@@ -1,0 +1,400 @@
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const Call = require('../models/Call');
+const config = require('../config/config');
+const aiService = require('../services/aiService');
+const scoringService = require('../services/scoringService');
+
+// Ensure upload directory exists
+if (!fs.existsSync(config.upload.dir)) {
+  fs.mkdirSync(config.upload.dir, { recursive: true });
+}
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, config.upload.dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}_${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['.wav', '.mp3', '.m4a', '.ogg'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedTypes.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only audio files are allowed.'));
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: config.upload.maxSize },
+});
+
+/**
+ * @route   POST /api/calls/upload
+ * @desc    Upload call audio and create call record
+ * @access  Private
+ */
+exports.uploadCall = [
+  upload.single('audio'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Audio file is required',
+        });
+      }
+
+      const {
+        agentId,
+        agentName,
+        customerId,
+        customerName,
+        campaign,
+        duration,
+        callDate,
+      } = req.body;
+
+      // Generate unique call ID
+      const callId = `CALL-${Date.now()}-${uuidv4().substring(0, 8)}`;
+
+      // Create call record
+      const call = await Call.create({
+        callId,
+        agentId,
+        agentName,
+        customerId,
+        customerName,
+        campaign,
+        duration: parseInt(duration),
+        callDate: new Date(callDate),
+        audioFilePath: req.file.path,
+        audioFileName: req.file.filename,
+        fileSize: req.file.size,
+        uploadedBy: req.user._id,
+        status: 'uploaded',
+      });
+
+      // Trigger async processing (don't wait for completion)
+      processCallAsync(call._id);
+
+      res.status(201).json({
+        success: true,
+        message: 'Call uploaded successfully. Processing started.',
+        data: call,
+      });
+    } catch (error) {
+      // Clean up uploaded file if database operation fails
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+      }
+      next(error);
+    }
+  },
+];
+
+/**
+ * Process call asynchronously using FREE & open-source AI models
+ */
+async function processCallAsync(callId) {
+  try {
+    const call = await Call.findById(callId);
+    if (!call) return;
+
+    console.log(`🔄 Processing call ${call.callId} with FREE AI models...`);
+
+    // Update status
+    call.status = 'processing';
+    await call.save();
+
+    // Step 1: Transcribe audio (FREE Whisper)
+    console.log(`🎙️  Step 1: Transcribing with Whisper (medium)...`);
+    const transcriptionResult = await aiService.transcribeAudio(call.audioFilePath);
+    call.transcript = transcriptionResult.text;
+    call.transcriptTimestamps = transcriptionResult.timestamps || [];
+    call.wordCount = transcriptionResult.word_count || call.transcript.split(' ').length;
+    await call.save();
+
+    // Step 2: Analyze sentiment (FREE DistilBERT)
+    console.log(`😊 Step 2: Analyzing sentiment with DistilBERT...`);
+    const sentimentResult = await aiService.analyzeSentiment(call.transcript);
+    call.sentiment = sentimentResult.label;
+    call.sentimentScore = sentimentResult.score;
+    await call.save();
+
+    // Step 3: Extract entities (FREE spaCy) - optional
+    try {
+      console.log(`🔍 Step 3: Extracting entities with spaCy...`);
+      const entitiesResult = await aiService.extractEntities(call.transcript);
+      call.entities = entitiesResult.entities || [];
+      call.keyPhrases = entitiesResult.key_phrases || [];
+      await call.save();
+    } catch (error) {
+      console.log(`⚠️  Entity extraction skipped: ${error.message}`);
+    }
+
+    // Step 4: Generate summary (FREE BART) - optional for longer transcripts
+    try {
+      if (call.transcript.length > 500) {
+        console.log(`📄 Step 4: Generating summary with BART...`);
+        const summaryResult = await aiService.summarizeText(call.transcript);
+        call.summary = summaryResult.summary;
+        await call.save();
+      }
+    } catch (error) {
+      console.log(`⚠️  Summarization skipped: ${error.message}`);
+    }
+
+    // Step 5: Check compliance (FREE rapidfuzz + regex)
+    console.log(`✅ Step 5: Checking compliance with rapidfuzz...`);
+    const complianceResult = await scoringService.checkCompliance(
+      call.transcript,
+      call.campaign
+    );
+    call.complianceScore = complianceResult.score;
+    call.missingMandatoryPhrases = complianceResult.missingMandatory;
+    call.detectedForbiddenPhrases = complianceResult.detectedForbidden;
+    await call.save();
+
+    // Step 6: Calculate quality score (rule-based)
+    console.log(`📊 Step 6: Calculating quality score...`);
+    const qualityResult = scoringService.calculateQualityScore({
+      transcript: call.transcript,
+      sentiment: call.sentiment,
+      complianceScore: call.complianceScore,
+      duration: call.duration,
+    });
+    call.qualityScore = qualityResult.score;
+    call.qualityMetrics = qualityResult.metrics;
+    await call.save();
+
+    // Mark as completed
+    call.status = 'completed';
+    call.processedAt = new Date();
+    await call.save();
+
+    console.log(`✅ Call ${call.callId} processed successfully (100% FREE AI)`);
+  } catch (error) {
+    console.error(`❌ Error processing call ${callId}:`, error);
+    
+    // Update call with error status
+    await Call.findByIdAndUpdate(callId, {
+      status: 'failed',
+      processingError: error.message,
+    });
+  }
+}
+
+/**
+ * @route   GET /api/calls
+ * @desc    Get all calls with filtering and pagination
+ * @access  Private
+ */
+exports.getCalls = async (req, res, next) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      campaign,
+      agentId,
+      status,
+      startDate,
+      endDate,
+      minQualityScore,
+      maxQualityScore,
+    } = req.query;
+
+    // Build query
+    const query = {};
+
+    if (campaign) query.campaign = campaign;
+    if (agentId) query.agentId = agentId;
+    if (status) query.status = status;
+
+    if (startDate || endDate) {
+      query.callDate = {};
+      if (startDate) query.callDate.$gte = new Date(startDate);
+      if (endDate) query.callDate.$lte = new Date(endDate);
+    }
+
+    if (minQualityScore || maxQualityScore) {
+      query.qualityScore = {};
+      if (minQualityScore) query.qualityScore.$gte = parseFloat(minQualityScore);
+      if (maxQualityScore) query.qualityScore.$lte = parseFloat(maxQualityScore);
+    }
+
+    // Role-based access control
+    if (req.user.role === 'Agent') {
+      query.agentId = req.user._id;
+    }
+
+    // Execute query with pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const calls = await Call.find(query)
+      .sort({ callDate: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('agentId', 'name email')
+      .populate('uploadedBy', 'name email');
+
+    const total = await Call.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count: calls.length,
+      total,
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page),
+      data: calls,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/calls/:id
+ * @desc    Get single call by ID
+ * @access  Private
+ */
+exports.getCallById = async (req, res, next) => {
+  try {
+    const call = await Call.findById(req.params.id)
+      .populate('agentId', 'name email department')
+      .populate('uploadedBy', 'name email')
+      .populate('reviewedBy', 'name email');
+
+    if (!call) {
+      return res.status(404).json({
+        success: false,
+        message: 'Call not found',
+      });
+    }
+
+    // Role-based access control
+    if (req.user.role === 'Agent' && call.agentId._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to access this call',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: call,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/calls/:id/audio
+ * @desc    Stream call audio file
+ * @access  Private
+ */
+exports.getCallAudio = async (req, res, next) => {
+  try {
+    const call = await Call.findById(req.params.id);
+
+    if (!call) {
+      return res.status(404).json({
+        success: false,
+        message: 'Call not found',
+      });
+    }
+
+    // Role-based access control
+    if (req.user.role === 'Agent' && call.agentId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to access this audio',
+      });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(call.audioFilePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Audio file not found',
+      });
+    }
+
+    // Stream the audio file
+    const stat = fs.statSync(call.audioFilePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(call.audioFilePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'audio/mpeg',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'audio/mpeg',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(call.audioFilePath).pipe(res);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   DELETE /api/calls/:id
+ * @desc    Delete a call
+ * @access  Private (Admin, Manager only)
+ */
+exports.deleteCall = async (req, res, next) => {
+  try {
+    const call = await Call.findById(req.params.id);
+
+    if (!call) {
+      return res.status(404).json({
+        success: false,
+        message: 'Call not found',
+      });
+    }
+
+    // Delete audio file
+    if (fs.existsSync(call.audioFilePath)) {
+      fs.unlinkSync(call.audioFilePath);
+    }
+
+    // Delete from database
+    await call.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Call deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

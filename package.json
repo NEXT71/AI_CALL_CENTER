@@ -1,0 +1,22 @@
+{
+  "name": "ai-call-center",
+  "version": "1.0.0",
+  "description": "AI-based Call Quality & Compliance Auto-Scoring Platform for BPO call centers",
+  "main": "index.js",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File start.ps1",
+    "install-all": "cd backend && npm install && cd ../frontend && npm install && cd ../ai-service && python -m venv venv && .\\venv\\Scripts\\pip install -r requirements.txt && cd ..",
+    "seed": "cd backend && npm run seed && cd .."
+  },
+  "keywords": [
+    "call-center",
+    "quality-assurance",
+    "compliance",
+    "ai",
+    "bpo",
+    "speech-to-text",
+    "nlp"
+  ],
+  "author": "Nextel BPO",
+  "license": "MIT"
+}
