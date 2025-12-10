@@ -3,13 +3,15 @@ const router = express.Router();
 const callController = require('../controllers/callController');
 const { protect, authorize } = require('../middleware/auth');
 const { validateCallUpload, handleValidationErrors, validateObjectId } = require('../middleware/validation');
+const { uploadLimiter } = require('../middleware/rateLimiter');
 
 // All routes are protected
 router.use(protect);
 
-// Upload call
+// Upload call with rate limiting
 router.post(
   '/upload',
+  uploadLimiter,
   authorize('Admin', 'Manager', 'QA'),
   callController.uploadCall
 );

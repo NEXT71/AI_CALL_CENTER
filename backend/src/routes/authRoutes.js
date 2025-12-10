@@ -7,10 +7,38 @@ const {
   validateLogin,
   handleValidationErrors,
 } = require('../middleware/validation');
+const { authLimiter, registerLimiter } = require('../middleware/rateLimiter');
 
-// Public routes
-router.post('/register', validateRegister, handleValidationErrors, authController.register);
-router.post('/login', validateLogin, handleValidationErrors, authController.login);
+// Public routes with rate limiting
+// NOTE: Registration should be protected in production (admin-only)
+// For initial setup, leave unprotected. After creating admin, protect this route.
+router.post(
+  '/register',
+  registerLimiter,
+  validateRegister,
+  handleValidationErrors,
+  authController.register
+);
+
+// To enable admin-only registration, uncomment below and comment above:
+// router.post(
+//   '/register',
+//   registerLimiter,
+//   protect,
+//   authorize('Admin'),
+//   validateRegister,
+//   handleValidationErrors,
+//   authController.register
+// );
+
+router.post(
+  '/login',
+  authLimiter,
+  validateLogin,
+  handleValidationErrors,
+  authController.login
+);
+
 router.post('/refresh', authController.refreshToken);
 
 // Protected routes

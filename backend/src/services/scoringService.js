@@ -1,4 +1,5 @@
 const ComplianceRule = require('../models/ComplianceRule');
+const logger = require('../config/logger');
 
 /**
  * Check compliance against rules
@@ -65,16 +66,16 @@ exports.checkCompliance = async (transcript, campaign) => {
       },
     };
   } catch (error) {
-    console.error('Compliance check error:', error);
+    logger.error('Compliance check error', { error: error.message });
     throw error;
   }
 };
 
 /**
- * Calculate quality score based on various metrics
+ * Calculate quality score based on various metrics (AGENT-FOCUSED)
  */
 exports.calculateQualityScore = (data) => {
-  const { transcript, sentiment, complianceScore, duration } = data;
+  const { transcript, sentiment, complianceScore, duration, talkTimeRatio, deadAirTotal } = data;
   
   const transcriptLower = transcript.toLowerCase();
   
@@ -86,6 +87,8 @@ exports.calculateQualityScore = (data) => {
     complianceLinesSpoken: false,
     agentInterruptionCount: 0,
     avgSpeechRate: 0,
+    talkTimeBalance: 'unknown',
+    deadAirPenalty: 0,
   };
 
   // 1. Check for greeting (10 points)
@@ -120,7 +123,7 @@ exports.calculateQualityScore = (data) => {
     score += 10;
   }
 
-  // 4. Sentiment score (20 points)
+  // 4. Agent sentiment score (20 points) - AGENT-SPECIFIC
   if (sentiment === 'positive') {
     score += 20;
   } else if (sentiment === 'neutral') {
@@ -175,6 +178,42 @@ exports.calculateQualityScore = (data) => {
     score += 10;
   } else if (metrics.avgSpeechRate >= 100 && metrics.avgSpeechRate <= 180) {
     score += 5;
+  }
+
+  // 9. Talk-time ratio balance (NEW - 10 points bonus/penalty)
+  if (talkTimeRatio && talkTimeRatio !== 'N/A') {
+    const ratio = parseFloat(talkTimeRatio.split(':')[0]);
+    
+    // Ideal agent:customer ratio is 0.6:1 to 1.2:1 (agent speaks 60%-120% of customer)
+    if (ratio >= 0.6 && ratio <= 1.2) {
+      score += 10;
+      metrics.talkTimeBalance = 'balanced';
+    } else if (ratio < 0.3) {
+      score -= 10; // Agent spoke too little
+      metrics.talkTimeBalance = 'agent_too_quiet';
+    } else if (ratio > 2.0) {
+      score -= 10; // Agent spoke too much
+      metrics.talkTimeBalance = 'agent_dominates';
+    } else {
+      score += 5;
+      metrics.talkTimeBalance = 'acceptable';
+    }
+  }
+
+  // 10. Dead air penalty (NEW)
+  if (deadAirTotal) {
+    const deadAirPercentage = (deadAirTotal / duration) * 100;
+    
+    if (deadAirPercentage > 15) {
+      metrics.deadAirPenalty = 15;
+      score -= 15;
+    } else if (deadAirPercentage > 10) {
+      metrics.deadAirPenalty = 10;
+      score -= 10;
+    } else if (deadAirPercentage > 5) {
+      metrics.deadAirPenalty = 5;
+      score -= 5;
+    }
   }
 
   // Ensure score is within 0-100

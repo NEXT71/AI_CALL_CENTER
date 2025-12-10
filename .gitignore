@@ -21,6 +21,11 @@ build/
 .env.local
 .env.*.local
 
+# Keep production and development environment files for deployment
+!.env.production
+!.env.development
+!.env.example
+
 # Logs
 logs/
 *.log

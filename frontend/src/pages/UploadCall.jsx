@@ -15,6 +15,9 @@ const UploadCall = () => {
     campaign: '',
     duration: '',
     callDate: new Date().toISOString().slice(0, 16),
+    isSale: false,
+    saleAmount: '',
+    productSold: '',
   });
   const [audioFile, setAudioFile] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
@@ -69,6 +72,12 @@ const UploadCall = () => {
 
     if (!audioFile) {
       setError('Please select an audio file');
+      return;
+    }
+
+    // Validate sale data
+    if (formData.isSale && (!formData.saleAmount || parseFloat(formData.saleAmount) <= 0)) {
+      setError('Sale amount is required for sale calls');
       return;
     }
 
@@ -266,6 +275,68 @@ const UploadCall = () => {
               onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
             />
           </div>
+
+          {/* Sale Status */}
+          <div className="md:col-span-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
+                checked={formData.isSale}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  isSale: e.target.checked,
+                  saleAmount: e.target.checked ? formData.saleAmount : '',
+                  productSold: e.target.checked ? formData.productSold : '',
+                })}
+              />
+              <span className="ml-2 font-medium text-gray-900">
+                ✅ This call resulted in a SALE
+              </span>
+            </label>
+            <p className="text-xs text-gray-600 mt-1 ml-6">
+              Only sale calls will be processed and scored
+            </p>
+          </div>
+
+          {formData.isSale && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale Amount ($) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  className="input"
+                  value={formData.saleAmount}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    saleAmount: e.target.value 
+                  })}
+                  placeholder="e.g., 299.99"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product/Service Sold
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  value={formData.productSold}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    productSold: e.target.value 
+                  })}
+                  placeholder="e.g., Premium Package, Monthly Plan"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Progress Bar */}

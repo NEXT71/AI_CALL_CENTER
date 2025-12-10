@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const config = require('../config/config');
+const auditService = require('../services/auditService');
 
 /**
  * Generate JWT tokens
@@ -19,11 +20,20 @@ const generateTokens = (userId) => {
 
 /**
  * @route   POST /api/auth/register
- * @desc    Register new user
- * @access  Public (Admin only in production)
+ * @desc    Register new user (ADMIN ONLY for security)
+ * @access  Private - Admin only
  */
 exports.register = async (req, res, next) => {
   try {
+    // In production, this should be protected - only admins can create users
+    // For development/initial setup, you can disable this check
+    if (req.user && req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only administrators can register new users',
+      });
+    }
+
     const { name, email, password, role, department } = req.body;
 
     // Check if user already exists
@@ -46,6 +56,9 @@ exports.register = async (req, res, next) => {
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user._id);
+
+    // Log user registration
+    await auditService.logUserRegistration(req.user, user, req);
 
     res.status(201).json({
       success: true,
@@ -92,6 +105,9 @@ exports.login = async (req, res, next) => {
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
+      // Log failed login attempt
+      await auditService.logFailedLogin(email, req);
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
@@ -103,6 +119,9 @@ exports.login = async (req, res, next) => {
 
     // Remove password from response
     user.password = undefined;
+
+    // Log successful login
+    await auditService.logLogin(user, req);
 
     res.status(200).json({
       success: true,

@@ -1,3 +1,5 @@
+const logger = require('../config/logger');
+
 /**
  * Central error handling middleware
  */
@@ -5,8 +7,14 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error for debugging
-  console.error('Error:', err);
+  // Log error with context
+  logger.error('Request error', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip,
+  });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -40,11 +48,26 @@ const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 401 };
   }
 
-  res.status(error.statusCode || err.statusCode || 500).json({
+  // Multer file upload errors
+  if (err.name === 'MulterError') {
+    const message = err.code === 'LIMIT_FILE_SIZE' 
+      ? 'File size exceeds limit' 
+      : 'File upload error';
+    error = { message, statusCode: 400 };
+  }
+
+  // Response - hide stack trace in production
+  const response = {
     success: false,
     message: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+  };
+
+  // Only include stack trace in development
+  if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+  }
+
+  res.status(error.statusCode || err.statusCode || 500).json(response);
 };
 
 module.exports = errorHandler;

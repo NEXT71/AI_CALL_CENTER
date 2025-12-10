@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { callService, reportService } from '../services/apiService';
-import { Phone, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
+  const [salesData, setSalesData] = useState(null);
   const [recentCalls, setRecentCalls] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,13 +16,15 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [callsResponse, analyticsResponse] = await Promise.all([
+      const [callsResponse, analyticsResponse, salesResponse] = await Promise.all([
         callService.getCalls({ limit: 5, status: 'completed' }),
         reportService.getAnalyticsSummary({}).catch(() => ({ data: null })),
+        reportService.getSalesSummary({}).catch(() => ({ data: null })),
       ]);
 
       setRecentCalls(callsResponse.data);
       setStats(analyticsResponse.data);
+      setSalesData(salesResponse.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -110,6 +113,76 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sales Stats Cards */}
+      {salesData && salesData.totalSales > 0 && (
+        <>
+          <div className="mt-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 Sales Performance</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-green-700 font-medium">Total Sales</p>
+                  <p className="text-3xl font-bold text-green-900 mt-1">
+                    {salesData.totalSales}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">Sale calls processed</p>
+                </div>
+                <div className="bg-green-200 p-3 rounded-full">
+                  <ShoppingCart className="text-green-700" size={24} />
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-blue-700 font-medium">Total Revenue</p>
+                  <p className="text-3xl font-bold text-blue-900 mt-1">
+                    ${salesData.totalRevenue?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">From analyzed sales</p>
+                </div>
+                <div className="bg-blue-200 p-3 rounded-full">
+                  <DollarSign className="text-blue-700" size={24} />
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-purple-700 font-medium">Avg Sale Amount</p>
+                  <p className="text-3xl font-bold text-purple-900 mt-1">
+                    ${salesData.avgSaleAmount?.toFixed(2) || 0}
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">Per transaction</p>
+                </div>
+                <div className="bg-purple-200 p-3 rounded-full">
+                  <TrendingUp className="text-purple-700" size={24} />
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-yellow-700 font-medium">Sales Quality</p>
+                  <p className="text-3xl font-bold text-yellow-900 mt-1">
+                    {salesData.avgQualityScore?.toFixed(1) || 0}
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">Average score</p>
+                </div>
+                <div className="bg-yellow-200 p-3 rounded-full">
+                  <CheckCircle className="text-yellow-700" size={24} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Recent Calls */}

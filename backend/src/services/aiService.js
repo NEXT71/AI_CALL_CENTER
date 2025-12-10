@@ -1,5 +1,6 @@
 const axios = require('axios');
 const config = require('../config/config');
+const logger = require('../config/logger');
 
 const AI_SERVICE_URL = config.aiService.url;
 
@@ -19,7 +20,7 @@ exports.transcribeAudio = async (audioFilePath) => {
 
     return response.data;
   } catch (error) {
-    console.error('AI Service transcription error:', error.message);
+    logger.error('AI Service transcription error', { error: error.message });
     throw new Error(`Transcription failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -40,7 +41,7 @@ exports.analyzeSentiment = async (text) => {
 
     return response.data;
   } catch (error) {
-    console.error('AI Service sentiment analysis error:', error.message);
+    logger.error('AI Service sentiment analysis error', { error: error.message });
     throw new Error(`Sentiment analysis failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -61,7 +62,7 @@ exports.extractEntities = async (text) => {
 
     return response.data;
   } catch (error) {
-    console.error('AI Service entity extraction error:', error.message);
+    logger.error('AI Service entity extraction error', { error: error.message });
     throw new Error(`Entity extraction failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -82,7 +83,7 @@ exports.summarizeText = async (text, maxLength = 130, minLength = 30) => {
 
     return response.data;
   } catch (error) {
-    console.error('AI Service summarization error:', error.message);
+    logger.error('AI Service summarization error', { error: error.message });
     throw new Error(`Summarization failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -108,8 +109,57 @@ exports.checkCompliance = async (transcript, mandatoryPhrases, forbiddenPhrases,
 
     return response.data;
   } catch (error) {
-    console.error('AI Service compliance check error:', error.message);
+    logger.error('AI Service compliance check error', { error: error.message });
     throw new Error(`Compliance check failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
+ * Speaker diarization using FREE pyannote.audio
+ */
+exports.diarizeAudio = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) => {
+  try {
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/diarize`,
+      { 
+        audio_path: audioFilePath,
+        min_speakers: minSpeakers,
+        max_speakers: maxSpeakers
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 180000, // 3 minutes
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service diarization error', { error: error.message });
+    throw new Error(`Diarization failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
+ * Calculate talk-time metrics
+ */
+exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
+  try {
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/calculate-talk-time`,
+      { 
+        audio_path: audioFilePath,
+        speaker_segments: speakerSegments
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000,
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service talk-time calculation error', { error: error.message });
+    throw new Error(`Talk-time calculation failed: ${error.response?.data?.detail || error.message}`);
   }
 };
 

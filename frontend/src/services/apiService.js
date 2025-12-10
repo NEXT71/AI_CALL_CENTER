@@ -95,4 +95,24 @@ export const reportService = {
     const response = await api.get('/reports/analytics/summary', { params });
     return response.data;
   },
+
+  getSalesSummary: async (params = {}) => {
+    const response = await api.get('/reports/sales/summary', { params });
+    return response.data;
+  },
+
+  getSalesByAgent: async (params = {}) => {
+    const response = await api.get('/reports/sales/by-agent', { params });
+    return response.data;
+  },
+
+  getSalesByProduct: async (params = {}) => {
+    const response = await api.get('/reports/sales/by-product', { params });
+    return response.data;
+  },
+
+  getBestSaleCalls: async (params = {}) => {
+    const response = await api.get('/reports/sales/best-calls', { params });
+    return response.data;
+  },
 };

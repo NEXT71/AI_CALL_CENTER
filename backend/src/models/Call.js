@@ -86,6 +86,46 @@ const callSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Speaker Diarization (FREE pyannote.audio)
+    speakerSegments: {
+      type: Array,
+      default: [],
+    },
+    speakers: {
+      type: Array,
+      default: [],
+    },
+    agentTalkTime: {
+      type: Number,
+      default: 0,
+    },
+    customerTalkTime: {
+      type: Number,
+      default: 0,
+    },
+    talkTimeRatio: {
+      type: String,
+      default: '',
+    },
+    deadAirTotal: {
+      type: Number,
+      default: 0,
+    },
+    deadAirSegments: {
+      type: Array,
+      default: [],
+    },
+    // Per-speaker sentiment
+    agentSentiment: {
+      type: String,
+      enum: ['positive', 'negative', 'neutral', ''],
+      default: '',
+    },
+    customerSentiment: {
+      type: String,
+      enum: ['positive', 'negative', 'neutral', ''],
+      default: '',
+    },
     // Compliance
     complianceScore: {
       type: Number,
@@ -115,10 +155,35 @@ const callSchema = new mongoose.Schema(
       agentInterruptionCount: { type: Number, default: 0 },
       avgSpeechRate: { type: Number },
     },
+    // Sale Status - ONLY process calls that resulted in a sale
+    isSale: {
+      type: Boolean,
+      default: false,
+      required: true,
+      index: true,
+    },
+    saleAmount: {
+      type: Number,
+      min: 0,
+    },
+    productSold: {
+      type: String,
+      trim: true,
+    },
+    saleDate: {
+      type: Date,
+    },
+    requiresQA: {
+      type: Boolean,
+      default: function() {
+        return this.isSale === true; // Only QA if it's a sale
+      },
+      index: true,
+    },
     // Processing Status
     status: {
       type: String,
-      enum: ['uploaded', 'processing', 'completed', 'failed'],
+      enum: ['uploaded', 'queued', 'processing', 'completed', 'failed', 'skipped'],
       default: 'uploaded',
     },
     processingError: {
@@ -152,8 +217,18 @@ const callSchema = new mongoose.Schema(
 // Indexes for better query performance
 callSchema.index({ callId: 1 });
 callSchema.index({ agentId: 1 });
+callSchema.index({ agentName: 1 });
 callSchema.index({ campaign: 1 });
 callSchema.index({ status: 1 });
 callSchema.index({ callDate: -1 });
+callSchema.index({ createdAt: -1 });
+callSchema.index({ qualityScore: -1 });
+callSchema.index({ complianceScore: -1 });
+// Compound indexes for common queries
+callSchema.index({ campaign: 1, callDate: -1 });
+callSchema.index({ agentId: 1, callDate: -1 });
+callSchema.index({ status: 1, createdAt: -1 });
+callSchema.index({ isSale: 1, requiresQA: 1 });
+callSchema.index({ isSale: 1, callDate: -1 });
 
 module.exports = mongoose.model('Call', callSchema);

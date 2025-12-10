@@ -313,3 +313,203 @@ function generateRecommendations(call) {
 
   return recommendations;
 }
+
+/**
+ * @route   GET /api/reports/sales/summary
+ * @desc    Get sales summary analytics
+ * @access  Private (Admin, Manager, QA)
+ */
+exports.getSalesSummary = async (req, res, next) => {
+  try {
+    const { startDate, endDate, campaign } = req.query;
+
+    // Build query for sale calls only
+    const match = { isSale: true, status: 'completed' };
+    
+    if (startDate || endDate) {
+      match.callDate = {};
+      if (startDate) match.callDate.$gte = new Date(startDate);
+      if (endDate) match.callDate.$lte = new Date(endDate);
+    }
+    
+    if (campaign) match.campaign = campaign;
+
+    const summary = await Call.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: 1 },
+          totalRevenue: { $sum: '$saleAmount' },
+          avgSaleAmount: { $avg: '$saleAmount' },
+          avgQualityScore: { $avg: '$qualityScore' },
+          avgComplianceScore: { $avg: '$complianceScore' },
+          minSaleAmount: { $min: '$saleAmount' },
+          maxSaleAmount: { $max: '$saleAmount' },
+        },
+      },
+    ]);
+
+    const result = summary[0] || {
+      totalSales: 0,
+      totalRevenue: 0,
+      avgSaleAmount: 0,
+      avgQualityScore: 0,
+      avgComplianceScore: 0,
+      minSaleAmount: 0,
+      maxSaleAmount: 0,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ...result,
+        period: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+        },
+        filters: { campaign },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/reports/sales/by-agent
+ * @desc    Get sales performance by agent
+ * @access  Private (Admin, Manager, QA)
+ */
+exports.getSalesByAgent = async (req, res, next) => {
+  try {
+    const { startDate, endDate, campaign, limit = 20 } = req.query;
+
+    const match = { isSale: true, status: 'completed' };
+    
+    if (startDate || endDate) {
+      match.callDate = {};
+      if (startDate) match.callDate.$gte = new Date(startDate);
+      if (endDate) match.callDate.$lte = new Date(endDate);
+    }
+    
+    if (campaign) match.campaign = campaign;
+
+    const sales = await Call.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$agentId',
+          agentName: { $first: '$agentName' },
+          totalSales: { $sum: 1 },
+          totalRevenue: { $sum: '$saleAmount' },
+          avgSaleAmount: { $avg: '$saleAmount' },
+          avgQualityScore: { $avg: '$qualityScore' },
+          avgComplianceScore: { $avg: '$complianceScore' },
+          maxSaleAmount: { $max: '$saleAmount' },
+        },
+      },
+      { $sort: { totalRevenue: -1 } },
+      { $limit: parseInt(limit) },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: sales,
+      count: sales.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/reports/sales/by-product
+ * @desc    Get sales performance by product
+ * @access  Private (Admin, Manager, QA)
+ */
+exports.getSalesByProduct = async (req, res, next) => {
+  try {
+    const { startDate, endDate, campaign } = req.query;
+
+    const match = { 
+      isSale: true, 
+      status: 'completed', 
+      productSold: { $ne: null, $ne: '' },
+    };
+    
+    if (startDate || endDate) {
+      match.callDate = {};
+      if (startDate) match.callDate.$gte = new Date(startDate);
+      if (endDate) match.callDate.$lte = new Date(endDate);
+    }
+    
+    if (campaign) match.campaign = campaign;
+
+    const products = await Call.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$productSold',
+          totalSales: { $sum: 1 },
+          totalRevenue: { $sum: '$saleAmount' },
+          avgSaleAmount: { $avg: '$saleAmount' },
+          avgQualityScore: { $avg: '$qualityScore' },
+          avgComplianceScore: { $avg: '$complianceScore' },
+        },
+      },
+      { $sort: { totalRevenue: -1 } },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: products,
+      count: products.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/reports/sales/best-calls
+ * @desc    Get best sale calls for training
+ * @access  Private (Admin, Manager, QA)
+ */
+exports.getBestSaleCalls = async (req, res, next) => {
+  try {
+    const { 
+      limit = 10, 
+      minQualityScore = 80,
+      minComplianceScore = 80,
+      campaign,
+    } = req.query;
+
+    const query = {
+      isSale: true,
+      status: 'completed',
+      qualityScore: { $gte: parseFloat(minQualityScore) },
+      complianceScore: { $gte: parseFloat(minComplianceScore) },
+    };
+
+    if (campaign) query.campaign = campaign;
+
+    const bestCalls = await Call.find(query)
+      .sort({ qualityScore: -1, complianceScore: -1, saleAmount: -1 })
+      .limit(parseInt(limit))
+      .select('callId agentName saleAmount productSold qualityScore complianceScore sentiment callDate campaign')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: bestCalls,
+      count: bestCalls.length,
+      criteria: {
+        minQualityScore: parseFloat(minQualityScore),
+        minComplianceScore: parseFloat(minComplianceScore),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

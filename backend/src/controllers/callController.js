@@ -6,6 +6,8 @@ const Call = require('../models/Call');
 const config = require('../config/config');
 const aiService = require('../services/aiService');
 const scoringService = require('../services/scoringService');
+const auditService = require('../services/auditService');
+const logger = require('../config/logger');
 
 // Ensure upload directory exists
 if (!fs.existsSync(config.upload.dir)) {
@@ -30,8 +32,48 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only audio files are allowed.'));
+    cb(new Error('Invalid file type. Only audio files (.wav, .mp3, .m4a, .ogg) are allowed.'));
   }
+};
+
+// Magic number (file signature) validation for audio files
+const validateAudioFile = (filePath) => {
+  const buffer = fs.readFileSync(filePath);
+  
+  // Check magic numbers for common audio formats
+  const magicNumbers = {
+    wav: [0x52, 0x49, 0x46, 0x46], // RIFF
+    mp3: [0xFF, 0xFB], // MP3 frame sync
+    mp3_id3: [0x49, 0x44, 0x33], // ID3
+    m4a: [0x66, 0x74, 0x79, 0x70], // ftyp (at offset 4)
+    ogg: [0x4F, 0x67, 0x67, 0x53], // OggS
+  };
+  
+  // Check WAV
+  if (buffer[0] === magicNumbers.wav[0] && buffer[1] === magicNumbers.wav[1] &&
+      buffer[2] === magicNumbers.wav[2] && buffer[3] === magicNumbers.wav[3]) {
+    return true;
+  }
+  
+  // Check MP3
+  if ((buffer[0] === magicNumbers.mp3[0] && buffer[1] === magicNumbers.mp3[1]) ||
+      (buffer[0] === magicNumbers.mp3_id3[0] && buffer[1] === magicNumbers.mp3_id3[1])) {
+    return true;
+  }
+  
+  // Check M4A (ftyp at offset 4)
+  if (buffer[4] === magicNumbers.m4a[0] && buffer[5] === magicNumbers.m4a[1] &&
+      buffer[6] === magicNumbers.m4a[2] && buffer[7] === magicNumbers.m4a[3]) {
+    return true;
+  }
+  
+  // Check OGG
+  if (buffer[0] === magicNumbers.ogg[0] && buffer[1] === magicNumbers.ogg[1] &&
+      buffer[2] === magicNumbers.ogg[2] && buffer[3] === magicNumbers.ogg[3]) {
+    return true;
+  }
+  
+  return false;
 };
 
 const upload = multer({
@@ -56,6 +98,17 @@ exports.uploadCall = [
         });
       }
 
+      // Validate file content (magic number check)
+      const isValidAudio = validateAudioFile(req.file.path);
+      if (!isValidAudio) {
+        // Delete invalid file
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid audio file format. File content does not match extension.',
+        });
+      }
+
       const {
         agentId,
         agentName,
@@ -64,7 +117,20 @@ exports.uploadCall = [
         campaign,
         duration,
         callDate,
+        isSale,        // NEW: Was this call a sale?
+        saleAmount,    // NEW: Sale amount (optional)
+        productSold,   // NEW: Product sold (optional)
       } = req.body;
+
+      // Validate sale data
+      if (isSale === true || isSale === 'true') {
+        if (!saleAmount || parseFloat(saleAmount) <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Sale amount is required for sale calls',
+          });
+        }
+      }
 
       // Generate unique call ID
       const callId = `CALL-${Date.now()}-${uuidv4().substring(0, 8)}`;
@@ -83,11 +149,28 @@ exports.uploadCall = [
         audioFileName: req.file.filename,
         fileSize: req.file.size,
         uploadedBy: req.user._id,
-        status: 'uploaded',
+        // Sale fields
+        isSale: isSale === true || isSale === 'true',
+        saleAmount: saleAmount ? parseFloat(saleAmount) : undefined,
+        productSold: productSold || undefined,
+        saleDate: (isSale === true || isSale === 'true') ? new Date(callDate) : undefined,
+        requiresQA: (isSale === true || isSale === 'true'), // Only QA sale calls
+        status: (isSale === true || isSale === 'true') ? 'queued' : 'skipped', // Skip non-sale calls
       });
 
-      // Trigger async processing (don't wait for completion)
-      processCallAsync(call._id);
+      // Only trigger AI processing for SALE calls
+      if (call.isSale && call.requiresQA) {
+        logger.info(`Call ${callId} is a SALE - queuing for AI processing`, {
+          saleAmount: call.saleAmount,
+          productSold: call.productSold,
+        });
+        processCallAsync(call._id);
+      } else {
+        logger.info(`Call ${callId} is NOT a sale - skipping AI processing`);
+      }
+
+      // Log call upload
+      await auditService.logCallUpload(req.user, call, req);
 
       res.status(201).json({
         success: true,
@@ -128,16 +211,45 @@ async function processCallAsync(callId) {
     call.wordCount = transcriptionResult.word_count || call.transcript.split(' ').length;
     await call.save();
 
-    // Step 2: Analyze sentiment (FREE DistilBERT)
-    console.log(`😊 Step 2: Analyzing sentiment with DistilBERT...`);
+    // Step 2: Speaker Diarization (FREE pyannote.audio) - CRITICAL
+    console.log(`🎭 Step 2: Speaker diarization with pyannote.audio...`);
+    try {
+      const diarizeResult = await aiService.diarizeAudio(call.audioFilePath);
+      call.speakerSegments = diarizeResult.speaker_segments;
+      call.speakers = diarizeResult.speakers;
+      await call.save();
+
+      // Step 2b: Calculate talk-time metrics
+      console.log(`📊 Step 2b: Calculating talk-time metrics...`);
+      const talkTimeResult = await aiService.calculateTalkTime(
+        call.audioFilePath,
+        diarizeResult.speaker_segments
+      );
+      
+      call.agentTalkTime = talkTimeResult.speaker_talk_time.SPEAKER_00 || 0;
+      call.customerTalkTime = talkTimeResult.speaker_talk_time.SPEAKER_01 || 0;
+      call.talkTimeRatio = talkTimeResult.agent_customer_ratio || 'N/A';
+      call.deadAirTotal = talkTimeResult.dead_air_total || 0;
+      call.deadAirSegments = talkTimeResult.dead_air_segments || [];
+      await call.save();
+    } catch (error) {
+      console.log(`⚠️  Diarization skipped: ${error.message}`);
+    }
+
+    // Step 3: Analyze sentiment (FREE DistilBERT)
+    console.log(`😊 Step 3: Analyzing sentiment with DistilBERT...`);
     const sentimentResult = await aiService.analyzeSentiment(call.transcript);
     call.sentiment = sentimentResult.label;
     call.sentimentScore = sentimentResult.score;
+    
+    // Set agent/customer sentiment (placeholder - proper implementation needs segment mapping)
+    call.agentSentiment = sentimentResult.label;
+    call.customerSentiment = sentimentResult.label;
     await call.save();
 
-    // Step 3: Extract entities (FREE spaCy) - optional
+    // Step 4: Extract entities (FREE spaCy) - optional
     try {
-      console.log(`🔍 Step 3: Extracting entities with spaCy...`);
+      console.log(`🔍 Step 4: Extracting entities with spaCy...`);
       const entitiesResult = await aiService.extractEntities(call.transcript);
       call.entities = entitiesResult.entities || [];
       call.keyPhrases = entitiesResult.key_phrases || [];
@@ -146,10 +258,10 @@ async function processCallAsync(callId) {
       console.log(`⚠️  Entity extraction skipped: ${error.message}`);
     }
 
-    // Step 4: Generate summary (FREE BART) - optional for longer transcripts
+    // Step 5: Generate summary (FREE BART) - optional for longer transcripts
     try {
       if (call.transcript.length > 500) {
-        console.log(`📄 Step 4: Generating summary with BART...`);
+        console.log(`📄 Step 5: Generating summary with BART...`);
         const summaryResult = await aiService.summarizeText(call.transcript);
         call.summary = summaryResult.summary;
         await call.save();
@@ -158,8 +270,8 @@ async function processCallAsync(callId) {
       console.log(`⚠️  Summarization skipped: ${error.message}`);
     }
 
-    // Step 5: Check compliance (FREE rapidfuzz + regex)
-    console.log(`✅ Step 5: Checking compliance with rapidfuzz...`);
+    // Step 6: Check compliance (FREE rapidfuzz + regex)
+    console.log(`✅ Step 6: Checking compliance with rapidfuzz...`);
     const complianceResult = await scoringService.checkCompliance(
       call.transcript,
       call.campaign
@@ -169,13 +281,15 @@ async function processCallAsync(callId) {
     call.detectedForbiddenPhrases = complianceResult.detectedForbidden;
     await call.save();
 
-    // Step 6: Calculate quality score (rule-based)
-    console.log(`📊 Step 6: Calculating quality score...`);
+    // Step 7: Calculate quality score (rule-based, agent-focused)
+    console.log(`📊 Step 7: Calculating quality score...`);
     const qualityResult = scoringService.calculateQualityScore({
       transcript: call.transcript,
-      sentiment: call.sentiment,
+      sentiment: call.agentSentiment || call.sentiment,
       complianceScore: call.complianceScore,
       duration: call.duration,
+      talkTimeRatio: call.talkTimeRatio,
+      deadAirTotal: call.deadAirTotal,
     });
     call.qualityScore = qualityResult.score;
     call.qualityMetrics = qualityResult.metrics;
