@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, checkTrialExpiration } = require('../middleware/auth');
 const { validateObjectId, handleValidationErrors } = require('../middleware/validation');
 
-// All routes are protected
+// All routes are protected and check trial expiration
 router.use(protect);
+router.use(checkTrialExpiration);
 
 // Get call report
 router.get(

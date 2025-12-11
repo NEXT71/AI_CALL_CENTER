@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const ruleController = require('../controllers/ruleController');
-const { protect, authorize } = require('../middleware/auth');
-const { validateComplianceRule, handleValidationErrors, validateObjectId } = require('../middleware/validation');
+const { protect, authorize, checkTrialExpiration } = require('../middleware/auth');
+const { validateRule, validateComplianceRule, handleValidationErrors, validateObjectId } = require('../middleware/validation');
 
-// All routes are protected
+// All routes are protected and check trial expiration
 router.use(protect);
+router.use(checkTrialExpiration);
 
 // Get campaigns list
 router.get('/campaigns/list', ruleController.getCampaigns);

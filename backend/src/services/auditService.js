@@ -124,3 +124,111 @@ exports.logUserRegistration = async (admin, newUser, req) => {
     req,
   });
 };
+
+/**
+ * Log logout
+ */
+exports.logLogout = async (user, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'LOGOUT',
+    resourceType: 'Auth',
+    req,
+  });
+};
+
+/**
+ * Log email verification
+ */
+exports.logEmailVerification = async (user, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'UPLOAD_CALL', // Using existing action since EMAIL_VERIFIED not in enum
+    resourceType: 'User',
+    resourceId: user._id,
+    details: {
+      action: 'EMAIL_VERIFIED',
+      email: user.email,
+    },
+    req,
+  });
+};
+
+/**
+ * Log password reset
+ */
+exports.logPasswordReset = async (user, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'UPDATE_USER',
+    resourceType: 'User',
+    resourceId: user._id,
+    details: {
+      action: 'PASSWORD_RESET',
+    },
+    req,
+  });
+};
+
+/**
+ * Log compliance rule creation
+ */
+exports.logRuleCreation = async (user, rule, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'CREATE_RULE',
+    resourceType: 'ComplianceRule',
+    resourceId: rule._id,
+    details: {
+      ruleName: rule.name,
+      ruleType: rule.type,
+    },
+    req,
+  });
+};
+
+/**
+ * Log compliance rule update
+ */
+exports.logRuleUpdate = async (user, rule, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'UPDATE_RULE',
+    resourceType: 'ComplianceRule',
+    resourceId: rule._id,
+    details: {
+      ruleName: rule.name,
+      ruleType: rule.type,
+    },
+    req,
+  });
+};
+
+/**
+ * Log compliance rule deletion
+ */
+exports.logRuleDeletion = async (user, rule, req) => {
+  return exports.createAuditLog({
+    userId: user._id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'DELETE_RULE',
+    resourceType: 'ComplianceRule',
+    resourceId: rule._id,
+    details: {
+      ruleName: rule.name,
+      ruleType: rule.type,
+    },
+    req,
+  });
+};

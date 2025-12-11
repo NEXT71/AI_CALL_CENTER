@@ -1,28 +1,48 @@
+console.log('📦 Loading dependencies...');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
+console.log('✅ Core dependencies loaded');
+
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const config = require('./config/config');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./config/logger');
 const validateEnv = require('./config/validateEnv');
+console.log('✅ Config modules loaded');
 
 // Import routes
+console.log('Loading authRoutes...');
 const authRoutes = require('./routes/authRoutes');
+console.log('Loading callRoutes...');
 const callRoutes = require('./routes/callRoutes');
+console.log('Loading ruleRoutes...');
 const ruleRoutes = require('./routes/ruleRoutes');
+console.log('Loading reportRoutes...');
 const reportRoutes = require('./routes/reportRoutes');
-const queueRoutes = require('./routes/queueRoutes');
+// const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
+console.log('Loading auditLogRoutes...');
+const auditLogRoutes = require('./routes/auditLogRoutes');
+console.log('✅ Routes loaded');
 
 // Import jobs
-const fileCleanupJob = require('./jobs/fileCleanup');
+// const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
+console.log('✅ Jobs loaded');
 
 // Validate environment variables before starting
-validateEnv();
+try {
+  console.log('🔍 Validating environment variables...');
+  validateEnv();
+  console.log('✅ Environment validation passed');
+} catch (error) {
+  console.error('❌ Environment validation failed:', error.message);
+  process.exit(1);
+}
 
 // Initialize express app
 const app = express();
@@ -31,9 +51,25 @@ const app = express();
 connectDB();
 
 // Security Middleware
-app.use(helmet()); // Secure HTTP headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+})); // Secure HTTP headers
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(compression()); // Compress responses
+app.use(cookieParser()); // Parse cookies
 
 // CORS Configuration
 const corsOptions = {
@@ -125,7 +161,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/rules', ruleRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/queue', queueRoutes);
+// app.use('/api/queue', queueRoutes); // Temporarily disabled - Redis not running
+app.use('/api/audit-logs', auditLogRoutes);
 
 // 404 Handler
 app.use('*', (req, res) => {
@@ -148,7 +185,7 @@ const server = app.listen(PORT, () => {
   });
   
   // Start scheduled jobs
-  fileCleanupJob.start();
+  // fileCleanupJob.start(); // Temporarily disabled
   
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
@@ -193,12 +230,16 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
+  console.error('❌ UNHANDLED REJECTION:', err.message);
+  console.error('Stack:', err.stack);
   logger.error('Unhandled Rejection:', { error: err.message, stack: err.stack });
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', err.message);
+  console.error('Stack:', err.stack);
   logger.error('Uncaught Exception:', { error: err.message, stack: err.stack });
   process.exit(1);
 });

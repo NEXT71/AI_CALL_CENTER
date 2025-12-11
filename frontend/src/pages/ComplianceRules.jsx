@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ruleService } from '../services/apiService';
-import { Plus, Edit2, Trash2, Check, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X, Shield, AlertTriangle, Search, Filter } from 'lucide-react';
 
 const ComplianceRules = () => {
   const [rules, setRules] = useState([]);
@@ -94,10 +94,11 @@ const ComplianceRules = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Page Header */}
+      <div className="page-header flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Compliance Rules</h1>
-          <p className="text-gray-600 mt-1">Manage mandatory and forbidden phrases</p>
+          <h1 className="page-title">Compliance Rules</h1>
+          <p className="page-subtitle">Manage mandatory and forbidden phrases for quality assurance</p>
         </div>
         <button
           onClick={() => {
@@ -106,20 +107,66 @@ const ComplianceRules = () => {
           }}
           className="btn btn-primary"
         >
-          <Plus size={20} className="mr-2" />
+          <Plus size={18} />
           Add Rule
         </button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <div className="icon-container icon-container-blue">
+              <Shield size={20} />
+            </div>
+            <span className="badge badge-info">Active</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">
+            {rules.filter(r => r.ruleType === 'mandatory' && r.isActive).length}
+          </div>
+          <div className="caption-text">Mandatory Phrases</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <div className="icon-container icon-container-red">
+              <AlertTriangle size={20} />
+            </div>
+            <span className="badge badge-danger">Blocked</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">
+            {rules.filter(r => r.ruleType === 'forbidden' && r.isActive).length}
+          </div>
+          <div className="caption-text">Forbidden Phrases</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between mb-2">
+            <div className="icon-container icon-container-slate">
+              <Filter size={20} />
+            </div>
+            <span className="badge badge-neutral">{campaigns.length}</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900">
+            {rules.length}
+          </div>
+          <div className="caption-text">Total Rules</div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="card">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Campaign
-            </label>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="icon-container icon-container-blue">
+            <Filter size={18} />
+          </div>
+          <h2 className="heading-4">Filter Rules</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="input-label">Campaign</label>
             <select
-              className="input"
+              className="select"
               value={filter.campaign}
               onChange={(e) => setFilter({ ...filter, campaign: e.target.value })}
             >
@@ -130,12 +177,10 @@ const ComplianceRules = () => {
             </select>
           </div>
 
-          <div className="min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rule Type
-            </label>
+          <div>
+            <label className="input-label">Rule Type</label>
             <select
-              className="input"
+              className="select"
               value={filter.ruleType}
               onChange={(e) => setFilter({ ...filter, ruleType: e.target.value })}
             >
@@ -147,200 +192,224 @@ const ComplianceRules = () => {
         </div>
       </div>
 
-      {/* Rules List */}
-      <div className="card">
+      {/* Rules Table */}
+      <div className="table-container">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="flex items-center justify-center py-16">
+            <div className="spinner h-12 w-12"></div>
           </div>
         ) : rules.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No rules found</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Campaign</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Phrase</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Description</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Weight</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule._id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-sm">{rule.campaign}</td>
-                    <td className="py-3 px-4">
-                      <span className={`badge ${
-                        rule.ruleType === 'mandatory' ? 'badge-info' : 'badge-danger'
-                      }`}>
-                        {rule.ruleType}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm font-medium">{rule.phrase}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {rule.description || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-sm">{rule.weight}</td>
-                    <td className="py-3 px-4">
-                      <span className={`badge ${
-                        rule.isActive ? 'badge-success' : 'badge-warning'
-                      }`}>
-                        {rule.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(rule)}
-                          className="text-primary-600 hover:text-primary-700"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(rule._id)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="text-center py-16">
+            <div className="icon-container icon-container-slate mx-auto mb-4">
+              <Shield size={32} />
+            </div>
+            <p className="heading-4 mb-2">No rules found</p>
+            <p className="body-text text-slate-600">Create your first compliance rule to get started</p>
           </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Type</th>
+                <th>Phrase</th>
+                <th>Description</th>
+                <th>Weight</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((rule) => (
+                <tr key={rule._id}>
+                  <td>
+                    <span className="font-medium text-slate-900">{rule.campaign}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${
+                      rule.ruleType === 'mandatory' ? 'badge-info' : 'badge-danger'
+                    }`}>
+                      {rule.ruleType === 'mandatory' ? (
+                        <><Shield size={12} /> Mandatory</>
+                      ) : (
+                        <><X size={12} /> Forbidden</>
+                      )}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="font-medium text-slate-900">{rule.phrase}</span>
+                  </td>
+                  <td>
+                    <span className="body-text text-slate-600">
+                      {rule.description || '-'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="badge badge-neutral">{rule.weight}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${
+                      rule.isActive ? 'badge-success' : 'badge-warning'
+                    }`}>
+                      {rule.isActive ? (
+                        <><Check size={12} /> Active</>
+                      ) : (
+                        <>Inactive</>
+                      )}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(rule)}
+                        className="btn btn-ghost text-blue-600 hover:text-blue-700"
+                        title="Edit"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(rule._id)}
+                        className="btn btn-ghost text-red-600 hover:text-red-700"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingRule ? 'Edit Rule' : 'Add New Rule'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowModal(false);
-                    resetForm();
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Campaign <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="input"
-                    value={formData.campaign}
-                    onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
-                    placeholder="e.g., Sales, Customer Service"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rule Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    className="input"
-                    value={formData.ruleType}
-                    onChange={(e) => setFormData({ ...formData, ruleType: e.target.value })}
-                  >
-                    <option value="mandatory">Mandatory</option>
-                    <option value="forbidden">Forbidden</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phrase <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="input"
-                    value={formData.phrase}
-                    onChange={(e) => setFormData({ ...formData, phrase: e.target.value })}
-                    placeholder="e.g., thank you for calling"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    className="input"
-                    rows="3"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Optional description of this rule"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Weight (1-10)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      className="input"
-                      value={formData.weight}
-                      onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fuzzy Tolerance (0-5)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="5"
-                      className="input"
-                      value={formData.fuzzyTolerance}
-                      onChange={(e) => setFormData({ ...formData, fuzzyTolerance: parseInt(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <button type="submit" className="flex-1 btn btn-primary">
-                    {editingRule ? 'Update Rule' : 'Create Rule'}
-                  </button>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); resetForm(); }}>
+          <div className="modal">
+            <div className="flex items-center justify-center min-h-screen p-4">
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title">
+                    {editingRule ? 'Edit Compliance Rule' : 'Add New Compliance Rule'}
+                  </h2>
                   <button
-                    type="button"
                     onClick={() => {
                       setShowModal(false);
                       resetForm();
                     }}
-                    className="btn btn-secondary"
+                    className="btn btn-ghost p-1"
                   >
-                    Cancel
+                    <X size={20} />
                   </button>
                 </div>
-              </form>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <label className="input-label">
+                      Campaign <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="input"
+                      value={formData.campaign}
+                      onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
+                      placeholder="Sales, Customer Service, etc."
+                    />
+                    <p className="input-hint">The campaign this rule applies to</p>
+                  </div>
+
+                  <div>
+                    <label className="input-label">
+                      Rule Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      className="select"
+                      value={formData.ruleType}
+                      onChange={(e) => setFormData({ ...formData, ruleType: e.target.value })}
+                    >
+                      <option value="mandatory">Mandatory - Must be present in call</option>
+                      <option value="forbidden">Forbidden - Must not be present in call</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="input-label">
+                      Phrase <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="input"
+                      value={formData.phrase}
+                      onChange={(e) => setFormData({ ...formData, phrase: e.target.value })}
+                      placeholder="thank you for calling"
+                    />
+                    <p className="input-hint">The phrase to detect in transcriptions</p>
+                  </div>
+
+                  <div>
+                    <label className="input-label">Description</label>
+                    <textarea
+                      className="input"
+                      rows="3"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Optional description explaining this rule..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="input-label">Weight (1-10)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        className="input"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
+                      />
+                      <p className="input-hint">Impact on quality score</p>
+                    </div>
+
+                    <div>
+                      <label className="input-label">Fuzzy Tolerance (0-5)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        className="input"
+                        value={formData.fuzzyTolerance}
+                        onChange={(e) => setFormData({ ...formData, fuzzyTolerance: parseInt(e.target.value) })}
+                      />
+                      <p className="input-hint">Allowed word variations</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t border-slate-200">
+                    <button type="submit" className="flex-1 btn btn-primary">
+                      {editingRule ? (
+                        <><Check size={18} /> Update Rule</>
+                      ) : (
+                        <><Plus size={18} /> Create Rule</>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        resetForm();
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>

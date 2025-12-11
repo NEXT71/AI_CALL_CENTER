@@ -18,13 +18,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check if user is logged in
     const initAuth = async () => {
-      const token = localStorage.getItem('accessToken');
       const savedUser = localStorage.getItem('user');
 
-      if (token && savedUser) {
+      if (savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
-          // Optionally verify token with backend
+          // Verify authentication with backend (cookies sent automatically)
           const response = await authService.getMe();
           setUser(response.data);
           localStorage.setItem('user', JSON.stringify(response.data));
@@ -42,10 +40,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
-      const { user, accessToken, refreshToken } = response.data;
+      const { user } = response.data;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // Tokens are now in httpOnly cookies, just store user data
       localStorage.setItem('user', JSON.stringify(user));
 
       setUser(user);
@@ -62,10 +59,9 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
-      const { user, accessToken, refreshToken } = response.data;
+      const { user } = response.data;
 
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      // Tokens are now in httpOnly cookies, just store user data
       localStorage.setItem('user', JSON.stringify(user));
 
       setUser(user);
@@ -79,9 +75,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+  const logout = async () => {
+    // Clear cookies via API call
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Clear local storage
     localStorage.removeItem('user');
     setUser(null);
   };

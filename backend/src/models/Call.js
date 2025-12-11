@@ -215,7 +215,7 @@ const callSchema = new mongoose.Schema(
 );
 
 // Indexes for better query performance
-callSchema.index({ callId: 1 });
+// Note: callId already has unique: true, so no separate index needed
 callSchema.index({ agentId: 1 });
 callSchema.index({ agentName: 1 });
 callSchema.index({ campaign: 1 });

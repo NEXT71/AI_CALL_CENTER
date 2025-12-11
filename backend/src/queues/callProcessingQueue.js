@@ -11,6 +11,14 @@ const callQueue = new Queue('call-processing', {
     host: process.env.REDIS_HOST || 'localhost',
     port: process.env.REDIS_PORT || 6379,
     password: process.env.REDIS_PASSWORD,
+    retryStrategy: (times) => {
+      // Stop retrying after 3 attempts to prevent infinite loop
+      if (times > 3) {
+        logger.warn('Redis connection failed after 3 attempts. Queue functionality disabled.');
+        return null; // Stop retrying
+      }
+      return Math.min(times * 1000, 3000);
+    },
   },
   settings: {
     maxStalledCount: 3,
@@ -26,6 +34,16 @@ const callQueue = new Queue('call-processing', {
     removeOnComplete: 100,
     removeOnFail: false,
   },
+});
+
+// Handle Redis connection errors gracefully
+callQueue.on('error', (error) => {
+  logger.error('Queue error', { error: error.message });
+  // Don't crash the app - queue functionality will be disabled
+});
+
+callQueue.on('failed', (job, err) => {
+  logger.error('Job failed', { jobId: job.id, error: err.message });
 });
 
 /**

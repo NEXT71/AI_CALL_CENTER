@@ -9,8 +9,10 @@ exports.protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check for token in headers
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    // Check for token in cookies first (preferred), then headers (fallback for API clients)
+    if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
@@ -31,7 +33,7 @@ exports.protect = async (req, res, next) => {
       if (!user || !user.isActive) {
         return res.status(401).json({
           success: false,
-          message: 'User not found or inactive',
+          message: 'Authentication failed',
         });
       }
 
@@ -40,7 +42,7 @@ exports.protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired token',
+        message: 'Authentication failed',
       });
     }
   } catch (error) {
@@ -70,4 +72,49 @@ exports.authorize = (...roles) => {
 
     next();
   };
+};
+
+/**
+ * Check if user's trial has expired
+ */
+exports.checkTrialExpiration = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    // Skip check if user has active subscription
+    if (user.subscription?.status === 'active') {
+      return next();
+    }
+
+    // Check if trial has expired
+    if (user.subscription?.status === 'trial') {
+      const now = new Date();
+      const trialEndsAt = new Date(user.subscription.trialEndsAt);
+
+      if (now > trialEndsAt) {
+        // Update user status to expired
+        user.subscription.status = 'expired';
+        await user.save();
+
+        return res.status(402).json({
+          success: false,
+          message: 'Your trial period has expired. Please upgrade your plan to continue.',
+          trialExpired: true,
+        });
+      }
+    }
+
+    // If trial is already expired
+    if (user.subscription?.status === 'expired') {
+      return res.status(402).json({
+        success: false,
+        message: 'Your trial period has expired. Please upgrade your plan to continue.',
+        trialExpired: true,
+      });
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 };

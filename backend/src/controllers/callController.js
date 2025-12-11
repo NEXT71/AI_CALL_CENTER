@@ -496,6 +496,9 @@ exports.deleteCall = async (req, res, next) => {
       });
     }
 
+    // Log deletion before deleting
+    await auditService.logCallDeletion(req.user, call, req);
+
     // Delete audio file
     if (fs.existsSync(call.audioFilePath)) {
       fs.unlinkSync(call.audioFilePath);

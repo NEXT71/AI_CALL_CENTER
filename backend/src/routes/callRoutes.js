@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const callController = require('../controllers/callController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, checkTrialExpiration } = require('../middleware/auth');
 const { validateCallUpload, handleValidationErrors, validateObjectId } = require('../middleware/validation');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 
-// All routes are protected
+// All routes are protected and check trial expiration
 router.use(protect);
+router.use(checkTrialExpiration);
 
 // Upload call with rate limiting
 router.post(

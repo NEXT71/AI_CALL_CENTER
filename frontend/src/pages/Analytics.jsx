@@ -37,9 +37,12 @@ const Analytics = () => {
   if (!analytics || analytics.totalCalls === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+        <div className="page-header">
+          <h1 className="page-title">Analytics Dashboard</h1>
+          <p className="page-subtitle">Performance insights and trends across all campaigns</p>
+        </div>
         <div className="card text-center py-12">
-          <p className="text-gray-600">No data available for the selected period</p>
+          <p className="text-gray-500">No data available for the selected period</p>
         </div>
       </div>
     );
@@ -47,10 +50,11 @@ const Analytics = () => {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600 mt-1">Performance insights and trends</p>
+        <div className="page-header">
+          <h1 className="page-title">Analytics Dashboard</h1>
+          <p className="page-subtitle">Performance insights and trends across all campaigns</p>
         </div>
       </div>
 
@@ -84,29 +88,29 @@ const Analytics = () => {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card">
-          <p className="text-sm text-gray-600">Total Calls</p>
+        <div className="stat-card">
+          <p className="text-sm font-medium text-gray-600">Total Calls</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {analytics.overview.totalCalls}
           </p>
         </div>
 
-        <div className="card">
-          <p className="text-sm text-gray-600">Avg Quality Score</p>
+        <div className="stat-card">
+          <p className="text-sm font-medium text-gray-600">Avg Quality Score</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {analytics.overview.avgQualityScore}
           </p>
         </div>
 
-        <div className="card">
-          <p className="text-sm text-gray-600">Avg Compliance Score</p>
+        <div className="stat-card">
+          <p className="text-sm font-medium text-gray-600">Avg Compliance Score</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {analytics.overview.avgComplianceScore}
           </p>
         </div>
 
-        <div className="card">
-          <p className="text-sm text-gray-600">Total Duration</p>
+        <div className="stat-card">
+          <p className="text-sm font-medium text-gray-600">Total Duration</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">
             {Math.floor(analytics.overview.totalDuration / 60)} min
           </p>

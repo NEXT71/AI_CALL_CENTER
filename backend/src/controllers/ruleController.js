@@ -1,4 +1,5 @@
 const ComplianceRule = require('../models/ComplianceRule');
+const auditService = require('../services/auditService');
 
 /**
  * @route   POST /api/rules
@@ -18,6 +19,9 @@ exports.createRule = async (req, res, next) => {
       weight,
       createdBy: req.user._id,
     });
+
+    // Log rule creation
+    await auditService.logRuleCreation(req.user, rule, req);
 
     res.status(201).json({
       success: true,
@@ -111,6 +115,9 @@ exports.updateRule = async (req, res, next) => {
 
     await rule.save();
 
+    // Log rule update
+    await auditService.logRuleUpdate(req.user, rule, req);
+
     res.status(200).json({
       success: true,
       message: 'Compliance rule updated successfully',
@@ -136,6 +143,9 @@ exports.deleteRule = async (req, res, next) => {
         message: 'Compliance rule not found',
       });
     }
+
+    // Log deletion before deleting
+    await auditService.logRuleDeletion(req.user, rule, req);
 
     await rule.deleteOne();
 

@@ -19,7 +19,18 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: 6,
+      minlength: [8, 'Password must be at least 8 characters'],
+      validate: {
+        validator: function(password) {
+          // Check for at least one uppercase, lowercase, number, and special character
+          const hasUpperCase = /[A-Z]/.test(password);
+          const hasLowerCase = /[a-z]/.test(password);
+          const hasNumber = /\d/.test(password);
+          const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+          return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+        },
+        message: 'Password must include uppercase, lowercase, numbers, and special characters'
+      },
       select: false,
     },
     role: {
@@ -35,6 +46,61 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    company: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    subscription: {
+      plan: {
+        type: String,
+        enum: ['starter', 'professional', 'enterprise'],
+        default: 'starter',
+      },
+      status: {
+        type: String,
+        enum: ['trial', 'active', 'expired', 'cancelled'],
+        default: 'trial',
+      },
+      trialEndsAt: {
+        type: Date,
+        default: function() {
+          // Default 14-day trial
+          return new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        },
+      },
+      currentPeriodStart: Date,
+      currentPeriodEnd: Date,
+      stripeCustomerId: String,
+      stripeSubscriptionId: String,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
     },
   },
   {
@@ -56,6 +122,36 @@ userSchema.pre('save', async function (next) {
 // Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Generate email verification token
+userSchema.methods.generateEmailVerificationToken = function () {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  this.emailVerificationToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+  
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  
+  return token; // Return unhashed token to send via email
+};
+
+// Generate password reset token
+userSchema.methods.generatePasswordResetToken = function () {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  this.passwordResetToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+  
+  this.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+  
+  return token; // Return unhashed token to send via email
 };
 
 // Remove password from JSON response
