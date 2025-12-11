@@ -14,6 +14,9 @@ import CallDetails from './pages/CallDetails';
 import UploadCall from './pages/UploadCall';
 import ComplianceRules from './pages/ComplianceRules';
 import Analytics from './pages/Analytics';
+import Subscription from './pages/Subscription';
+import SubscriptionSuccess from './pages/SubscriptionSuccess';
+import SubscriptionCancelled from './pages/SubscriptionCancelled';
 import Landing from './pages/Landing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -38,6 +41,11 @@ function App() {
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          
+          {/* Subscription Pages */}
+          <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+          <Route path="/subscription/success" element={<ProtectedRoute><SubscriptionSuccess /></ProtectedRoute>} />
+          <Route path="/subscription/cancelled" element={<ProtectedRoute><SubscriptionCancelled /></ProtectedRoute>} />
           
           {/* App Pages - Protected */}
           <Route path="/app" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

@@ -8,7 +8,8 @@ import {
   BarChart3, 
   LogOut,
   Menu,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,6 +30,7 @@ const Layout = () => {
     { name: 'Upload Call', href: '/app/upload', icon: Upload, roles: ['Admin', 'Manager', 'QA'] },
     { name: 'Compliance Rules', href: '/app/rules', icon: FileText, roles: ['Admin', 'Manager'] },
     { name: 'Analytics', href: '/app/analytics', icon: BarChart3, roles: ['Admin', 'Manager', 'QA'] },
+    { name: 'Subscription', href: '/subscription', icon: CreditCard, roles: ['Admin', 'Manager', 'QA', 'Agent'] },
   ];
 
   // Filter navigation based on user role

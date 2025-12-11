@@ -121,3 +121,50 @@ export const reportService = {
     return response.data;
   },
 };
+
+export const subscriptionService = {
+  getPlans: async () => {
+    const response = await api.get('/subscriptions/plans');
+    return response.data;
+  },
+
+  createCheckoutSession: async (planType) => {
+    const response = await api.post('/subscriptions/create-checkout-session', { planType });
+    return response.data;
+  },
+
+  createBillingPortalSession: async () => {
+    const response = await api.post('/subscriptions/create-portal-session');
+    return response.data;
+  },
+
+  getCurrentSubscription: async () => {
+    const response = await api.get('/subscriptions/current');
+    return response.data;
+  },
+
+  cancelSubscription: async () => {
+    const response = await api.post('/subscriptions/cancel');
+    return response.data;
+  },
+
+  reactivateSubscription: async () => {
+    const response = await api.post('/subscriptions/reactivate');
+    return response.data;
+  },
+
+  getInvoices: async () => {
+    const response = await api.get('/subscriptions/invoices');
+    return response.data;
+  },
+};
+
+const apiService = {
+  ...authService,
+  ...callService,
+  ...ruleService,
+  ...reportService,
+  ...subscriptionService,
+};
+
+export default apiService;

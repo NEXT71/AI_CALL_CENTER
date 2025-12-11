@@ -10,6 +10,8 @@
     "lint": "eslint src --ext js,jsx"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.5.3",
     "axios": "^1.6.2",
     "date-fns": "^3.0.6",
     "dompurify": "^3.3.1",

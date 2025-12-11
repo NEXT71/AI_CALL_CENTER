@@ -28,6 +28,10 @@ const reportRoutes = require('./routes/reportRoutes');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 console.log('Loading auditLogRoutes...');
 const auditLogRoutes = require('./routes/auditLogRoutes');
+console.log('Loading subscriptionRoutes...');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+console.log('Loading webhookRoutes...');
+const webhookRoutes = require('./routes/webhookRoutes');
 console.log('✅ Routes loaded');
 
 // Import jobs
@@ -83,6 +87,10 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 app.use(cors(corsOptions));
+
+// Stripe webhook endpoint - MUST be before body parser
+// Stripe needs raw body for signature verification
+app.use('/api/webhooks', webhookRoutes);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -163,6 +171,7 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/reports', reportRoutes);
 // app.use('/api/queue', queueRoutes); // Temporarily disabled - Redis not running
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // 404 Handler
 app.use('*', (req, res) => {
