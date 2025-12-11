@@ -90,10 +90,27 @@ const Subscription = () => {
       if (response.success && response.data.url) {
         // Redirect to Stripe Checkout
         window.location.href = response.data.url;
+      } else {
+        throw new Error(response.message || 'Failed to create checkout session');
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      alert('Failed to start checkout process. Please try again.');
+      
+      // Show user-friendly error
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start checkout process';
+      
+      if (errorMessage.includes('Price ID not configured')) {
+        alert(
+          '⚠️ Stripe Products Not Configured\n\n' +
+          'To enable subscriptions, please:\n' +
+          '1. Go to https://dashboard.stripe.com/test/products\n' +
+          '2. Create 3 products (Starter, Professional, Enterprise)\n' +
+          '3. Copy the Price IDs to your .env file\n\n' +
+          'Contact support if you need assistance.'
+        );
+      } else {
+        alert(`Error: ${errorMessage}\n\nPlease try again or contact support.`);
+      }
     } finally {
       setProcessingPlan(null);
     }
@@ -172,8 +189,8 @@ const Subscription = () => {
         </p>
       </div>
 
-      {/* Current Subscription Info */}
-      {currentSubscription && currentSubscription.status !== 'trial' && (
+      {/* Current Subscription Info - Only show for paid subscribers */}
+      {currentSubscription && currentSubscription.status === 'active' && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -181,7 +198,7 @@ const Subscription = () => {
                 Current Plan: {currentSubscription.plan?.toUpperCase()}
               </h3>
               <p className="text-blue-700">
-                Status: <span className="font-medium">{currentSubscription.status}</span>
+                Status: <span className="font-medium capitalize">{currentSubscription.status}</span>
               </p>
               {currentSubscription.currentPeriodEnd && (
                 <p className="text-blue-600 text-sm mt-1">
@@ -213,16 +230,22 @@ const Subscription = () => {
         </div>
       )}
 
-      {/* Trial Info */}
-      {currentSubscription && currentSubscription.status === 'trial' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-            You're on a Free Trial
-          </h3>
-          <p className="text-yellow-700">
-            Your trial ends on {new Date(currentSubscription.trialEndsAt).toLocaleDateString()}.
-            Subscribe to a plan to continue using QualityPulse after your trial.
-          </p>
+      {/* Trial Info - Only show for trial users */}
+      {currentSubscription && currentSubscription.status === 'trial' && currentSubscription.trialEndsAt && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                🎉 You're on a Free Trial
+              </h3>
+              <p className="text-yellow-800 mb-1">
+                Your trial ends on <span className="font-semibold">{new Date(currentSubscription.trialEndsAt).toLocaleDateString()}</span>
+              </p>
+              <p className="text-yellow-700 text-sm">
+                Choose a plan below to continue using QualityPulse after your trial ends.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

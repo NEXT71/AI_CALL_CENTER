@@ -81,6 +81,84 @@ exports.createCheckoutSession = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error creating checkout session:', error);
+    
+    // Return user-friendly error message
+    const errorMessage = error.message.includes('Price ID not configured')
+      ? error.message
+      : 'Failed to create checkout session. Please try again later.';
+    
+    res.status(400).json({
+      success: false,
+      message: errorMessage,
+    });
+  }
+};
+
+/**
+ * @route   GET /api/subscriptions/verify-session/:sessionId
+ * @desc    Verify checkout session and update subscription (fallback if webhook fails)
+ * @access  Private
+ */
+exports.verifySession = async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Retrieve the session from Stripe
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription'],
+    });
+
+    // Verify session belongs to this user
+    if (session.metadata.userId !== user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized',
+      });
+    }
+
+    // If payment was successful, update user subscription
+    if (session.payment_status === 'paid' && session.subscription) {
+      const subscription = session.subscription;
+      const planType = session.metadata.planType;
+
+      user.subscription.stripeCustomerId = session.customer;
+      user.subscription.stripeSubscriptionId = typeof subscription === 'string' ? subscription : subscription.id;
+      user.subscription.plan = planType;
+      user.subscription.status = 'active';
+      
+      if (typeof subscription === 'object') {
+        user.subscription.currentPeriodStart = new Date(subscription.current_period_start * 1000);
+        user.subscription.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+      }
+
+      await user.save();
+
+      logger.info('Subscription verified and activated:', {
+        userId: user._id,
+        planType,
+        sessionId,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        paymentStatus: session.payment_status,
+        subscriptionStatus: user.subscription.status,
+        plan: user.subscription.plan,
+      },
+    });
+  } catch (error) {
+    logger.error('Error verifying session:', error);
     next(error);
   }
 };

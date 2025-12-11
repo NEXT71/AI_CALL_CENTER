@@ -13,7 +13,7 @@ exports.getCallReport = async (req, res, next) => {
       .populate('reviewedBy', 'name email');
 
     if (!call) {
-      return res.status(404).json({
+      return res.status(404).json({ 
         success: false,
         message: 'Call not found',
       });

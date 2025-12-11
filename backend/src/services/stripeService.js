@@ -85,6 +85,15 @@ exports.createCheckoutSession = async (user, planType) => {
       throw new Error('Invalid plan type');
     }
 
+    // Check if price ID is configured
+    if (!plan.priceId) {
+      throw new Error(
+        `Stripe Price ID not configured for ${planType} plan. ` +
+        'Please create products in Stripe Dashboard and add Price IDs to .env file. ' +
+        'Visit: https://dashboard.stripe.com/test/products'
+      );
+    }
+
     // Create customer if not exists
     let customerId = user.subscription?.stripeCustomerId;
     if (!customerId) {
@@ -245,6 +254,14 @@ exports.getInvoices = async (customerId, limit = 10) => {
 exports.constructWebhookEvent = (payload, signature) => {
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    // In development, if webhook secret is not configured, skip verification
+    if (!webhookSecret && process.env.NODE_ENV === 'development') {
+      logger.warn('Webhook secret not configured - skipping signature verification (development only)');
+      // Parse the payload directly
+      return typeof payload === 'string' ? JSON.parse(payload) : payload;
+    }
+    
     if (!webhookSecret) {
       throw new Error('Webhook secret not configured');
     }

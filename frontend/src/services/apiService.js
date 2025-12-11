@@ -133,6 +133,11 @@ export const subscriptionService = {
     return response.data;
   },
 
+  verifySubscriptionSession: async (sessionId) => {
+    const response = await api.get(`/subscriptions/verify-session/${sessionId}`);
+    return response.data;
+  },
+
   createBillingPortalSession: async () => {
     const response = await api.post('/subscriptions/create-portal-session');
     return response.data;
