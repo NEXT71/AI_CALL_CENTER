@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('../config/logger');
 const config = require('../config/config');
 const logger = require('../config/logger');
 
@@ -173,7 +174,7 @@ exports.healthCheck = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('AI Service health check failed:', error.message);
+    logger.error('AI Service health check failed', { error: error.message });
     return { status: 'unavailable' };
   }
 };

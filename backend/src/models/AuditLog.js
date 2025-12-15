@@ -68,5 +68,9 @@ auditLogSchema.index({ userId: 1 });
 auditLogSchema.index({ action: 1 });
 auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ status: 1 });
+// Compound indexes for audit queries
+auditLogSchema.index({ userId: 1, createdAt: -1 });
+auditLogSchema.index({ action: 1, status: 1 });
+auditLogSchema.index({ resourceType: 1, resourceId: 1 });
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);

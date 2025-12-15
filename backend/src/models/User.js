@@ -161,4 +161,15 @@ userSchema.methods.toJSON = function () {
   return obj;
 };
 
+// Indexes for efficient querying
+userSchema.index({ email: 1 }); // Already unique, but explicit index
+userSchema.index({ role: 1 });
+userSchema.index({ 'subscription.status': 1 });
+userSchema.index({ isActive: 1 });
+userSchema.index({ emailVerified: 1 });
+userSchema.index({ createdAt: -1 });
+// Compound indexes for common queries
+userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ 'subscription.status': 1, 'subscription.currentPeriodEnd': 1 });
+
 module.exports = mongoose.model('User', userSchema);

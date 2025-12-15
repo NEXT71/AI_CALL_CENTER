@@ -31,7 +31,7 @@ exports.createAuditLog = async ({
     });
   } catch (error) {
     // Don't throw error - audit log failure shouldn't break the main operation
-    console.error('Audit log creation failed:', error);
+    logger.error('Audit log creation failed', { error: error.message });
   }
 };
 

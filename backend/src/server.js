@@ -1,4 +1,3 @@
-console.log('📦 Loading dependencies...');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -6,7 +5,6 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-console.log('✅ Core dependencies loaded');
 
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
@@ -14,37 +12,26 @@ const config = require('./config/config');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./config/logger');
 const validateEnv = require('./config/validateEnv');
-console.log('✅ Config modules loaded');
 
 // Import routes
-console.log('Loading authRoutes...');
 const authRoutes = require('./routes/authRoutes');
-console.log('Loading callRoutes...');
 const callRoutes = require('./routes/callRoutes');
-console.log('Loading ruleRoutes...');
 const ruleRoutes = require('./routes/ruleRoutes');
-console.log('Loading reportRoutes...');
 const reportRoutes = require('./routes/reportRoutes');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
-console.log('Loading auditLogRoutes...');
 const auditLogRoutes = require('./routes/auditLogRoutes');
-console.log('Loading subscriptionRoutes...');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
-console.log('Loading webhookRoutes...');
 const webhookRoutes = require('./routes/webhookRoutes');
-console.log('✅ Routes loaded');
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
-console.log('✅ Jobs loaded');
 
 // Validate environment variables before starting
 try {
-  console.log('🔍 Validating environment variables...');
   validateEnv();
-  console.log('✅ Environment validation passed');
+  logger.info('Environment validation passed');
 } catch (error) {
-  console.error('❌ Environment validation failed:', error.message);
+  logger.error('Environment validation failed', { error: error.message });
   process.exit(1);
 }
 
@@ -78,14 +65,20 @@ app.use(cookieParser()); // Parse cookies
 // CORS Configuration
 const corsOptions = {
   origin: process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
     : config.nodeEnv === 'production'
-    ? ['https://your-app.vercel.app'] // Update with your actual Vercel URL
+    ? [] // Reject all origins in production if ALLOWED_ORIGINS not set (security)
     : ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
+
+// Warn if CORS not configured in production
+if (config.nodeEnv === 'production' && !process.env.ALLOWED_ORIGINS) {
+  logger.warn('ALLOWED_ORIGINS not set in production - CORS will reject all requests');
+}
+
 app.use(cors(corsOptions));
 
 // Stripe webhook endpoint - MUST be before body parser
@@ -164,14 +157,24 @@ app.get('/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/calls', callRoutes);
-app.use('/api/rules', ruleRoutes);
-app.use('/api/reports', reportRoutes);
-// app.use('/api/queue', queueRoutes); // Temporarily disabled - Redis not running
-app.use('/api/audit-logs', auditLogRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
+// API Routes - Version 1
+const API_VERSION = '/api/v1';
+
+app.use(`${API_VERSION}/auth`, authRoutes);
+app.use(`${API_VERSION}/calls`, callRoutes);
+app.use(`${API_VERSION}/rules`, ruleRoutes);
+app.use(`${API_VERSION}/reports`, reportRoutes);
+// app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
+app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
+app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
+
+// Legacy routes (deprecated - redirect to v1)
+app.use('/api/auth', (req, res) => res.redirect(308, `${API_VERSION}/auth${req.url}`));
+app.use('/api/calls', (req, res) => res.redirect(308, `${API_VERSION}/calls${req.url}`));
+app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req.url}`));
+app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
+app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
+app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`));
 
 // 404 Handler
 app.use('*', (req, res) => {
@@ -188,27 +191,14 @@ app.use(errorHandler);
 const PORT = config.port;
 
 const server = app.listen(PORT, () => {
-  logger.info(`Server started on port ${PORT}`, { 
+  logger.info('Server started successfully', { 
     environment: config.nodeEnv,
-    port: PORT 
+    port: PORT,
+    apiVersion: '/api/v1'
   });
   
   // Start scheduled jobs
   // fileCleanupJob.start(); // Temporarily disabled
-  
-  console.log(`
-  ╔═══════════════════════════════════════════════════════╗
-  ║                                                       ║
-  ║   🎯 AI Call Center API Server                       ║
-  ║                                                       ║
-  ║   Environment: ${config.nodeEnv.toUpperCase().padEnd(38)} ║
-  ║   Port: ${PORT.toString().padEnd(44)} ║
-  ║   Database: Connected                                 ║
-  ║                                                       ║
-  ║   📝 API Docs: http://localhost:${PORT}                  ║
-  ║                                                       ║
-  ╚═══════════════════════════════════════════════════════╝
-  `);
 });
 
 // Graceful shutdown handler
@@ -239,17 +229,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error('❌ UNHANDLED REJECTION:', err.message);
-  console.error('Stack:', err.stack);
-  logger.error('Unhandled Rejection:', { error: err.message, stack: err.stack });
+  logger.error('Unhandled Rejection - shutting down', { error: err.message, stack: err.stack });
   process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error('❌ UNCAUGHT EXCEPTION:', err.message);
-  console.error('Stack:', err.stack);
-  logger.error('Uncaught Exception:', { error: err.message, stack: err.stack });
+  logger.error('Uncaught Exception - shutting down', { error: err.message, stack: err.stack });
   process.exit(1);
 });
 

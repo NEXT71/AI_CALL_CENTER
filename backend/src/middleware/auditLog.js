@@ -20,7 +20,8 @@ const createAuditLog = async (data) => {
     await AuditLog.create(data);
   } catch (error) {
     // Don't throw error to prevent audit logging from breaking the application
-    console.error('Audit logging failed:', error.message);
+    const logger = require('../config/logger');
+    logger.error('Audit logging failed', { error: error.message });
   }
 };
 
@@ -103,7 +104,7 @@ const logAuthEvent = async (req, action, status = 'success', errorMessage = null
       errorMessage,
     });
   } catch (error) {
-    console.error('Auth logging failed:', error.message);
+    logger.error('Auth logging failed', { error: error.message });
   }
 };
 

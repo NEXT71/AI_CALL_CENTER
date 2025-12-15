@@ -79,7 +79,7 @@ exports.register = async (req, res, next) => {
 
     // Send verification email (don't wait for it)
     emailService.sendVerificationEmail(user, verificationToken).catch(error => {
-      console.error('Failed to send verification email:', error);
+      logger.warn('Failed to send verification email', { email: user.email, error: error.message });
     });
 
     // Generate tokens
@@ -329,7 +329,7 @@ exports.verifyEmail = async (req, res, next) => {
 
     // Send welcome email
     emailService.sendWelcomeEmail(user).catch(error => {
-      console.error('Failed to send welcome email:', error);
+      logger.warn('Failed to send welcome email', { email: user.email, error: error.message });
     });
 
     res.status(200).json({

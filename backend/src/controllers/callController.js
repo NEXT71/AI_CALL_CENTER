@@ -181,7 +181,10 @@ exports.uploadCall = [
       // Clean up uploaded file if database operation fails
       if (req.file) {
         fs.unlink(req.file.path, (err) => {
-          if (err) console.error('Error deleting file:', err);
+          if (err) logger.error('Error deleting uploaded file', { 
+            path: req.file.path, 
+            error: err.message 
+          });
         });
       }
       next(error);
@@ -197,14 +200,14 @@ async function processCallAsync(callId) {
     const call = await Call.findById(callId);
     if (!call) return;
 
-    console.log(`🔄 Processing call ${call.callId} with FREE AI models...`);
+    logger.info('Starting AI processing', { callId: call.callId });
 
     // Update status
     call.status = 'processing';
     await call.save();
 
     // Step 1: Transcribe audio (FREE Whisper)
-    console.log(`🎙️  Step 1: Transcribing with Whisper (medium)...`);
+    logger.info('Transcribing audio with Whisper', { callId: call.callId });
     const transcriptionResult = await aiService.transcribeAudio(call.audioFilePath);
     call.transcript = transcriptionResult.text;
     call.transcriptTimestamps = transcriptionResult.timestamps || [];
@@ -212,7 +215,7 @@ async function processCallAsync(callId) {
     await call.save();
 
     // Step 2: Speaker Diarization (FREE pyannote.audio) - CRITICAL
-    console.log(`🎭 Step 2: Speaker diarization with pyannote.audio...`);
+    logger.info('Processing speaker diarization', { callId: call.callId });
     try {
       const diarizeResult = await aiService.diarizeAudio(call.audioFilePath);
       call.speakerSegments = diarizeResult.speaker_segments;
@@ -220,7 +223,7 @@ async function processCallAsync(callId) {
       await call.save();
 
       // Step 2b: Calculate talk-time metrics
-      console.log(`📊 Step 2b: Calculating talk-time metrics...`);
+      logger.info('Calculating talk-time metrics', { callId: call.callId });
       const talkTimeResult = await aiService.calculateTalkTime(
         call.audioFilePath,
         diarizeResult.speaker_segments
@@ -233,11 +236,11 @@ async function processCallAsync(callId) {
       call.deadAirSegments = talkTimeResult.dead_air_segments || [];
       await call.save();
     } catch (error) {
-      console.log(`⚠️  Diarization skipped: ${error.message}`);
+      logger.warn('Diarization skipped', { callId: call.callId, error: error.message });
     }
 
     // Step 3: Analyze sentiment (FREE DistilBERT)
-    console.log(`😊 Step 3: Analyzing sentiment with DistilBERT...`);
+    logger.info('Analyzing sentiment', { callId: call.callId });
     const sentimentResult = await aiService.analyzeSentiment(call.transcript);
     call.sentiment = sentimentResult.label;
     call.sentimentScore = sentimentResult.score;
@@ -248,30 +251,30 @@ async function processCallAsync(callId) {
     await call.save();
 
     // Step 4: Extract entities (FREE spaCy) - optional
+    logger.info('Extracting entities', { callId: call.callId });
     try {
-      console.log(`🔍 Step 4: Extracting entities with spaCy...`);
       const entitiesResult = await aiService.extractEntities(call.transcript);
       call.entities = entitiesResult.entities || [];
       call.keyPhrases = entitiesResult.key_phrases || [];
       await call.save();
     } catch (error) {
-      console.log(`⚠️  Entity extraction skipped: ${error.message}`);
+      logger.warn('Entity extraction skipped', { callId: call.callId, error: error.message });
     }
 
     // Step 5: Generate summary (FREE BART) - optional for longer transcripts
     try {
       if (call.transcript.length > 500) {
-        console.log(`📄 Step 5: Generating summary with BART...`);
+        logger.info('Generating summary', { callId: call.callId });
         const summaryResult = await aiService.summarizeText(call.transcript);
         call.summary = summaryResult.summary;
         await call.save();
       }
     } catch (error) {
-      console.log(`⚠️  Summarization skipped: ${error.message}`);
+      logger.warn('Summarization skipped', { callId: call.callId, error: error.message });
     }
 
     // Step 6: Check compliance (FREE rapidfuzz + regex)
-    console.log(`✅ Step 6: Checking compliance with rapidfuzz...`);
+    logger.info('Checking compliance', { callId: call.callId, campaign: call.campaign });
     const complianceResult = await scoringService.checkCompliance(
       call.transcript,
       call.campaign
@@ -282,7 +285,7 @@ async function processCallAsync(callId) {
     await call.save();
 
     // Step 7: Calculate quality score (rule-based, agent-focused)
-    console.log(`📊 Step 7: Calculating quality score...`);
+    logger.info('Calculating quality score', { callId: call.callId });
     const qualityResult = scoringService.calculateQualityScore({
       transcript: call.transcript,
       sentiment: call.agentSentiment || call.sentiment,
@@ -300,9 +303,9 @@ async function processCallAsync(callId) {
     call.processedAt = new Date();
     await call.save();
 
-    console.log(`✅ Call ${call.callId} processed successfully (100% FREE AI)`);
+    logger.info('Call processed successfully', { callId: call.callId, qualityScore: call.qualityScore });
   } catch (error) {
-    console.error(`❌ Error processing call ${callId}:`, error);
+    logger.error('Error processing call', { callId, error: error.message, stack: error.stack });
     
     // Update call with error status
     await Call.findByIdAndUpdate(callId, {

@@ -8,7 +8,15 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/scripts/seedData.js",
     "worker": "node src/workers/callProcessor.js",
-    "worker:dev": "nodemon src/workers/callProcessor.js"
+    "worker:dev": "nodemon src/workers/callProcessor.js",
+    "generate-secrets": "node src/scripts/generateSecrets.js",
+    "check-quality": "node src/scripts/checkCodeQuality.js",
+    "check-production": "node src/scripts/checkProduction.js",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "test": "echo 'Error: no test specified' && exit 1",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix"
   },
   "keywords": [
     "call-center",

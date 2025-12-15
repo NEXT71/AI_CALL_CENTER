@@ -80,20 +80,13 @@ exports.sendVerificationEmail = async (user, verificationToken) => {
 
     // In development without SMTP, log the email details
     if (config.nodeEnv === 'development' && !process.env.SMTP_USER) {
-      logger.info('📧 [DEVELOPMENT] Verification email (not actually sent):', {
+      logger.info('Verification email (development - not sent)', {
         to: user.email,
         subject: mailOptions.subject,
         verificationUrl: verificationUrl,
       });
-      console.log('\n' + '='.repeat(80));
-      console.log('📧 EMAIL WOULD BE SENT (Development Mode)');
-      console.log('='.repeat(80));
-      console.log('To:', user.email);
-      console.log('Subject:', mailOptions.subject);
-      console.log('Verification URL:', verificationUrl);
-      console.log('='.repeat(80) + '\n');
     } else {
-      logger.info('Verification email sent:', {
+      logger.info('Verification email sent', {
         to: user.email,
         messageId: info.messageId,
       });
@@ -159,20 +152,13 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
 
     // In development without SMTP, log the email details
     if (config.nodeEnv === 'development' && !process.env.SMTP_USER) {
-      logger.info('📧 [DEVELOPMENT] Password reset email (not actually sent):', {
+      logger.info('Password reset email (development - not sent)', {
         to: user.email,
         subject: mailOptions.subject,
         resetUrl: resetUrl,
       });
-      console.log('\n' + '='.repeat(80));
-      console.log('📧 EMAIL WOULD BE SENT (Development Mode)');
-      console.log('='.repeat(80));
-      console.log('To:', user.email);
-      console.log('Subject:', mailOptions.subject);
-      console.log('Reset URL:', resetUrl);
-      console.log('='.repeat(80) + '\n');
     } else {
-      logger.info('Password reset email sent:', {
+      logger.info('Password reset email sent', {
         to: user.email,
         messageId: info.messageId,
       });
@@ -238,18 +224,12 @@ exports.sendWelcomeEmail = async (user) => {
 
     // In development without SMTP, log the email details
     if (config.nodeEnv === 'development' && !process.env.SMTP_USER) {
-      logger.info('📧 [DEVELOPMENT] Welcome email (not actually sent):', {
+      logger.info('Welcome email (development - not sent)', {
         to: user.email,
         subject: mailOptions.subject,
       });
-      console.log('\n' + '='.repeat(80));
-      console.log('📧 EMAIL WOULD BE SENT (Development Mode)');
-      console.log('='.repeat(80));
-      console.log('To:', user.email);
-      console.log('Subject:', mailOptions.subject);
-      console.log('='.repeat(80) + '\n');
     } else {
-      logger.info('Welcome email sent:', {
+      logger.info('Welcome email sent', {
         to: user.email,
         messageId: info.messageId,
       });
