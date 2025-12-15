@@ -162,7 +162,7 @@ userSchema.methods.toJSON = function () {
 };
 
 // Indexes for efficient querying
-userSchema.index({ email: 1 }); // Already unique, but explicit index
+// Note: email already has unique index from schema definition above
 userSchema.index({ role: 1 });
 userSchema.index({ 'subscription.status': 1 });
 userSchema.index({ isActive: 1 });
