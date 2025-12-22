@@ -97,24 +97,24 @@ const Landing = () => {
 
   const testimonials = [
     {
-      name: 'Sarah Johnson',
+      name: 'Maria Gonzalez',
       role: 'QA Manager',
-      company: 'TechCorp Solutions',
-      content: 'QualityPulse transformed our quality assurance process. We\'ve seen a 40% improvement in call quality scores.',
+      company: 'NextelBPO',
+      content: 'QualityPulse has been essential for our ACA campaign compliance. We\'ve reduced compliance violations by 65% and improved agent training effectiveness.',
       rating: 5
     },
     {
-      name: 'Michael Chen',
+      name: 'David Thompson',
       role: 'Operations Director',
-      company: 'Global Services Inc',
-      content: 'The AI-powered insights have been game-changing. We can now review 100% of calls instead of just samples.',
+      company: 'NextelBPO',
+      content: 'For our Medicare campaigns, the AI analysis helps us maintain the highest quality standards. We can now monitor every call and provide real-time feedback to agents.',
       rating: 5
     },
     {
-      name: 'Emily Rodriguez',
+      name: 'Lisa Chen',
       role: 'Team Lead',
-      company: 'CustomerFirst BPO',
-      content: 'Compliance monitoring is effortless now. The system catches issues we would have missed manually.',
+      company: 'NextelBPO',
+      content: 'The Final Expense campaign requires perfect compliance, and QualityPulse ensures we meet all regulatory requirements while maintaining excellent customer service.',
       rating: 5
     }
   ];

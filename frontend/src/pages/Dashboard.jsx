@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [salesData, setSalesData] = useState(null);
   const [recentCalls, setRecentCalls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaign, setCampaign] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -21,7 +22,7 @@ const Dashboard = () => {
     if (user) {
       fetchDashboardData();
     }
-  }, [dateRange, user]);
+  }, [dateRange, campaign, user]);
 
   const fetchDashboardData = async () => {
     if (!user) {
@@ -32,9 +33,9 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const [callsResponse, analyticsResponse, salesResponse] = await Promise.all([
-        callService.getCalls({ limit: 10, status: 'completed' }),
-        reportService.getAnalyticsSummary(dateRange).catch(() => ({ data: null })),
-        reportService.getSalesSummary(dateRange).catch(() => ({ data: null })),
+        callService.getCalls({ limit: 10, status: 'completed', campaign }),
+        reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
+        reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
       ]);
 
       setRecentCalls(callsResponse.data);
@@ -100,6 +101,17 @@ const Dashboard = () => {
               className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               style={{ width: '150px' }}
             />
+            <select
+              value={campaign}
+              onChange={(e) => setCampaign(e.target.value)}
+              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+              style={{ width: '140px' }}
+            >
+              <option value="">All Campaigns</option>
+              <option value="ACA">ACA</option>
+              <option value="Medicare">Medicare</option>
+              <option value="Final Expense">Final Expense</option>
+            </select>
           </div>
         </div>
       </div>

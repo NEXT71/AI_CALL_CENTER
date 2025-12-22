@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 const Analytics = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [campaign, setCampaign] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -12,12 +13,12 @@ const Analytics = () => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [dateRange]);
+  }, [dateRange, campaign]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await reportService.getAnalyticsSummary(dateRange);
+      const response = await reportService.getAnalyticsSummary(dateRange, campaign);
       setAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -82,6 +83,21 @@ const Analytics = () => {
               value={dateRange.endDate}
               onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Campaign
+            </label>
+            <select
+              className="select"
+              value={campaign}
+              onChange={(e) => setCampaign(e.target.value)}
+            >
+              <option value="">All Campaigns</option>
+              <option value="ACA">ACA</option>
+              <option value="Medicare">Medicare</option>
+              <option value="Final Expense">Final Expense</option>
+            </select>
           </div>
         </div>
       </div>

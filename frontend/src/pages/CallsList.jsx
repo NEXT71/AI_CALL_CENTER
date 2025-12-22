@@ -152,13 +152,16 @@ const CallsList = () => {
                 <Building2 size={14} className="inline mr-1.5" />
                 Campaign
               </label>
-              <input
-                type="text"
-                placeholder="Campaign name..."
-                className="input"
+              <select
+                className="select"
                 value={filters.campaign}
                 onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-              />
+              >
+                <option value="">All Campaigns</option>
+                <option value="ACA">ACA</option>
+                <option value="Medicare">Medicare</option>
+                <option value="Final Expense">Final Expense</option>
+              </select>
             </div>
 
             {/* Status Filter */}

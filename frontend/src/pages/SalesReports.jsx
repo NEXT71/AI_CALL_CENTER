@@ -6,6 +6,7 @@ import { TrendingUp, Users, Target, Award, Download } from 'lucide-react';
 const SalesReports = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [campaign, setCampaign] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -13,12 +14,12 @@ const SalesReports = () => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [dateRange]);
+  }, [dateRange, campaign]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await salesService.getSalesAnalytics(dateRange);
+      const response = await salesService.getSalesAnalytics(dateRange, campaign);
       setAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -49,6 +50,16 @@ const SalesReports = () => {
             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
             className="input"
           />
+          <select
+            value={campaign}
+            onChange={(e) => setCampaign(e.target.value)}
+            className="input"
+          >
+            <option value="">All Campaigns</option>
+            <option value="ACA">ACA</option>
+            <option value="Medicare">Medicare</option>
+            <option value="Final Expense">Final Expense</option>
+          </select>
         </div>
       </div>
 
