@@ -75,6 +75,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await authService.getMe();
+      setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      return { success: false, error };
+    }
+  };
+
   const logout = async () => {
     // Clear cookies via API call
     try {
@@ -102,6 +114,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
     hasRole,
     isAuthenticated: !!user,
   };

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2, Home, LayoutDashboard, AlertCircle } from 'lucide-react';
-import apiService from '../services/apiService';
-
+import apiService from '../services/apiService';import { useAuth } from '../context/AuthContext';
 const SubscriptionSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [verified, setVerified] = useState(false);
@@ -28,6 +28,8 @@ const SubscriptionSuccess = () => {
       
       if (response.success) {
         setVerified(true);
+        // Refresh user data to update subscription status
+        await refreshUser();
       } else {
         setError('Subscription verification failed. You can try manual activation below.');
       }
@@ -53,6 +55,8 @@ const SubscriptionSuccess = () => {
         if (response.success) {
           setVerified(true);
           setError(null);
+          // Refresh user data to update subscription status
+          await refreshUser();
           return;
         }
       } catch (activateError) {
@@ -67,6 +71,8 @@ const SubscriptionSuccess = () => {
           if (verifyResponse.success) {
             setVerified(true);
             setError(null);
+            // Refresh user data to update subscription status
+            await refreshUser();
             return;
           }
         }
