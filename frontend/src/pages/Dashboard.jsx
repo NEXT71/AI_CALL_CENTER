@@ -78,26 +78,26 @@ const Dashboard = () => {
       <EmailVerificationBanner />
       
       {/* Page Header with Date Filter */}
-      <div className="page-header">
+      <div className="page-header mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Monitor performance and quality metrics across your organization</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+            <p className="text-sm text-slate-600 mt-2">Monitor performance and quality metrics across your organization</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl shadow-md border border-slate-200">
             <input
               type="date"
               value={dateRange.startDate}
               onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-              className="input"
+              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               style={{ width: '150px' }}
             />
-            <span className="text-slate-500">to</span>
+            <span className="text-slate-500 font-medium">to</span>
             <input
               type="date"
               value={dateRange.endDate}
               onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-              className="input"
+              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               style={{ width: '150px' }}
             />
           </div>
@@ -106,18 +106,18 @@ const Dashboard = () => {
 
       {/* KPI Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div className="kpi-card">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg border-2 border-blue-200 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="kpi-label">Total Calls</p>
-                <p className="kpi-value">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
-                <p className="kpi-change kpi-change-positive flex items-center gap-1 mt-2">
-                  <ArrowUp size={12} />
+                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Total Calls</p>
+                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
+                <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-3">
+                  <ArrowUp size={14} />
                   <span>12.5% from last period</span>
                 </p>
               </div>
-              <div className="icon-container icon-container-blue">
+              <div className="p-3 bg-blue-600 rounded-xl shadow-md">
                 <Phone size={20} />
               </div>
             </div>

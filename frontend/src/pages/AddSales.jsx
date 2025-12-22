@@ -108,7 +108,7 @@ const AddSales = () => {
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto animate-fade-in">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
@@ -118,11 +118,11 @@ const AddSales = () => {
           duration={toast.duration}
         />
       ))}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add Sales Record</h1>
-            <p className="text-sm text-gray-600 mt-1">Enter daily sales data for an agent</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Add Sales Record</h1>
+            <p className="text-sm text-slate-600 mt-2">Enter daily sales data for an agent</p>
           </div>
           <button
             onClick={() => navigate('/sales-data')}
@@ -134,18 +134,18 @@ const AddSales = () => {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
-            <XCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-6 bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-start shadow-sm">
+            <XCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Agent & Campaign Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User className="w-4 h-4 inline mr-1" />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
                 Agent *
               </label>
               <select
@@ -165,8 +165,8 @@ const AddSales = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Briefcase className="w-4 h-4 inline mr-1" />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <Briefcase className="w-4 h-4 inline mr-1.5 text-blue-600" />
                 Campaign *
               </label>
               <input
@@ -187,8 +187,8 @@ const AddSales = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <Calendar className="w-4 h-4 inline mr-1.5 text-blue-600" />
                 Date *
               </label>
               <input

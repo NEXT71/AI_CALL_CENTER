@@ -157,10 +157,10 @@ const ViewSales = () => {
         />
       ))}
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sales Data</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage and view sales records</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Sales Data</h1>
+          <p className="text-sm text-slate-600 mt-2">Manage and view sales records</p>
         </div>
         <div className="flex space-x-3">
           <button onClick={handleExport} className="btn-secondary">
@@ -185,21 +185,21 @@ const ViewSales = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5 mb-6 hover:shadow-lg transition-shadow duration-300">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by agent name or campaign..."
-            className="input w-full pl-10"
+            className="w-full pl-12 pr-4 py-3 text-sm border-0 bg-slate-50 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all duration-200"
           />
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <input
             type="date"
@@ -233,44 +233,51 @@ const ViewSales = () => {
 
       {/* Bulk Actions */}
       {selectedRecords.length > 0 && canDelete && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-center justify-between">
-          <span className="text-sm font-medium text-blue-900">
-            {selectedRecords.length} record(s) selected
-          </span>
-          <button onClick={handleBulkDelete} className="btn-error">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 mb-6 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">{selectedRecords.length}</span>
+            </div>
+            <span className="text-sm font-semibold text-slate-900">
+              record(s) selected
+            </span>
+          </div>
+          <button onClick={handleBulkDelete} className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 inline-flex items-center justify-center font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
             <Trash2 className="w-4 h-4 mr-2" />
             Delete Selected
           </button>
         </div>
       )}
 
+
       {/* Sales Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-2 text-gray-600">Loading sales data...</p>
+          <div className="p-12 text-center">
+            <div className="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-lg font-semibold text-slate-700">Loading sales data...</p>
+            <p className="text-sm text-slate-500 mt-2">Please wait while we fetch the records</p>
           </div>
         ) : filteredSales.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <div className="p-16 text-center">
+            <div className="text-slate-300 mb-6">
+              <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No sales records found</h3>
-            <p className="text-gray-500 mb-4">Get started by adding your first sales record</p>
+            <h3 className="text-xl font-bold text-slate-900 mb-3">No sales records found</h3>
+            <p className="text-slate-600 mb-6 max-w-md mx-auto">Get started by adding your first sales record to track agent performance</p>
             {canAddSales && (
-              <Link to="/app/sales-data/add" className="btn-primary inline-flex">
-                <Plus className="w-4 h-4 mr-2" />
+              <Link to="/app/sales-data/add" className="btn-primary inline-flex shadow-lg hover:shadow-xl">
+                <Plus className="w-5 h-5 mr-2" />
                 Add Sales Record
               </Link>
             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
                 <tr>
                   {canDelete && (
                     <th className="px-6 py-3 text-left">
@@ -283,71 +290,71 @@ const ViewSales = () => {
                     </th>
                   )}
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
                     onClick={() => handleSort('salesDate')}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       Date
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
                     onClick={() => handleSort('agentName')}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       Agent
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Campaign</th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
                     onClick={() => handleSort('totalCalls')}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       Calls
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Success</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Failed</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Success</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Failed</th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
                     onClick={() => handleSort('successRate')}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       Rate
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {filteredSales.map((record) => (
-                  <tr key={record._id} className="hover:bg-gray-50">
+                  <tr key={record._id} className="hover:bg-slate-50 transition-colors duration-150">
                     {canDelete && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={selectedRecords.includes(record._id)}
                           onChange={() => handleSelectRecord(record._id)}
-                          className="rounded border-gray-300"
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
                         />
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {new Date(record.salesDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{record.agentName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{record.agentName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{record.campaign}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{record.totalCalls}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">{record.successfulSales}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{record.failedSales}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded ${record.successRate >= 70 ? 'bg-green-100 text-green-800' : record.successRate >= 50 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                      <span className={`px-3 py-1.5 rounded-full font-semibold text-xs ${record.successRate >= 70 ? 'bg-green-100 text-green-700 ring-1 ring-green-200' : record.successRate >= 50 ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200' : 'bg-red-100 text-red-700 ring-1 ring-red-200'}`}>
                         {record.successRate}%
                       </span>
                     </td>
@@ -358,11 +365,11 @@ const ViewSales = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex space-x-2">
-                        <Link to={`/app/sales-data/${record._id}`} className="text-blue-600 hover:text-blue-800">
+                        <Link to={`/app/sales-data/${record._id}`} className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200">
                           <Eye className="w-4 h-4" />
                         </Link>
                         {canDelete && (
-                          <button onClick={() => handleDelete(record._id)} className="text-red-600 hover:text-red-800">
+                          <button onClick={() => handleDelete(record._id)} className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
@@ -378,21 +385,21 @@ const ViewSales = () => {
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex justify-center mt-6 space-x-2">
+        <div className="flex justify-center mt-8 space-x-3">
           <button
             onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
             disabled={filters.page === 1}
-            className="btn-secondary disabled:opacity-50"
+            className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-sm text-gray-700">
+          <div className="px-6 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-slate-900 rounded-lg border-2 border-blue-200 font-bold shadow-sm">
             Page {pagination.currentPage} of {pagination.totalPages}
-          </span>
+          </div>
           <button
             onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
             disabled={filters.page === pagination.totalPages}
-            className="btn-secondary disabled:opacity-50"
+            className="px-5 py-2.5 bg-white text-slate-700 border-2 border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
           >
             Next
           </button>
