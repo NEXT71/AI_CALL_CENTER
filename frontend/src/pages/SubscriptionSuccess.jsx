@@ -46,17 +46,36 @@ const SubscriptionSuccess = () => {
 
     try {
       setLoading(true);
-      const response = await apiService.activateSubscription(planType);
-      
-      if (response.success) {
-        setVerified(true);
-        setError(null);
-      } else {
-        setError('Manual activation failed. Please contact support.');
+      // Try the new endpoint first, fallback to creating a checkout session if it fails
+      try {
+        const response = await apiService.activateSubscription(planType);
+        
+        if (response.success) {
+          setVerified(true);
+          setError(null);
+          return;
+        }
+      } catch (activateError) {
+        console.warn('Manual activation endpoint not available, trying alternative method:', activateError);
+        
+        // Fallback: Create a minimal checkout session and immediately verify it
+        // This is a workaround until the server is restarted
+        const checkoutResponse = await apiService.createCheckoutSession(planType);
+        if (checkoutResponse.success && checkoutResponse.data.sessionId) {
+          // Try to verify the session (this might work if webhooks are set up)
+          const verifyResponse = await apiService.verifySubscriptionSession(checkoutResponse.data.sessionId);
+          if (verifyResponse.success) {
+            setVerified(true);
+            setError(null);
+            return;
+          }
+        }
       }
+      
+      setError('Manual activation failed. Please restart your backend server and try again, or contact support.');
     } catch (err) {
       console.error('Error activating subscription manually:', err);
-      setError('Manual activation failed. Please contact support.');
+      setError('Manual activation failed. Please restart your backend server and try again, or contact support.');
     } finally {
       setLoading(false);
     }
