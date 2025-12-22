@@ -68,28 +68,38 @@ exports.handleStripeWebhook = async (req, res) => {
  * Handle successful checkout session
  */
 async function handleCheckoutSessionCompleted(session) {
-  const userId = session.metadata.userId;
-  const planType = session.metadata.planType;
+  try {
+    const userId = session.metadata?.userId;
+    const planType = session.metadata?.planType;
 
-  const user = await User.findById(userId);
-  if (!user) {
-    logger.error('User not found for checkout session:', { userId });
-    return;
+    if (!userId || !planType) {
+      logger.error('Missing metadata in checkout session:', { sessionId: session.id, metadata: session.metadata });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      logger.error('User not found for checkout session:', { userId, sessionId: session.id });
+      return;
+    }
+
+    // Update user subscription
+    user.subscription.stripeCustomerId = session.customer;
+    user.subscription.stripeSubscriptionId = session.subscription;
+    user.subscription.plan = planType;
+    user.subscription.status = 'active'; // Set to active immediately for successful checkout
+    
+    await user.save();
+
+    logger.info('Checkout session completed and subscription activated:', {
+      userId,
+      planType,
+      sessionId: session.id,
+      subscriptionId: session.subscription,
+    });
+  } catch (error) {
+    logger.error('Error handling checkout session completed:', error);
   }
-
-  // Update user subscription
-  user.subscription.stripeCustomerId = session.customer;
-  user.subscription.stripeSubscriptionId = session.subscription;
-  user.subscription.plan = planType;
-  user.subscription.status = 'active';
-  
-  await user.save();
-
-  logger.info('Checkout session completed:', {
-    userId,
-    planType,
-    subscriptionId: session.subscription,
-  });
 }
 
 /**

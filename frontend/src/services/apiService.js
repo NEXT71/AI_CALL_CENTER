@@ -138,6 +138,11 @@ export const subscriptionService = {
     return response.data;
   },
 
+  activateSubscription: async (planType) => {
+    const response = await api.post('/subscriptions/activate', { planType });
+    return response.data;
+  },
+
   createBillingPortalSession: async () => {
     const response = await api.post('/subscriptions/create-portal-session');
     return response.data;

@@ -29,11 +29,34 @@ const SubscriptionSuccess = () => {
       if (response.success) {
         setVerified(true);
       } else {
-        setError('Subscription verification failed');
+        setError('Subscription verification failed. You can try manual activation below.');
       }
     } catch (err) {
       console.error('Error verifying subscription:', err);
-      setError('Failed to verify subscription status');
+      setError('Failed to verify subscription status. You can try manual activation below.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualActivation = async () => {
+    // Extract plan type from URL or use a default
+    const urlParams = new URLSearchParams(window.location.search);
+    const planType = urlParams.get('plan') || 'starter'; // Default to starter if not specified
+
+    try {
+      setLoading(true);
+      const response = await apiService.activateSubscription(planType);
+      
+      if (response.success) {
+        setVerified(true);
+        setError(null);
+      } else {
+        setError('Manual activation failed. Please contact support.');
+      }
+    } catch (err) {
+      console.error('Error activating subscription manually:', err);
+      setError('Manual activation failed. Please contact support.');
     } finally {
       setLoading(false);
     }
@@ -90,15 +113,25 @@ const SubscriptionSuccess = () => {
 
             <p className="text-sm text-gray-500 mb-6">
               Your payment was successful, but we're still processing your subscription.
-              Please check your dashboard in a few moments.
+              You can try manual activation or check your dashboard in a few moments.
             </p>
 
-            <button
-              onClick={handleGoToDashboard}
-              className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              Go to Dashboard
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleManualActivation}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {loading ? 'Activating...' : 'Activate Subscription Manually'}
+              </button>
+              
+              <button
+                onClick={handleGoToDashboard}
+                className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 transition"
+              >
+                Go to Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>

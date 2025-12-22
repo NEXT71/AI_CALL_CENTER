@@ -114,7 +114,7 @@ exports.verifySession = async (req, res, next) => {
     // Retrieve the session from Stripe
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
+      expand: ['subscription', 'customer'],
     });
 
     // Verify session belongs to this user
@@ -126,37 +126,50 @@ exports.verifySession = async (req, res, next) => {
     }
 
     // If payment was successful, update user subscription
-    if (session.payment_status === 'paid' && session.subscription) {
-      const subscription = session.subscription;
+    if (session.payment_status === 'paid' && session.status === 'complete') {
       const planType = session.metadata.planType;
 
-      user.subscription.stripeCustomerId = session.customer;
-      user.subscription.stripeSubscriptionId = typeof subscription === 'string' ? subscription : subscription.id;
+      // Update user subscription info
+      user.subscription.stripeCustomerId = session.customer.id || session.customer;
+      user.subscription.stripeSubscriptionId = session.subscription;
       user.subscription.plan = planType;
       user.subscription.status = 'active';
       
-      if (typeof subscription === 'object') {
-        user.subscription.currentPeriodStart = new Date(subscription.current_period_start * 1000);
-        user.subscription.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+      // If subscription is expanded, set period dates
+      if (session.subscription && typeof session.subscription === 'object') {
+        user.subscription.currentPeriodStart = new Date(session.subscription.current_period_start * 1000);
+        user.subscription.currentPeriodEnd = new Date(session.subscription.current_period_end * 1000);
       }
 
       await user.save();
 
-      logger.info('Subscription verified and activated:', {
+      logger.info('Subscription verified and activated via verifySession:', {
         userId: user._id,
         planType,
         sessionId,
+        subscriptionId: session.subscription,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Subscription activated successfully',
+        data: {
+          plan: user.subscription.plan,
+          status: user.subscription.status,
+        },
+      });
+    } else {
+      logger.warn('Session not paid or complete:', {
+        sessionId,
+        paymentStatus: session.payment_status,
+        status: session.status,
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: 'Payment not completed',
       });
     }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        paymentStatus: session.payment_status,
-        subscriptionStatus: user.subscription.status,
-        plan: user.subscription.plan,
-      },
-    });
   } catch (error) {
     logger.error('Error verifying session:', error);
     next(error);
@@ -164,12 +177,21 @@ exports.verifySession = async (req, res, next) => {
 };
 
 /**
- * @route   POST /api/subscriptions/create-portal-session
- * @desc    Create Stripe billing portal session
+ * @route   POST /api/subscriptions/activate
+ * @desc    Manually activate subscription (for testing or webhook fallback)
  * @access  Private
  */
-exports.createPortalSession = async (req, res, next) => {
+exports.activateSubscription = async (req, res, next) => {
   try {
+    const { planType } = req.body;
+    
+    if (!planType || !['starter', 'professional', 'enterprise'].includes(planType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan type',
+      });
+    }
+
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({
@@ -178,23 +200,32 @@ exports.createPortalSession = async (req, res, next) => {
       });
     }
 
-    if (!user.subscription?.stripeCustomerId) {
-      return res.status(400).json({
-        success: false,
-        message: 'No active subscription found',
-      });
+    // Update subscription to active
+    user.subscription.plan = planType;
+    user.subscription.status = 'active';
+    
+    // Set trial end to past date if it was in trial
+    if (user.subscription.status === 'trial') {
+      user.subscription.trialEndsAt = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
     }
 
-    const session = await stripeService.createBillingPortalSession(user);
+    await user.save();
+
+    logger.info('Subscription manually activated:', {
+      userId: user._id,
+      planType,
+    });
 
     res.status(200).json({
       success: true,
+      message: 'Subscription activated successfully',
       data: {
-        url: session.url,
+        plan: user.subscription.plan,
+        status: user.subscription.status,
       },
     });
   } catch (error) {
-    logger.error('Error creating portal session:', error);
+    logger.error('Error activating subscription:', error);
     next(error);
   }
 };
