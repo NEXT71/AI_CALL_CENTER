@@ -251,6 +251,99 @@ const Landing = () => {
                 ))}
               </div>
             </div>
+
+            {/* Hero Image/Illustration */}
+            <div className="mt-20">
+              <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-3xl shadow-2xl overflow-hidden">
+                {/* Dashboard Preview */}
+                <div className="p-8">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                    {/* Browser-like Header */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                        <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                      </div>
+                      <div className="flex-1 bg-white/20 rounded px-4 py-1 text-xs text-white/80">
+                        https://ai-call-center.app/dashboard
+                      </div>
+                    </div>
+                    
+                    {/* Dashboard Content Mockup */}
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                      {[
+                        { label: 'Total Calls', value: '2,847', trend: '+12%', color: 'blue' },
+                        { label: 'Avg Quality', value: '87.5%', trend: '+5%', color: 'green' },
+                        { label: 'Compliance', value: '94.2%', trend: '+3%', color: 'purple' },
+                        { label: 'Violations', value: '23', trend: '-18%', color: 'red' }
+                      ].map((stat, idx) => (
+                        <div key={idx} className="bg-white/90 rounded-xl p-4 backdrop-blur">
+                          <div className="text-xs font-medium text-slate-600 mb-1">{stat.label}</div>
+                          <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                          <div className={`text-xs font-semibold ${stat.color === 'red' ? 'text-red-600' : 'text-green-600'} mt-1`}>
+                            {stat.trend}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart Visualization */}
+                    <div className="bg-white/90 rounded-xl p-6 backdrop-blur">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-slate-900">Quality Score Trend</h3>
+                        <div className="flex gap-2">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Last 7 Days</span>
+                        </div>
+                      </div>
+                      {/* Simple Chart Bars */}
+                      <div className="flex items-end justify-between gap-2 h-32">
+                        {[65, 72, 68, 85, 82, 89, 87].map((height, idx) => (
+                          <div key={idx} className="flex-1 flex flex-col justify-end">
+                            <div 
+                              className="bg-gradient-to-t from-blue-600 to-indigo-500 rounded-t-lg transition-all hover:from-blue-700 hover:to-indigo-600"
+                              style={{ height: `${height}%` }}
+                            ></div>
+                            <div className="text-xs text-slate-600 text-center mt-2">
+                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Call List Preview */}
+                    <div className="mt-4 bg-white/90 rounded-xl p-4 backdrop-blur">
+                      <div className="text-xs font-bold text-slate-900 mb-3">Recent Calls</div>
+                      {[
+                        { agent: 'John Smith', score: 92, status: 'success' },
+                        { agent: 'Sarah Lee', score: 88, status: 'success' },
+                        { agent: 'Mike Davis', score: 76, status: 'warning' }
+                      ].map((call, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-200 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                              {call.agent.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <span className="text-xs font-medium text-slate-900">{call.agent}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${call.status === 'success' ? 'text-green-600' : 'text-yellow-600'}`}>
+                              {call.score}%
+                            </span>
+                            <div className={`w-2 h-2 rounded-full ${call.status === 'success' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Decorative Elements */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -323,8 +416,89 @@ const Landing = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
                 1
               </div>
-              <div className="icon-container icon-container-blue mb-4">
-                <Phone size={32} />
+              {/* Upload Illustration */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+                <div className="relative">
+                  <div className="w-full h-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-300 flex flex-col items-center justify-center">
+                    <Phone className="w-12 h-12 text-blue-600 mb-2" />
+                    <div className="text-xs font-semibold text-slate-600">Drop audio files here</div>
+                    <div className="mt-2 flex gap-1">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <h3 className="heading-4 mb-3">Upload Calls</h3>
+              <p className="body-text text-slate-600">Upload call recordings in any format. Drag & drop or browse files.</p>
+            </div>
+
+            <div className="text-center relative">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
+                2
+              </div>
+              {/* AI Processing Illustration */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+                <div className="relative">
+                  <div className="w-full h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl flex items-center justify-center overflow-hidden relative">
+                    {/* AI Brain Animation */}
+                    <div className="relative">
+                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <Zap className="w-8 h-8 text-white" />
+                      </div>
+                      {/* Pulse rings */}
+                      <div className="absolute inset-0 rounded-full border-2 border-indigo-400 animate-ping"></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-purple-400 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                    </div>
+                    {/* Floating particles */}
+                    <div className="absolute top-2 left-4 w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div className="absolute bottom-4 right-6 w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="absolute top-6 right-4 w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+              <h3 className="heading-4 mb-3">AI Analysis</h3>
+              <p className="body-text text-slate-600">AI transcribes, scores quality, and checks compliance automatically.</p>
+            </div>
+
+            <div className="text-center relative">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
+                3
+              </div>
+              {/* Results Illustration */}
+              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+                <div className="relative">
+                  <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 flex flex-col justify-center">
+                    {/* Score Display */}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-slate-600">Quality Score</span>
+                      <span className="text-xl font-bold text-green-600">89%</span>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full" style={{ width: '89%' }}></div>
+                    </div>
+                    {/* Status badges */}
+                    <div className="flex gap-2 mt-2">
+                      <div className="flex-1 bg-green-100 rounded px-2 py-1 flex items-center justify-center gap-1">
+                        <Check className="w-3 h-3 text-green-600" />
+                        <span className="text-xs font-semibold text-green-700">Compliant</span>
+                      </div>
+                      <div className="flex-1 bg-blue-100 rounded px-2 py-1 flex items-center justify-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-blue-600" />
+                        <span className="text-xs font-semibold text-blue-700">Good</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <h3 className="heading-4 mb-3">Get Insights</h3>
+              <p className="body-text text-slate-600">View detailed reports, scores, and actionable recommendations.</p>
+            </div>
+          </div>
+        </div>
+      </section>
               </div>
               <h3 className="heading-4 mb-3">Upload Calls</h3>
               <p className="body-text text-slate-600">
