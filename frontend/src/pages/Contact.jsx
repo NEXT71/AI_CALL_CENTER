@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MessageSquare, Clock, Users, Shield, Zap } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MessageSquare, Clock, Users, Shield, Zap, Send } from 'lucide-react';
 import { useState } from 'react';
 
 const Contact = () => {
