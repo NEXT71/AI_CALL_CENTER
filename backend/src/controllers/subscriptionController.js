@@ -2,6 +2,13 @@ const User = require('../models/User');
 const stripeService = require('../services/stripeService');
 const auditService = require('../services/auditService');
 const logger = require('../config/logger');
+const Stripe = require('stripe');
+
+// Initialize Stripe conditionally
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 /**
  * @route   GET /api/subscriptions/plans
@@ -111,8 +118,15 @@ exports.verifySession = async (req, res, next) => {
       });
     }
 
+    // Check if Stripe is configured
+    if (!stripe) {
+      return res.status(500).json({
+        success: false,
+        message: 'Stripe not configured',
+      });
+    }
+
     // Retrieve the session from Stripe
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['subscription', 'customer'],
     });
@@ -234,11 +248,12 @@ exports.activateSubscription = async (req, res, next) => {
     }
 
     // Update subscription to active
+    const wasTrial = user.subscription.status === 'trial';
     user.subscription.plan = planType;
     user.subscription.status = 'active';
     
     // Set trial end to past date if it was in trial
-    if (user.subscription.status === 'trial') {
+    if (wasTrial) {
       user.subscription.trialEndsAt = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
     }
 
