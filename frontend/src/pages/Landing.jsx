@@ -499,41 +499,6 @@ const Landing = () => {
           </div>
         </div>
       </section>
-              </div>
-              <h3 className="heading-4 mb-3">Upload Calls</h3>
-              <p className="body-text text-slate-600">
-                Upload recordings in any format - WAV, MP3, M4A. Bulk upload hundreds of calls at once or integrate via API for automatic ingestion.
-              </p>
-            </div>
-            
-            <div className="text-center relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
-                2
-              </div>
-              <div className="icon-container icon-container-blue mb-4">
-                <Zap size={32} />
-              </div>
-              <h3 className="heading-4 mb-3">AI Analysis</h3>
-              <p className="body-text text-slate-600">
-                Our AI transcribes, scores quality metrics, checks compliance, identifies trends, and generates detailed insights - all automatically in minutes.
-              </p>
-            </div>
-            
-            <div className="text-center relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
-                3
-              </div>
-              <div className="icon-container icon-container-blue mb-4">
-                <BarChart3 size={32} />
-              </div>
-              <h3 className="heading-4 mb-3">Get Insights</h3>
-              <p className="body-text text-slate-600">
-                Review comprehensive analytics, identify training opportunities, track improvements, and make data-driven decisions to boost performance.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-white">
