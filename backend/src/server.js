@@ -116,6 +116,22 @@ if (config.nodeEnv === 'development') {
 // Apply rate limiter to all API routes
 app.use('/api/', apiLimiter);
 
+// Root route - API information
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'AI Call Center QA Backend API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api/v1',
+      docs: 'https://github.com/your-repo/docs'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   const mongoose = require('mongoose');
