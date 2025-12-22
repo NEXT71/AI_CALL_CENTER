@@ -176,9 +176,13 @@ const ViewSales = () => {
             </Link>
           )}
           {canAddSales && (
-            <Link to="/app/sales-data/add" className="btn-primary">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Sales
+            <Link 
+              to="/app/sales-data/add" 
+              className="relative px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-bold text-sm shadow-[0_4px_14px_0_rgba(37,99,235,0.39)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.5)] hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:shadow-[0_2px_8px_rgba(37,99,235,0.4)] inline-flex items-center justify-center gap-2 border border-blue-700 overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <Plus className="w-5 h-5 relative z-10 group-hover:rotate-90 transition-transform duration-300" />
+              <span className="relative z-10">Add Sales</span>
             </Link>
           )}
         </div>
