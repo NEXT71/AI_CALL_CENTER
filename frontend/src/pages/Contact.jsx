@@ -8,7 +8,6 @@ const Contact = () => {
     email: '',
     company: '',
     phone: '',
-    campaign: '',
     subject: '',
     message: ''
   });
@@ -29,10 +28,10 @@ const Contact = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <img src="/logo.jpg" alt="NextelBPO" className="h-10 w-10" />
+              <img src="/logo.jpg" alt="QualityPulse" className="h-10 w-10" />
               <div>
-                <h1 className="text-xl font-bold text-blue-600">NextelBPO</h1>
-                <p className="text-xs text-slate-500 -mt-0.5">AI-Powered Call Center Solutions</p>
+                <h1 className="text-xl font-bold text-blue-600">QualityPulse</h1>
+                <p className="text-xs text-slate-500 -mt-0.5">AI-Powered Quality Assurance</p>
               </div>
             </div>
             <Link to="/" className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2">
@@ -51,7 +50,7 @@ const Contact = () => {
               Get in Touch
             </h1>
             <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
-              Ready to elevate your call center performance? Let's discuss how our AI-powered quality assurance can transform your ACA, Medicare, and Final Expense campaigns.
+              Ready to elevate your call center performance? Let's discuss how our AI-powered quality assurance can transform your operations.
             </p>
           </div>
         </div>
@@ -70,8 +69,8 @@ const Contact = () => {
               <p className="body-text text-slate-600 mb-3">
                 Our team responds within 24 hours for technical inquiries and demos
               </p>
-              <a href="mailto:support@nextelbpo.com" className="text-blue-600 hover:text-blue-700 font-medium">
-                support@nextelbpo.com
+              <a href="mailto:support@qualitypulse.com" className="text-blue-600 hover:text-blue-700 font-medium">
+                support@qualitypulse.com
               </a>
             </div>
 
@@ -104,19 +103,19 @@ const Contact = () => {
               <div className="icon-container icon-container-slate mb-4">
                 <Users size={24} />
               </div>
-              <h3 className="heading-4 mb-2">Why Choose NextelBPO?</h3>
+              <h3 className="heading-4 mb-2">Why Choose QualityPulse?</h3>
               <ul className="body-text text-slate-600 space-y-2">
                 <li className="flex items-center gap-2">
                   <Shield size={16} className="text-green-600" />
-                  <span>Specialized in insurance campaigns</span>
+                  <span>Advanced AI technology</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Zap size={16} className="text-blue-600" />
-                  <span>AI-powered quality assurance</span>
+                  <span>Real-time quality monitoring</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Users size={16} className="text-purple-600" />
-                  <span>Experienced compliance team</span>
+                  <span>Expert support team</span>
                 </li>
               </ul>
             </div>
@@ -190,21 +189,6 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label className="input-label">Campaign Type</label>
-                  <select
-                    className="select"
-                    value={formData.campaign}
-                    onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
-                  >
-                    <option value="">Select campaign type (optional)</option>
-                    <option value="aca">ACA (Affordable Care Act)</option>
-                    <option value="medicare">Medicare</option>
-                    <option value="final-expense">Final Expense</option>
-                    <option value="other">Other Insurance</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="input-label">
                     Subject <span className="text-red-500">*</span>
                   </label>
@@ -217,7 +201,7 @@ const Contact = () => {
                     <option value="">Select a subject</option>
                     <option value="demo">Request Product Demo</option>
                     <option value="pricing">Pricing & Plans</option>
-                    <option value="integration">Vicidial Integration</option>
+                    <option value="integration">System Integration</option>
                     <option value="support">Technical Support</option>
                     <option value="compliance">Compliance Questions</option>
                     <option value="partnership">Partnership Opportunities</option>
@@ -253,44 +237,44 @@ const Contact = () => {
           <h2 className="heading-2 text-center mb-8">Frequently Asked Questions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             <div className="card">
-              <h3 className="heading-4 mb-2">Do you specialize in insurance campaigns?</h3>
+              <h3 className="heading-4 mb-2">How does AI quality monitoring work?</h3>
               <p className="body-text text-slate-600">
-                Yes, we specialize in ACA, Medicare, and Final Expense campaigns. Our AI is trained on insurance-specific compliance requirements and sales best practices.
+                Our AI analyzes call recordings in real-time, scoring quality metrics, detecting sentiment, and identifying areas for improvement.
               </p>
             </div>
 
             <div className="card">
-              <h3 className="heading-4 mb-2">Can you integrate with Vicidial?</h3>
+              <h3 className="heading-4 mb-2">Can you integrate with my dialer?</h3>
               <p className="body-text text-slate-600">
-                Absolutely. We offer seamless integration with Vicidial dialers, automatically importing call recordings and providing real-time quality analysis.
-              </p>
-            </div>
-
-            <div className="card">
-              <h3 className="heading-4 mb-2">How does compliance monitoring work?</h3>
-              <p className="body-text text-slate-600">
-                Our AI scans every call for mandatory phrases, forbidden language, and regulatory compliance. You'll get instant alerts for any violations.
+                Yes, we support integration with most popular dialers and call center platforms through APIs and custom connectors.
               </p>
             </div>
 
             <div className="card">
               <h3 className="heading-4 mb-2">What's the setup process like?</h3>
               <p className="body-text text-slate-600">
-                Setup typically takes 1-2 days. We'll configure campaign-specific rules, integrate with your dialer, and provide training for your QA team.
+                Setup typically takes 1-2 days. We'll configure your quality rules, integrate with your systems, and provide training for your team.
+              </p>
+            </div>
+
+            <div className="card">
+              <h3 className="heading-4 mb-2">Do you support custom integrations?</h3>
+              <p className="body-text text-slate-600">
+                Yes, we offer APIs and custom integrations for most call center platforms, CRM systems, and dialers.
+              </p>
+            </div>
+
+            <div className="card">
+              <h3 className="heading-4 mb-2">What about data security?</h3>
+              <p className="body-text text-slate-600">
+                We maintain industry-standard security certifications. All data is encrypted, and we offer custom security agreements for enterprise clients.
               </p>
             </div>
 
             <div className="card">
               <h3 className="heading-4 mb-2">Do you offer white-label solutions?</h3>
               <p className="body-text text-slate-600">
-                Yes, we offer white-label options for agencies and BPOs who want to provide quality assurance as part of their service offering.
-              </p>
-            </div>
-
-            <div className="card">
-              <h3 className="heading-4 mb-2">What about data security and HIPAA?</h3>
-              <p className="body-text text-slate-600">
-                We maintain HIPAA compliance and SOC 2 certification. All call data is encrypted, and we offer custom security agreements for enterprise clients.
+                Yes, we offer white-label options for agencies who want to provide quality assurance as part of their service offering.
               </p>
             </div>
           </div>
@@ -300,7 +284,7 @@ const Contact = () => {
         <div className="mt-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Call Center?</h2>
           <p className="text-xl text-blue-100 mb-6 max-w-2xl mx-auto">
-            Join leading insurance BPOs who trust NextelBPO for AI-powered quality assurance and compliance monitoring.
+            Join leading call centers who trust QualityPulse for AI-powered quality assurance and performance monitoring.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup" className="btn bg-white text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-lg font-semibold">
