@@ -42,6 +42,10 @@ try {
 // Initialize express app
 const app = express();
 
+// Trust proxy - required for Render and other reverse proxy deployments
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 
