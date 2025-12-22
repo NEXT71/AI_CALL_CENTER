@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const logger = require('../config/logger');
 
 /**
  * Create audit log entry
