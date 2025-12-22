@@ -126,7 +126,12 @@ exports.verifySession = async (req, res, next) => {
     }
 
     // If payment was successful, update user subscription
-    if (session.payment_status === 'paid' && session.status === 'complete') {
+    // For test mode, be more lenient with payment status
+    const isTestMode = process.env.STRIPE_SECRET_KEY?.includes('test');
+    const isPaymentComplete = (session.payment_status === 'paid' && session.status === 'complete') || 
+                             (isTestMode && session.status === 'complete');
+    
+    if (isPaymentComplete) {
       const planType = session.metadata.planType;
 
       // Update user subscription info
@@ -148,6 +153,7 @@ exports.verifySession = async (req, res, next) => {
         planType,
         sessionId,
         subscriptionId: session.subscription,
+        isTestMode,
       });
 
       return res.status(200).json({
@@ -163,7 +169,32 @@ exports.verifySession = async (req, res, next) => {
         sessionId,
         paymentStatus: session.payment_status,
         status: session.status,
+        isTestMode,
       });
+
+      // For test mode, still try to activate if session is complete
+      if (isTestMode && session.status === 'complete') {
+        const planType = session.metadata.planType;
+        
+        user.subscription.plan = planType;
+        user.subscription.status = 'active';
+        await user.save();
+
+        logger.info('Test mode: Subscription activated despite payment status:', {
+          userId: user._id,
+          planType,
+          sessionId,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Subscription activated (test mode)',
+          data: {
+            plan: user.subscription.plan,
+            status: user.subscription.status,
+          },
+        });
+      }
 
       return res.status(400).json({
         success: false,
@@ -184,6 +215,8 @@ exports.verifySession = async (req, res, next) => {
 exports.activateSubscription = async (req, res, next) => {
   try {
     const { planType } = req.body;
+    
+    logger.info('Manual activation requested:', { userId: req.user._id, planType });
     
     if (!planType || !['starter', 'professional', 'enterprise'].includes(planType)) {
       return res.status(400).json({
