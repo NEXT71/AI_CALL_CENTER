@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { callService, reportService } from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
+import SalesWidget from '../components/SalesWidget';
 import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award } from 'lucide-react';
 
 const Dashboard = () => {
@@ -171,12 +172,20 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Sales Performance & Agent Leaderboard */}
-      {salesData && salesData.totalSales > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Sales Metrics */}
-          <div className="lg:col-span-2 card">
-            <h3 className="section-header">Sales Performance</h3>
+      {/* Sales Performance & Agent Leaderboard & Sales Widget */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Sales Widget - Today's Performance */}
+        {['Admin', 'Manager', 'QA'].includes(user?.role) && (
+          <div>
+            <SalesWidget />
+          </div>
+        )}
+
+        {salesData && salesData.totalSales > 0 && (
+          <>
+            {/* Sales Metrics */}
+            <div className={`${['Admin', 'Manager', 'QA'].includes(user?.role) ? 'lg:col-span-2' : 'lg:col-span-3'} card`}>
+              <h3 className="section-header">Sales Performance</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <p className="caption-text">Total Revenue</p>
@@ -237,8 +246,9 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
+      </div>
 
       {/* Recent Calls Table */}
       <div className="card-compact">

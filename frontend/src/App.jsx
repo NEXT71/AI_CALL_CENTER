@@ -19,6 +19,7 @@ import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import SubscriptionCancelled from './pages/SubscriptionCancelled';
 import ViewSales from './pages/ViewSales';
 import AddSales from './pages/AddSales';
+import SalesReports from './pages/SalesReports';
 import Landing from './pages/Landing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -77,8 +78,13 @@ function App() {
               </RoleGuard>
             } />
             <Route path="sales-data/add" element={
-              <RoleGuard allowedRoles={['Admin', 'QA']}>
+              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
                 <AddSales />
+              </RoleGuard>
+            } />
+            <Route path="sales-reports" element={
+              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
+                <SalesReports />
               </RoleGuard>
             } />
           </Route>

@@ -133,4 +133,10 @@ salesRecordSchema.index({ successRate: -1 });
 salesRecordSchema.index({ campaign: 1, salesDate: -1 });
 salesRecordSchema.index({ agentId: 1, campaign: 1, salesDate: -1 });
 
+// Unique index to prevent duplicate entries for same agent, date, and campaign
+salesRecordSchema.index(
+  { agentId: 1, salesDate: 1, campaign: 1 }, 
+  { unique: true }
+);
+
 module.exports = mongoose.model('SalesRecord', salesRecordSchema);

@@ -4,10 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import * as salesService from '../services/salesService';
 import api from '../services/api';
 import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, ArrowUpCircle, PhoneCall } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import Toast from '../components/Toast';
 
 const AddSales = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error: showError } = useToast();
   const [agents, setAgents] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,27 +57,47 @@ const AddSales = () => {
       const totalCalls = parseInt(formData.totalCalls) || 0;
       const successfulSales = parseInt(formData.successfulSales) || 0;
       const failedSales = parseInt(formData.failedSales) || 0;
+      const warmTransfers = parseInt(formData.warmTransfers) || 0;
+      const callbacksScheduled = parseInt(formData.callbacksScheduled) || 0;
 
+      // Enhanced validation
       if (totalCalls < (successfulSales + failedSales)) {
         throw new Error('Total calls must be greater than or equal to successful + failed sales');
+      }
+
+      if (warmTransfers > totalCalls) {
+        throw new Error('Warm transfers cannot exceed total calls');
+      }
+
+      if (callbacksScheduled > totalCalls) {
+        throw new Error('Callbacks scheduled cannot exceed total calls');
+      }
+
+      if (successfulSales + failedSales > totalCalls) {
+        throw new Error('Successful + Failed sales cannot exceed total calls');
       }
 
       const salesData = {
         agentId: formData.agentId,
         campaign: formData.campaign,
         salesDate: formData.salesDate,
-        totalCalls: parseInt(formData.totalCalls),
-        successfulSales: parseInt(formData.successfulSales),
-        failedSales: parseInt(formData.failedSales),
-        warmTransfers: parseInt(formData.warmTransfers) || 0,
-        callbacksScheduled: parseInt(formData.callbacksScheduled) || 0,
+        totalCalls,
+        successfulSales,
+        failedSales,
+        warmTransfers,
+        callbacksScheduled,
         notes: formData.notes,
       };
 
       await salesService.createSalesRecord(salesData);
-      navigate('/sales-data');
+      
+      // Success feedback
+      success('Sales record created successfully!');
+      setTimeout(() => navigate('/app/sales-data'), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create sales record');
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to create sales record';
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -86,6 +109,15 @@ const AddSales = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+          duration={toast.duration}
+        />
+      ))}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
