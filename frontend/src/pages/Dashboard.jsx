@@ -65,6 +65,35 @@ const Dashboard = () => {
     });
   };
 
+  const getPlanDisplayName = (plan) => {
+    const planNames = {
+      'starter': 'Starter Plan',
+      'professional': 'Professional Plan',
+      'enterprise': 'Enterprise Plan'
+    };
+    return planNames[plan] || 'Free Trial';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'text-green-600 bg-green-100';
+      case 'trial': return 'text-blue-600 bg-blue-100';
+      case 'expired': return 'text-red-600 bg-red-100';
+      case 'cancelled': return 'text-gray-600 bg-gray-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'active': return 'Active';
+      case 'trial': return 'Trial';
+      case 'expired': return 'Expired';
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -77,7 +106,47 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Email Verification Banner */}
       <EmailVerificationBanner />
-      
+
+      {/* Current Plan Display */}
+      {user?.subscription && (
+        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-md">
+                <Award size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {getPlanDisplayName(user.subscription.plan)}
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Current subscription plan
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(user.subscription.status)}`}>
+                {getStatusText(user.subscription.status)}
+              </span>
+              {user.subscription.status === 'trial' && user.subscription.trialEndsAt && (
+                <div className="text-right">
+                  <p className="text-sm text-slate-600">Trial ends</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {new Date(user.subscription.trialEndsAt).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              <Link
+                to="/subscription"
+                className="btn btn-primary text-sm px-4 py-2"
+              >
+                Manage Plan
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header with Date Filter */}
       <div className="page-header mb-8">
         <div className="flex items-center justify-between">
