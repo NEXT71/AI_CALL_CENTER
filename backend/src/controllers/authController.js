@@ -89,14 +89,14 @@ exports.register = async (req, res, next) => {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'strict',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'strict',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -167,14 +167,14 @@ exports.login = async (req, res, next) => {
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'strict',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'strict',
+      sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -232,7 +232,7 @@ exports.refreshToken = async (req, res, next) => {
       res.cookie('accessToken', tokens.accessToken, {
         httpOnly: true,
         secure: config.nodeEnv === 'production',
-        sameSite: 'strict',
+        sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
         maxAge: 15 * 60 * 1000, // 15 minutes
       });
 
