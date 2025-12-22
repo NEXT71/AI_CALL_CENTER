@@ -13,7 +13,7 @@ const SubscriptionCancelled = () => {
             <h1 className="text-xl font-semibold text-gray-900">Subscription</h1>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/app/dashboard')}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
               >
                 <Home className="w-4 h-4" />

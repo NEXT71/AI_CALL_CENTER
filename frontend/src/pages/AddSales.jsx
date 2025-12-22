@@ -125,7 +125,7 @@ const AddSales = () => {
             <p className="text-sm text-slate-600 mt-2">Enter daily sales data for an agent</p>
           </div>
           <button
-            onClick={() => navigate('/sales-data')}
+            onClick={() => navigate('/app/sales-data')}
             className="btn-secondary"
           >
             <X className="w-4 h-4 mr-2" />
@@ -328,7 +328,7 @@ const AddSales = () => {
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
-              onClick={() => navigate('/sales-data')}
+              onClick={() => navigate('/app/sales-data')}
               className="btn-secondary"
               disabled={loading}
             >
