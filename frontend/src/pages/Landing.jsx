@@ -162,7 +162,7 @@ const Landing = () => {
   ];
 
   const clientLogos = [
-    'TechCorp', 'Global Services', 'CustomerFirst BPO', 'CallCenter Pro', 'QA Solutions', 'Support Inc'
+    'NextelBPO'
   ];
 
   return (
