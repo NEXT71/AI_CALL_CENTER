@@ -25,6 +25,7 @@ const salesRoutes = require('./routes/salesRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const vicidialWebhookRoutes = require('./routes/vicidialWebhookRoutes');
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
@@ -92,6 +93,9 @@ app.use(cors(corsOptions));
 // Stripe webhook endpoint - MUST be before body parser
 // Stripe needs raw body for signature verification
 app.use('/api/webhooks', webhookRoutes);
+
+// Vicidial webhook endpoints
+app.use('/api/webhooks/vicidial', vicidialWebhookRoutes);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
