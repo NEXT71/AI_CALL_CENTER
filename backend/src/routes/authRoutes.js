@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const {
   validateRegister,
   validateLogin,
@@ -51,6 +51,7 @@ router.post('/reset-password/:token', authController.resetPassword);
 
 // Protected routes
 router.get('/me', protect, authController.getMe);
+router.get('/users', protect, authorize('Admin', 'Manager', 'QA'), authController.getUsers);
 router.post('/logout', protect, authController.logout);
 
 module.exports = router;

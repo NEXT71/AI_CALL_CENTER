@@ -1,7 +1,6 @@
 const axios = require('axios');
 const logger = require('../config/logger');
 const config = require('../config/config');
-const logger = require('../config/logger');
 
 const AI_SERVICE_URL = config.aiService.url;
 

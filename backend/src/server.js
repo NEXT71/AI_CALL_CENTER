@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -18,6 +20,7 @@ const authRoutes = require('./routes/authRoutes');
 const callRoutes = require('./routes/callRoutes');
 const ruleRoutes = require('./routes/ruleRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const salesRoutes = require('./routes/salesRoutes');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
@@ -32,6 +35,7 @@ try {
   logger.info('Environment validation passed');
 } catch (error) {
   logger.error('Environment validation failed', { error: error.message });
+  console.error('ENV VALIDATION ERROR:', error.message);
   process.exit(1);
 }
 
@@ -164,6 +168,7 @@ app.use(`${API_VERSION}/auth`, authRoutes);
 app.use(`${API_VERSION}/calls`, callRoutes);
 app.use(`${API_VERSION}/rules`, ruleRoutes);
 app.use(`${API_VERSION}/reports`, reportRoutes);
+app.use(`${API_VERSION}/sales`, salesRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
 app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
@@ -173,6 +178,7 @@ app.use('/api/auth', (req, res) => res.redirect(308, `${API_VERSION}/auth${req.u
 app.use('/api/calls', (req, res) => res.redirect(308, `${API_VERSION}/calls${req.url}`));
 app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req.url}`));
 app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
+app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
 app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`));
 

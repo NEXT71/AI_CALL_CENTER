@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  CreditCard
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -28,6 +29,7 @@ const Layout = () => {
     { name: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'QA', 'Agent'] },
     { name: 'Calls', href: '/app/calls', icon: Phone, roles: ['Admin', 'Manager', 'QA', 'Agent'] },
     { name: 'Upload Call', href: '/app/upload', icon: Upload, roles: ['Admin', 'Manager', 'QA'] },
+    { name: 'Sales Data', href: '/app/sales-data', icon: DollarSign, roles: ['Admin', 'Manager', 'QA'] },
     { name: 'Compliance Rules', href: '/app/rules', icon: FileText, roles: ['Admin', 'Manager'] },
     { name: 'Analytics', href: '/app/analytics', icon: BarChart3, roles: ['Admin', 'Manager', 'QA'] },
     { name: 'Subscription', href: '/subscription', icon: CreditCard, roles: ['Admin', 'Manager', 'QA', 'Agent'] },

@@ -469,3 +469,35 @@ exports.resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @route   GET /api/auth/users
+ * @desc    Get list of users (Admin/QA/Manager only)
+ * @access  Private
+ */
+exports.getUsers = async (req, res, next) => {
+  try {
+    const { role, search, limit = 50 } = req.query;
+    
+    const filter = {};
+    if (role) filter.role = role;
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await User.find(filter)
+      .select('name email role department')
+      .limit(parseInt(limit))
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

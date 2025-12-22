@@ -17,6 +17,8 @@ import Analytics from './pages/Analytics';
 import Subscription from './pages/Subscription';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import SubscriptionCancelled from './pages/SubscriptionCancelled';
+import ViewSales from './pages/ViewSales';
+import AddSales from './pages/AddSales';
 import Landing from './pages/Landing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -66,6 +68,17 @@ function App() {
             <Route path="analytics" element={
               <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
                 <Analytics />
+              </RoleGuard>
+            } />
+            {/* Sales Data Module - QA/Manager/Admin only */}
+            <Route path="sales-data" element={
+              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
+                <ViewSales />
+              </RoleGuard>
+            } />
+            <Route path="sales-data/add" element={
+              <RoleGuard allowedRoles={['Admin', 'QA']}>
+                <AddSales />
               </RoleGuard>
             } />
           </Route>
