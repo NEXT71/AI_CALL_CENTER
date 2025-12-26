@@ -16,25 +16,42 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
 const connectDB = require('./config/database');
+console.log('✅ DEBUG: connectDB imported');
 const errorHandler = require('./middleware/errorHandler');
+console.log('✅ DEBUG: errorHandler imported');
 const config = require('./config/config');
+console.log('✅ DEBUG: config imported');
 const { apiLimiter } = require('./middleware/rateLimiter');
+console.log('✅ DEBUG: rateLimiter imported');
 const logger = require('./config/logger');
+console.log('✅ DEBUG: Logger imported and initialized');
 const validateEnv = require('./config/validateEnv');
+console.log('✅ DEBUG: validateEnv imported successfully');
 
 // Import routes
+console.log('🔍 DEBUG: Importing routes...');
 const authRoutes = require('./routes/authRoutes');
+console.log('✅ DEBUG: authRoutes imported');
 const callRoutes = require('./routes/callRoutes');
+console.log('✅ DEBUG: callRoutes imported');
 const ruleRoutes = require('./routes/ruleRoutes');
+console.log('✅ DEBUG: ruleRoutes imported');
 const reportRoutes = require('./routes/reportRoutes');
+console.log('✅ DEBUG: reportRoutes imported');
 const salesRoutes = require('./routes/salesRoutes');
+console.log('✅ DEBUG: salesRoutes imported');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 const auditLogRoutes = require('./routes/auditLogRoutes');
+console.log('✅ DEBUG: auditLogRoutes imported');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+console.log('✅ DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
+console.log('✅ DEBUG: webhookRoutes imported');
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
+
+console.log('🔍 DEBUG: Starting environment validation...');
 
 // Validate environment variables before starting
 try {

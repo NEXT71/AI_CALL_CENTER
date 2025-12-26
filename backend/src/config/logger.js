@@ -105,4 +105,5 @@ logger.stream = {
   },
 };
 
+console.log('✅ DEBUG: Logger fully initialized');
 module.exports = logger;
