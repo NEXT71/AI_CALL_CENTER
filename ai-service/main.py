@@ -545,17 +545,16 @@ async def diarize_audio(audio: UploadFile = File(...), min_speakers: int = 2, ma
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
         
-        try:
-            logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {audio.filename}")
-            
-            # Load diarization pipeline
-            pipeline = Pipeline.from_pretrained(
-                "pyannote/speaker-diarization-3.1",
-                use_auth_token=hf_token
-            )
-            
-            # Run diarization
-            diarization = pipeline(temp_path, min_speakers=min_speakers, max_speakers=max_speakers)
+        logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {audio.filename}")
+        
+        # Load diarization pipeline
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=hf_token
+        )
+        
+        # Run diarization
+        diarization = pipeline(temp_path, min_speakers=min_speakers, max_speakers=max_speakers)
         
         # Extract speaker segments
         speakers = {}
@@ -596,15 +595,7 @@ async def diarize_audio(audio: UploadFile = File(...), min_speakers: int = 2, ma
             talk_time=talk_time,
             num_speakers=len(speakers)
         )
-        
-        finally:
-            # Clean up temporary file
-            try:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-            except Exception as e:
-                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
-        
+    
     except ImportError:
         raise HTTPException(
             status_code=503, 
@@ -615,6 +606,13 @@ async def diarize_audio(audio: UploadFile = File(...), min_speakers: int = 2, ma
     except Exception as e:
         logger.error(f"❌ Diarization error: {e}")
         raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    finally:
+        # Clean up temporary file
+        try:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except Exception as e:
+            logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
 
 
 @app.post("/calculate-talk-time", response_model=TalkTimeResponse)
@@ -631,43 +629,42 @@ async def calculate_talk_time(audio: UploadFile = File(...), speaker_segments: s
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
         
-        try:
-            # Parse speaker segments from JSON string
-            segments = json.loads(speaker_segments)
+        # Parse speaker segments from JSON string
+        segments = json.loads(speaker_segments)
+        
+        logger.info(f"📊 Calculating talk-time metrics...")
+        
+        # Get total audio duration
+        duration = librosa.get_duration(path=temp_path)
+        
+        # Calculate talk time per speaker
+        speaker_talk_time = {}
+        for segment in segments:
+            speaker = segment["speaker"]
+            seg_duration = segment["duration"]
             
-            logger.info(f"📊 Calculating talk-time metrics...")
+            if speaker not in speaker_talk_time:
+                speaker_talk_time[speaker] = 0.0
+            speaker_talk_time[speaker] += seg_duration
+        
+        # Calculate percentages
+        speaker_percentage = {
+            speaker: round((time / duration) * 100, 2)
+            for speaker, time in speaker_talk_time.items()
+        }
+        
+        # Detect dead air (gaps between segments)
+        dead_air_segments = []
+        sorted_segments = sorted(segments, key=lambda x: x["start"])
+        
+        for i in range(len(sorted_segments) - 1):
+            gap_start = sorted_segments[i]["end"]
+            gap_end = sorted_segments[i + 1]["start"]
+            gap_duration = gap_end - gap_start
             
-            # Get total audio duration
-            duration = librosa.get_duration(path=temp_path)
-            
-            # Calculate talk time per speaker
-            speaker_talk_time = {}
-            for segment in segments:
-                speaker = segment["speaker"]
-                seg_duration = segment["duration"]
-                
-                if speaker not in speaker_talk_time:
-                    speaker_talk_time[speaker] = 0.0
-                speaker_talk_time[speaker] += seg_duration
-            
-            # Calculate percentages
-            speaker_percentage = {
-                speaker: round((time / duration) * 100, 2)
-                for speaker, time in speaker_talk_time.items()
-            }
-            
-            # Detect dead air (gaps between segments)
-            dead_air_segments = []
-            sorted_segments = sorted(segments, key=lambda x: x["start"])
-            
-            for i in range(len(sorted_segments) - 1):
-                gap_start = sorted_segments[i]["end"]
-                gap_end = sorted_segments[i + 1]["start"]
-                gap_duration = gap_end - gap_start
-                
-                # Consider gaps > 2 seconds as dead air
-                if gap_duration > 2.0:
-                    dead_air_segments.append({
+            # Consider gaps > 2 seconds as dead air
+            if gap_duration > 2.0:
+                dead_air_segments.append({
                     "start": round(gap_start, 2),
                     "end": round(gap_end, 2),
                     "duration": round(gap_duration, 2)
@@ -701,18 +698,17 @@ async def calculate_talk_time(audio: UploadFile = File(...), speaker_segments: s
             dead_air_total=round(dead_air_total, 2),
             agent_customer_ratio=agent_customer_ratio
         )
-        
-        finally:
-            # Clean up temporary file
-            try:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-            except Exception as e:
-                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
-        
+    
     except Exception as e:
         logger.error(f"❌ Talk-time calculation error: {e}")
         raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
+    finally:
+        # Clean up temporary file
+        try:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+        except Exception as e:
+            logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
 
 
 @app.post("/analyze-batch")
