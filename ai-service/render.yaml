@@ -3,7 +3,6 @@ services:
     name: ai-callcenter-ai-service
     env: python
     region: oregon
-    plan: standard  # $25/month - minimum for AI models (2GB RAM)
     buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -14,7 +13,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://ai-callcenter-backend.onrender.com,https://ai-call-center-pt0v.onrender.com,https://ai-call-center-henna.vercel.app,http://localhost:3000,http://localhost:5000
       - key: WHISPER_MODEL
-        value: base  # Use 'base' for CPU deployment (fits in 2GB RAM)
+        value: tiny  # Changed from 'base' to 'tiny' for faster processing and lower memory usage
       - key: DEVICE
         value: cpu  # Render doesn't provide GPU on standard plans
       - key: SENTIMENT_MODEL

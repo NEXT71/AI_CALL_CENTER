@@ -26,7 +26,7 @@ exports.transcribeAudio = async (audioFilePath) => {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 300000, // 5 minutes timeout for large files
+        timeout: 1800000, // 30 minutes timeout for large files (increased from 5 minutes)
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
       }

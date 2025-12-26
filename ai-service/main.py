@@ -54,7 +54,7 @@ def load_whisper_model():
 
     try:
         import whisper
-        model_size = os.getenv("WHISPER_MODEL", "base")
+        model_size = os.getenv("WHISPER_MODEL", "tiny")  # Changed from "base" to "tiny" for faster processing
         logger.info(f"Loading Whisper model: {model_size}")
         whisper_model = whisper.load_model(model_size)
         models_available["whisper"] = True
@@ -227,10 +227,18 @@ class TalkTimeResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    import psutil
+    memory = psutil.virtual_memory()
     return {
         "status": "healthy",
         "models_available": models_available,
         "device": os.getenv("DEVICE", "cpu"),
+        "memory_usage": {
+            "total": memory.total,
+            "available": memory.available,
+            "percent": memory.percent,
+            "used": memory.used
+        },
         "note": "100% FREE & Open-Source Models - Models loaded on demand"
     }
 
@@ -255,7 +263,44 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
             # Transcribe audio locally using FREE Whisper
             logger.info(f"🎙️ Transcribing (FREE Whisper): {audio.filename}")
-            result = model.transcribe(temp_path)
+            logger.info(f"Audio file size: {os.path.getsize(temp_path)} bytes")
+            
+            # Add timeout and progress logging
+            import time
+            import psutil
+            start_time = time.time()
+            
+            memory_before = psutil.virtual_memory()
+            logger.info(f"Memory before transcription: {memory_before.percent}% used, {memory_before.available / 1024 / 1024:.1f}MB available")
+            
+            logger.info("Starting Whisper transcription...")
+            
+            try:
+                logger.info("Calling model.transcribe()...")
+                result = model.transcribe(temp_path, verbose=True)  # Add verbose logging
+                logger.info("model.transcribe() returned successfully")
+                
+                # Check if result is valid
+                if not result or not isinstance(result, dict):
+                    logger.error(f"Invalid transcription result: {type(result)}")
+                    raise HTTPException(status_code=500, detail="Invalid transcription result")
+                    
+                logger.info(f"Transcription result keys: {list(result.keys()) if result else 'None'}")
+                
+            except Exception as e:
+                logger.error(f"Whisper transcription failed: {e}")
+                logger.error(f"Exception type: {type(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+            
+            end_time = time.time()
+            processing_time = end_time - start_time
+            
+            memory_after = psutil.virtual_memory()
+            logger.info(f"Memory after transcription: {memory_after.percent}% used, {memory_after.available / 1024 / 1024:.1f}MB available")
+            
+            logger.info(f"Whisper transcription completed in {processing_time:.2f} seconds")
             
             # Extract text and metadata
             text = result.get("text", "").strip()
