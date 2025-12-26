@@ -1,4 +1,11 @@
-require('dotenv').config();
+// Load environment variables - handle missing .env file gracefully
+try {
+  require('dotenv').config();
+  console.log('🔍 DEBUG: server.js loaded, dotenv configured');
+} catch (error) {
+  console.log('⚠️ DEBUG: dotenv failed to load:', error.message);
+  console.log('🔍 DEBUG: server.js loaded without dotenv');
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -31,15 +38,19 @@ const webhookRoutes = require('./routes/webhookRoutes');
 
 // Validate environment variables before starting
 try {
+  console.log('🔍 DEBUG: About to validate environment variables...');
   validateEnv();
+  console.log('✅ DEBUG: Environment validation passed');
   logger.info('Environment validation passed');
 } catch (error) {
+  console.log('❌ DEBUG: Environment validation failed:', error.message);
   logger.error('Environment validation failed', { error: error.message });
   console.error('ENV VALIDATION ERROR:', error.message);
   process.exit(1);
 }
 
 // Initialize express app
+console.log('🔍 DEBUG: Initializing Express app...');
 const app = express();
 
 // Trust proxy - required for Render and other reverse proxy deployments
@@ -47,6 +58,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Connect to MongoDB
+console.log('🔍 DEBUG: About to connect to MongoDB...');
 connectDB();
 
 // Security Middleware
@@ -215,8 +227,10 @@ app.use(errorHandler);
 
 // Start server
 const PORT = config.port;
+console.log('🔍 DEBUG: About to start server on port:', PORT);
 
 const server = app.listen(PORT, () => {
+  console.log('✅ DEBUG: Server started successfully on port:', PORT);
   logger.info('Server started successfully', { 
     environment: config.nodeEnv,
     port: PORT,

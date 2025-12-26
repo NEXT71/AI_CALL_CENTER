@@ -4,11 +4,16 @@ const path = require('path');
 const fs = require('fs');
 
 const logDir = process.env.LOG_DIR || './logs';
+console.log('🔍 DEBUG: Logger initializing with logDir:', logDir);
 
 // Ensure log directory exists (create if needed)
 try {
   if (!fs.existsSync(logDir)) {
+    console.log('🔍 DEBUG: Creating logs directory...');
     fs.mkdirSync(logDir, { recursive: true });
+    console.log('✅ DEBUG: Logs directory created');
+  } else {
+    console.log('✅ DEBUG: Logs directory already exists');
   }
 } catch (error) {
   // Silently fail if we can't create logs directory (e.g., read-only filesystem)

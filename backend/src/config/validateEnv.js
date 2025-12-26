@@ -4,6 +4,8 @@ const logger = require('./logger');
  * Validate required environment variables on startup
  */
 const validateEnv = () => {
+  console.log('🔍 DEBUG: Starting environment validation...');
+
   const required = [
     'MONGO_URI',
     'JWT_SECRET',
@@ -15,7 +17,9 @@ const validateEnv = () => {
 
   // Check required variables
   for (const varName of required) {
-    if (!process.env[varName]) {
+    const exists = !!process.env[varName];
+    console.log(`🔍 DEBUG: ${varName} exists: ${exists}`);
+    if (!exists) {
       missing.push(varName);
     }
   }
