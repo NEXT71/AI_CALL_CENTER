@@ -26,13 +26,13 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['.wav', '.mp3', '.m4a', '.ogg'];
+  const allowedTypes = ['.wav', '.mp3', '.m4a', '.ogg', '.flac', '.aac'];
   const ext = path.extname(file.originalname).toLowerCase();
   
   if (allowedTypes.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only audio files (.wav, .mp3, .m4a, .ogg) are allowed.'));
+    cb(new Error('Invalid file type. Only audio files (.wav, .mp3, .m4a, .ogg, .flac, .aac) are allowed.'));
   }
 };
 
@@ -43,10 +43,14 @@ const validateAudioFile = (filePath) => {
   // Check magic numbers for common audio formats
   const magicNumbers = {
     wav: [0x52, 0x49, 0x46, 0x46], // RIFF
-    mp3: [0xFF, 0xFB], // MP3 frame sync
-    mp3_id3: [0x49, 0x44, 0x33], // ID3
+    mp3: [0xFF, 0xFB], // MP3 frame sync (CBR)
+    mp3_vbr: [0xFF, 0xF3], // MP3 frame sync (VBR)
+    mp3_vbr2: [0xFF, 0xF2], // MP3 frame sync (VBR)
+    mp3_id3: [0x49, 0x44, 0x33], // ID3v2
     m4a: [0x66, 0x74, 0x79, 0x70], // ftyp (at offset 4)
     ogg: [0x4F, 0x67, 0x67, 0x53], // OggS
+    flac: [0x66, 0x4C, 0x61, 0x43], // fLaC
+    aac: [0xFF, 0xF1], // AAC ADTS
   };
   
   // Check WAV
@@ -55,10 +59,36 @@ const validateAudioFile = (filePath) => {
     return true;
   }
   
-  // Check MP3
-  if ((buffer[0] === magicNumbers.mp3[0] && buffer[1] === magicNumbers.mp3[1]) ||
-      (buffer[0] === magicNumbers.mp3_id3[0] && buffer[1] === magicNumbers.mp3_id3[1])) {
+  // Check MP3 (multiple possible signatures)
+  // 1. ID3v2 tag at start
+  if (buffer[0] === magicNumbers.mp3_id3[0] && buffer[1] === magicNumbers.mp3_id3[1] &&
+      buffer[2] === magicNumbers.mp3_id3[2]) {
     return true;
+  }
+  
+  // 2. Direct MP3 frame sync (check first few possible frame sync patterns)
+  const frameSyncPatterns = [
+    [0xFF, 0xFB], // 320 kbps
+    [0xFF, 0xFA], // 256 kbps
+    [0xFF, 0xF9], // 224 kbps
+    [0xFF, 0xF8], // 192 kbps
+    [0xFF, 0xF7], // 160 kbps
+    [0xFF, 0xF6], // 144 kbps
+    [0xFF, 0xF5], // 128 kbps
+    [0xFF, 0xF4], // 112 kbps
+    [0xFF, 0xF3], // 96 kbps
+    [0xFF, 0xF2], // 80 kbps
+    [0xFF, 0xF1], // 64 kbps
+    [0xFF, 0xF0], // 56 kbps
+    [0xFF, 0xEF], // 48 kbps
+  ];
+  
+  for (let i = 0; i < Math.min(100, buffer.length - 1); i++) {
+    for (const pattern of frameSyncPatterns) {
+      if (buffer[i] === pattern[0] && (buffer[i + 1] & 0xFE) === pattern[1]) {
+        return true;
+      }
+    }
   }
   
   // Check M4A (ftyp at offset 4)
@@ -70,6 +100,17 @@ const validateAudioFile = (filePath) => {
   // Check OGG
   if (buffer[0] === magicNumbers.ogg[0] && buffer[1] === magicNumbers.ogg[1] &&
       buffer[2] === magicNumbers.ogg[2] && buffer[3] === magicNumbers.ogg[3]) {
+    return true;
+  }
+  
+  // Check FLAC
+  if (buffer[0] === magicNumbers.flac[0] && buffer[1] === magicNumbers.flac[1] &&
+      buffer[2] === magicNumbers.flac[2] && buffer[3] === magicNumbers.flac[3]) {
+    return true;
+  }
+  
+  // Check AAC (ADTS header)
+  if (buffer[0] === magicNumbers.aac[0] && (buffer[1] & 0xF0) === magicNumbers.aac[1]) {
     return true;
   }
   
