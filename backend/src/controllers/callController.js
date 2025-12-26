@@ -2,6 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const mongoose = require('mongoose');
 const Call = require('../models/Call');
 const config = require('../config/config');
 const aiService = require('../services/aiService');
@@ -75,32 +76,29 @@ const validateAudioFile = (filePath) => {
     
     // 2. Direct MP3 frame sync (check first few possible frame sync patterns)
     const frameSyncPatterns = [
-      [0xFF, 0xFB], // 320 kbps
-      [0xFF, 0xFA], // 256 kbps
-      [0xFF, 0xF9], // 224 kbps
-      [0xFF, 0xF8], // 192 kbps
-      [0xFF, 0xF7], // 160 kbps
-      [0xFF, 0xF6], // 144 kbps
-      [0xFF, 0xF5], // 128 kbps
-      [0xFF, 0xF4], // 112 kbps
-      [0xFF, 0xF3], // 96 kbps
-      [0xFF, 0xF2], // 80 kbps
-      [0xFF, 0xF1], // 64 kbps
-      [0xFF, 0xF0], // 56 kbps
-      [0xFF, 0xEF], // 48 kbps
-      [0xFF, 0xFE], // Additional patterns
-      [0xFF, 0xFD],
-      [0xFF, 0xFC],
-      [0xFF, 0xF3],
+      [0xFF, 0xFB], [0xFF, 0xFA], [0xFF, 0xF9], [0xFF, 0xF8], [0xFF, 0xF7],
+      [0xFF, 0xF6], [0xFF, 0xF5], [0xFF, 0xF4], [0xFF, 0xF3], [0xFF, 0xF2],
+      [0xFF, 0xF1], [0xFF, 0xF0], [0xFF, 0xEF], [0xFF, 0xEE], [0xFF, 0xED],
+      [0xFF, 0xEC], [0xFF, 0xEB], [0xFF, 0xEA], [0xFF, 0xE9], [0xFF, 0xE8],
+      [0xFF, 0xE7], [0xFF, 0xE6], [0xFF, 0xE5], [0xFF, 0xE4], [0xFF, 0xE3],
+      [0xFF, 0xE2], [0xFF, 0xE1], [0xFF, 0xE0]
     ];
     
-    // Search for frame sync in first 1000 bytes (increased from 100)
-    for (let i = 0; i < Math.min(1000, buffer.length - 1); i++) {
+    // Search for frame sync in first 2000 bytes (increased for large ID3 tags)
+    for (let i = 0; i < Math.min(2000, buffer.length - 1); i++) {
       for (const pattern of frameSyncPatterns) {
-        if (buffer[i] === pattern[0] && (buffer[i + 1] & 0xE0) === pattern[1]) { // More permissive mask
-          logger.info(`Audio validation - Detected MP3 frame sync at offset ${i}`);
+        if (buffer[i] === pattern[0] && (buffer[i + 1] & 0xE0) === pattern[1]) {
+          logger.info(`Audio validation - Detected MP3 frame sync at offset ${i}: ${buffer[i].toString(16)} ${buffer[i+1].toString(16)}`);
           return true;
         }
+      }
+    }
+    
+    // 3. Check for MP3 frame sync anywhere in the file (last resort)
+    for (let i = 0; i < Math.min(10000, buffer.length - 1); i++) {
+      if ((buffer[i] & 0xFF) === 0xFF && (buffer[i + 1] & 0xE0) === 0xE0) {
+        logger.info(`Audio validation - Detected MP3 frame sync (broad search) at offset ${i}`);
+        return true;
       }
     }
     
@@ -161,28 +159,22 @@ exports.uploadCall = [
         });
       }
 
-      // Validate file content (magic number check) - TEMPORARILY DISABLED FOR TESTING
-      // const isValidAudio = validateAudioFile(req.file.path);
-      // if (!isValidAudio) {
-      //   logger.error('Audio file validation failed', {
-      //     filename: req.file.originalname,
-      //     path: req.file.path,
-      //     size: req.file.size,
-      //     mimetype: req.file.mimetype
-      //   });
-      //   // Delete invalid file
-      //   fs.unlinkSync(req.file.path);
-      //   return res.status(400).json({
-      //     success: false,
-      //     message: 'Invalid audio file format. File content does not match extension.',
-      //   });
-      // }
-      logger.info('Audio file validation temporarily disabled for testing', {
-        filename: req.file.originalname,
-        path: req.file.path,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      });
+      // Validate file content (magic number check)
+      const isValidAudio = validateAudioFile(req.file.path);
+      if (!isValidAudio) {
+        logger.error('Audio file validation failed', {
+          filename: req.file.originalname,
+          path: req.file.path,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        });
+        // Delete invalid file
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid audio file format. File content does not match extension.',
+        });
+      }
 
       const {
         agentId,
@@ -210,10 +202,21 @@ exports.uploadCall = [
       // Generate unique call ID
       const callId = `CALL-${Date.now()}-${uuidv4().substring(0, 8)}`;
 
+      // Convert agentId string to ObjectId if needed
+      let agentObjectId;
+      try {
+        agentObjectId = mongoose.Types.ObjectId(agentId);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid agent ID format',
+        });
+      }
+
       // Create call record
       const call = await Call.create({
         callId,
-        agentId,
+        agentId: agentObjectId,
         agentName,
         customerId,
         customerName,
