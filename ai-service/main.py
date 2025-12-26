@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# Global model variables (lazy loaded)
+whisper_model = None
+sentiment_pipeline = None
+summarizer_pipeline = None
+ner_pipeline = None
+nlp_spacy = None
+
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Call Center - AI Service",
