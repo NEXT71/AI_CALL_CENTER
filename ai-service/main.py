@@ -1,6 +1,8 @@
 import os
 import uvicorn
-from fastapi import FastAPI, HTTPException
+import uuid
+import shutil
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -227,43 +229,59 @@ async def health_check():
 
 
 @app.post("/transcribe", response_model=TranscribeResponse)
-async def transcribe_audio(request: TranscribeRequest):
+async def transcribe_audio(audio: UploadFile = File(...)):
     """
     Transcribe audio file to text using FREE Whisper model (local processing)
     NO paid APIs, NO cloud services
     """
     try:
-        # Check if file exists
-        if not os.path.exists(request.audio_path):
-            raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
+        # Save uploaded file temporarily
+        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(audio.file, buffer)
         
-        # Load Whisper model if not already loaded
-        model = load_whisper_model()
-        if model is None:
-            raise HTTPException(status_code=503, detail="Whisper model failed to load")
+        try:
+            # Load Whisper model if not already loaded
+            model = load_whisper_model()
+            if model is None:
+                raise HTTPException(status_code=503, detail="Whisper model failed to load")
 
-        # Transcribe audio locally using FREE Whisper
-        logger.info(f"🎙️ Transcribing (FREE Whisper): {request.audio_path}")
-        result = model.transcribe(request.audio_path)
-        # Format timestamps with speaker segments
-        timestamps = []
-        if "segments" in result:
-            for segment in result["segments"]:
-                timestamps.append({
-                    "start": round(segment["start"], 2),
-                    "end": round(segment["end"], 2),
-                    "text": segment["text"].strip()
-                })
+            # Transcribe audio locally using FREE Whisper
+            logger.info(f"🎙️ Transcribing (FREE Whisper): {audio.filename}")
+            result = model.transcribe(temp_path)
+            
+            # Extract text and metadata
+            text = result.get("text", "").strip()
+            language = result.get("language")
+            word_count = len(text.split()) if text else 0
+            
+            # Format timestamps with speaker segments
+            timestamps = []
+            if "segments" in result:
+                for segment in result["segments"]:
+                    timestamps.append({
+                        "start": round(segment["start"], 2),
+                        "end": round(segment["end"], 2),
+                        "text": segment["text"].strip()
+                    })
+            
+            logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
+            
+            return TranscribeResponse(
+                text=text,
+                timestamps=timestamps,
+                language=language,
+                duration=result.get("duration"),
+                word_count=word_count
+            )
         
-        logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
-        
-        return TranscribeResponse(
-            text=text,
-            timestamps=timestamps,
-            language=language,
-            duration=result.get("duration"),
-            word_count=word_count
-        )
+        finally:
+            # Clean up temporary file
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
         
     except HTTPException:
         raise
@@ -502,7 +520,7 @@ async def check_compliance(request: ComplianceCheckRequest):
 
 
 @app.post("/diarize", response_model=DiarizeResponse)
-async def diarize_audio(request: DiarizeRequest):
+async def diarize_audio(audio: UploadFile = File(...), min_speakers: int = 2, max_speakers: int = 2):
     """
     Perform speaker diarization using FREE pyannote.audio
     Identifies who spoke when (Agent vs Customer)
@@ -522,19 +540,22 @@ async def diarize_audio(request: DiarizeRequest):
                 detail="HF_TOKEN not set. Get token from https://huggingface.co/settings/tokens"
             )
         
-        if not os.path.exists(request.audio_path):
-            raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
+        # Save uploaded file temporarily
+        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(audio.file, buffer)
         
-        logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {request.audio_path}")
-        
-        # Load diarization pipeline
-        pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=hf_token
-        )
-        
-        # Run diarization
-        diarization = pipeline(request.audio_path, min_speakers=request.min_speakers, max_speakers=request.max_speakers)
+        try:
+            logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {audio.filename}")
+            
+            # Load diarization pipeline
+            pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=hf_token
+            )
+            
+            # Run diarization
+            diarization = pipeline(temp_path, min_speakers=min_speakers, max_speakers=max_speakers)
         
         # Extract speaker segments
         speakers = {}
@@ -576,6 +597,14 @@ async def diarize_audio(request: DiarizeRequest):
             num_speakers=len(speakers)
         )
         
+        finally:
+            # Clean up temporary file
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
+        
     except ImportError:
         raise HTTPException(
             status_code=503, 
@@ -589,49 +618,56 @@ async def diarize_audio(request: DiarizeRequest):
 
 
 @app.post("/calculate-talk-time", response_model=TalkTimeResponse)
-async def calculate_talk_time(request: TalkTimeRequest):
+async def calculate_talk_time(audio: UploadFile = File(...), speaker_segments: str = Form(...)):
     """
     Calculate talk-time metrics, dead air, agent/customer ratio
     """
     try:
         import librosa
+        import json
         
-        if not os.path.exists(request.audio_path):
-            raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
+        # Save uploaded file temporarily
+        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(audio.file, buffer)
         
-        logger.info(f"📊 Calculating talk-time metrics...")
-        
-        # Get total audio duration
-        duration = librosa.get_duration(path=request.audio_path)
-        
-        # Calculate talk time per speaker
-        speaker_talk_time = {}
-        for segment in request.speaker_segments:
-            speaker = segment["speaker"]
-            seg_duration = segment["duration"]
+        try:
+            # Parse speaker segments from JSON string
+            segments = json.loads(speaker_segments)
             
-            if speaker not in speaker_talk_time:
-                speaker_talk_time[speaker] = 0.0
-            speaker_talk_time[speaker] += seg_duration
-        
-        # Calculate percentages
-        speaker_percentage = {
-            speaker: round((time / duration) * 100, 2)
-            for speaker, time in speaker_talk_time.items()
-        }
-        
-        # Detect dead air (gaps between segments)
-        dead_air_segments = []
-        sorted_segments = sorted(request.speaker_segments, key=lambda x: x["start"])
-        
-        for i in range(len(sorted_segments) - 1):
-            gap_start = sorted_segments[i]["end"]
-            gap_end = sorted_segments[i + 1]["start"]
-            gap_duration = gap_end - gap_start
+            logger.info(f"📊 Calculating talk-time metrics...")
             
-            # Consider gaps > 2 seconds as dead air
-            if gap_duration > 2.0:
-                dead_air_segments.append({
+            # Get total audio duration
+            duration = librosa.get_duration(path=temp_path)
+            
+            # Calculate talk time per speaker
+            speaker_talk_time = {}
+            for segment in segments:
+                speaker = segment["speaker"]
+                seg_duration = segment["duration"]
+                
+                if speaker not in speaker_talk_time:
+                    speaker_talk_time[speaker] = 0.0
+                speaker_talk_time[speaker] += seg_duration
+            
+            # Calculate percentages
+            speaker_percentage = {
+                speaker: round((time / duration) * 100, 2)
+                for speaker, time in speaker_talk_time.items()
+            }
+            
+            # Detect dead air (gaps between segments)
+            dead_air_segments = []
+            sorted_segments = sorted(segments, key=lambda x: x["start"])
+            
+            for i in range(len(sorted_segments) - 1):
+                gap_start = sorted_segments[i]["end"]
+                gap_end = sorted_segments[i + 1]["start"]
+                gap_duration = gap_end - gap_start
+                
+                # Consider gaps > 2 seconds as dead air
+                if gap_duration > 2.0:
+                    dead_air_segments.append({
                     "start": round(gap_start, 2),
                     "end": round(gap_end, 2),
                     "duration": round(gap_duration, 2)
@@ -643,7 +679,7 @@ async def calculate_talk_time(request: TalkTimeRequest):
         agent_time = 0.0
         customer_time = 0.0
         
-        for segment in request.speaker_segments:
+        for segment in segments:
             if segment.get("label") == "Agent":
                 agent_time += segment["duration"]
             elif segment.get("label") == "Customer":
@@ -665,6 +701,14 @@ async def calculate_talk_time(request: TalkTimeRequest):
             dead_air_total=round(dead_air_total, 2),
             agent_customer_ratio=agent_customer_ratio
         )
+        
+        finally:
+            # Clean up temporary file
+            try:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
         
     except Exception as e:
         logger.error(f"❌ Talk-time calculation error: {e}")

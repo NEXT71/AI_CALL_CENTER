@@ -9,12 +9,26 @@ const AI_SERVICE_URL = config.aiService.url;
  */
 exports.transcribeAudio = async (audioFilePath) => {
   try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg', // Adjust based on file type
+    });
+
     const response = await axios.post(
       `${AI_SERVICE_URL}/transcribe`,
-      { audio_path: audioFilePath },
+      formData,
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...formData.getHeaders(),
+        },
         timeout: 300000, // 5 minutes timeout for large files
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
       }
     );
 
@@ -119,16 +133,28 @@ exports.checkCompliance = async (transcript, mandatoryPhrases, forbiddenPhrases,
  */
 exports.diarizeAudio = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) => {
   try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg',
+    });
+    formData.append('min_speakers', minSpeakers.toString());
+    formData.append('max_speakers', maxSpeakers.toString());
+
     const response = await axios.post(
       `${AI_SERVICE_URL}/diarize`,
-      { 
-        audio_path: audioFilePath,
-        min_speakers: minSpeakers,
-        max_speakers: maxSpeakers
-      },
+      formData,
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...formData.getHeaders(),
+        },
         timeout: 180000, // 3 minutes
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
       }
     );
 
@@ -144,15 +170,27 @@ exports.diarizeAudio = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) =
  */
 exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
   try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg',
+    });
+    formData.append('speaker_segments', JSON.stringify(speakerSegments));
+
     const response = await axios.post(
       `${AI_SERVICE_URL}/calculate-talk-time`,
-      { 
-        audio_path: audioFilePath,
-        speaker_segments: speakerSegments
-      },
+      formData,
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          ...formData.getHeaders(),
+        },
         timeout: 60000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
       }
     );
 
