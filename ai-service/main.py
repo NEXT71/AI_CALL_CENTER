@@ -28,13 +28,6 @@ app = FastAPI(
 # CORS configuration
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5000").split(",")
 
-# Global model variables with lazy loading
-whisper_model = None
-sentiment_pipeline = None
-summarizer_pipeline = None
-ner_pipeline = None
-nlp_spacy = None
-
 # Model availability flags
 models_available = {
     "whisper": False,
@@ -152,12 +145,6 @@ SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetune
 SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
 SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
 
-# Global variables for models
-whisper_model = None
-sentiment_analyzer = None
-summarizer = None
-nlp = None
-
 # Pydantic models
 class TranscribeRequest(BaseModel):
     audio_path: str
@@ -226,67 +213,6 @@ class TalkTimeResponse(BaseModel):
     dead_air_segments: List[Dict]
     dead_air_total: float
     agent_customer_ratio: Optional[str] = None
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Load all FREE & open-source models on startup"""
-    global whisper_model, sentiment_analyzer, summarizer, nlp
-    
-    try:
-        print("🚀 Loading FREE & Open-Source AI Models...")
-        print("=" * 60)
-        
-        # 1. Load Whisper for Speech-to-Text (FREE, local)
-        print(f"📝 Loading Whisper model: {WHISPER_MODEL}...")
-        whisper_model = whisper.load_model(WHISPER_MODEL, device=DEVICE)
-        print(f"✅ Whisper ({WHISPER_MODEL}) loaded successfully on {DEVICE}")
-        
-        # 2. Load DistilBERT for Sentiment Analysis (FREE)
-        print(f"😊 Loading sentiment model: {SENTIMENT_MODEL}...")
-        sentiment_analyzer = pipeline(
-            "sentiment-analysis",
-            model=SENTIMENT_MODEL,
-            device=0 if DEVICE == "cuda" and torch.cuda.is_available() else -1
-        )
-        print(f"✅ Sentiment analyzer loaded successfully")
-        
-        # 3. Load spaCy for Entity Recognition (FREE)
-        print(f"🔍 Loading spaCy model: {SPACY_MODEL}...")
-        try:
-            nlp = spacy.load(SPACY_MODEL)
-            print(f"✅ spaCy model loaded successfully")
-        except OSError:
-            print(f"⚠️  spaCy model not found. Run: python -m spacy download {SPACY_MODEL}")
-            print("   Continuing without NER support...")
-            nlp = None
-        
-        # 4. Load BART for Summarization (FREE, optional)
-        print(f"📄 Loading summarization model: {SUMMARIZATION_MODEL}...")
-        try:
-            summarizer = pipeline(
-                "summarization",
-                model=SUMMARIZATION_MODEL,
-                device=0 if DEVICE == "cuda" and torch.cuda.is_available() else -1
-            )
-            print(f"✅ Summarizer loaded successfully")
-        except Exception as e:
-            print(f"⚠️  Summarizer loading failed: {e}")
-            print("   Continuing without summarization support...")
-            summarizer = None
-        
-        print("=" * 60)
-        print("✅ All models loaded successfully!")
-        print("🎯 Using 100% FREE & Open-Source Models:")
-        print(f"   - Whisper: {WHISPER_MODEL}")
-        print(f"   - DistilBERT: {SENTIMENT_MODEL}")
-        print(f"   - spaCy: {SPACY_MODEL}")
-        print(f"   - BART: {SUMMARIZATION_MODEL}")
-        print("=" * 60)
-        
-    except Exception as e:
-        print(f"❌ Error loading models: {e}")
-        raise
 
 
 @app.get("/health")
