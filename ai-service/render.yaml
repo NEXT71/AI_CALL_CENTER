@@ -3,6 +3,7 @@ services:
     name: ai-callcenter-ai-service
     env: python
     region: oregon
+    plan: standard # $25/month - minimum for AI models (2GB RAM)
     buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
