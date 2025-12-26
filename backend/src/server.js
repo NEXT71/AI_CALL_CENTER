@@ -43,8 +43,9 @@ console.log('✅ DEBUG: salesRoutes imported');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 const auditLogRoutes = require('./routes/auditLogRoutes');
 console.log('✅ DEBUG: auditLogRoutes imported');
-const subscriptionRoutes = require('./routes/subscriptionRoutes');
-console.log('✅ DEBUG: subscriptionRoutes imported');
+console.log('🔍 DEBUG: About to import subscriptionRoutes...');
+// const subscriptionRoutes = require('./routes/subscriptionRoutes');
+// console.log('✅ DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
 console.log('✅ DEBUG: webhookRoutes imported');
 
@@ -220,7 +221,7 @@ app.use(`${API_VERSION}/reports`, reportRoutes);
 app.use(`${API_VERSION}/sales`, salesRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
-app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
+// app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes); // Temporarily disabled - import failing
 
 // Legacy routes (deprecated - redirect to v1)
 app.use('/api/auth', (req, res) => res.redirect(308, `${API_VERSION}/auth${req.url}`));
@@ -229,7 +230,7 @@ app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req
 app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
 app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
-app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`));
+// app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled
 
 // 404 Handler
 app.use('*', (req, res) => {
