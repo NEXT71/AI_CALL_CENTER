@@ -205,7 +205,15 @@ exports.uploadCall = [
       // Convert agentId string to ObjectId if needed
       let agentObjectId;
       try {
-        agentObjectId = mongoose.Types.ObjectId(agentId);
+        // If agentId is a simple number string, create a valid ObjectId from it
+        if (/^\d+$/.test(agentId)) {
+          // Create a consistent ObjectId from numeric string by padding it
+          const paddedId = agentId.padStart(24, '0');
+          agentObjectId = new mongoose.Types.ObjectId(paddedId.substring(0, 24));
+        } else {
+          // Try to parse as existing ObjectId
+          agentObjectId = new mongoose.Types.ObjectId(agentId);
+        }
       } catch (error) {
         return res.status(400).json({
           success: false,
