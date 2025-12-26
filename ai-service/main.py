@@ -1,19 +1,19 @@
 import os
-import whisper
-import torch
-import spacy
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import pipeline
 from typing import List, Dict, Optional
-import uvicorn
 from dotenv import load_dotenv
-from rapidfuzz import fuzz
 import warnings
+import logging
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +27,115 @@ app = FastAPI(
 
 # CORS configuration
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5000").split(",")
+
+# Global model variables with lazy loading
+whisper_model = None
+sentiment_pipeline = None
+summarizer_pipeline = None
+ner_pipeline = None
+nlp_spacy = None
+
+# Model availability flags
+models_available = {
+    "whisper": False,
+    "sentiment": False,
+    "summarizer": False,
+    "ner": False,
+    "spacy": False
+}
+
+def load_whisper_model():
+    """Lazy load Whisper model"""
+    global whisper_model, models_available
+    if whisper_model is not None:
+        return whisper_model
+
+    try:
+        import whisper
+        model_size = os.getenv("WHISPER_MODEL", "base")
+        logger.info(f"Loading Whisper model: {model_size}")
+        whisper_model = whisper.load_model(model_size)
+        models_available["whisper"] = True
+        logger.info("Whisper model loaded successfully")
+        return whisper_model
+    except Exception as e:
+        logger.error(f"Failed to load Whisper model: {e}")
+        models_available["whisper"] = False
+        return None
+
+def load_sentiment_model():
+    """Lazy load sentiment analysis model"""
+    global sentiment_pipeline, models_available
+    if sentiment_pipeline is not None:
+        return sentiment_pipeline
+
+    try:
+        from transformers import pipeline
+        model_name = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
+        logger.info(f"Loading sentiment model: {model_name}")
+        sentiment_pipeline = pipeline("sentiment-analysis", model=model_name)
+        models_available["sentiment"] = True
+        logger.info("Sentiment model loaded successfully")
+        return sentiment_pipeline
+    except Exception as e:
+        logger.error(f"Failed to load sentiment model: {e}")
+        models_available["sentiment"] = False
+        return None
+
+def load_summarizer_model():
+    """Lazy load summarization model"""
+    global summarizer_pipeline, models_available
+    if summarizer_pipeline is not None:
+        return summarizer_pipeline
+
+    try:
+        from transformers import pipeline
+        model_name = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
+        logger.info(f"Loading summarizer model: {model_name}")
+        summarizer_pipeline = pipeline("summarization", model=model_name)
+        models_available["summarizer"] = True
+        logger.info("Summarizer model loaded successfully")
+        return summarizer_pipeline
+    except Exception as e:
+        logger.error(f"Failed to load summarizer model: {e}")
+        models_available["summarizer"] = False
+        return None
+
+def load_ner_model():
+    """Lazy load NER model"""
+    global ner_pipeline, models_available
+    if ner_pipeline is not None:
+        return ner_pipeline
+
+    try:
+        from transformers import pipeline
+        logger.info("Loading NER model")
+        ner_pipeline = pipeline("ner", aggregation_strategy="simple")
+        models_available["ner"] = True
+        logger.info("NER model loaded successfully")
+        return ner_pipeline
+    except Exception as e:
+        logger.error(f"Failed to load NER model: {e}")
+        models_available["ner"] = False
+        return None
+
+def load_spacy_model():
+    """Lazy load spaCy model"""
+    global nlp_spacy, models_available
+    if nlp_spacy is not None:
+        return nlp_spacy
+
+    try:
+        import spacy
+        logger.info("Loading spaCy model: en_core_web_sm")
+        nlp_spacy = spacy.load("en_core_web_sm")
+        models_available["spacy"] = True
+        logger.info("spaCy model loaded successfully")
+        return nlp_spacy
+    except Exception as e:
+        logger.error(f"Failed to load spaCy model: {e}")
+        models_available["spacy"] = False
+        return None
 
 app.add_middleware(
     CORSMiddleware,
@@ -185,20 +294,9 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "models": {
-            "whisper": WHISPER_MODEL,
-            "sentiment": SENTIMENT_MODEL,
-            "spacy": SPACY_MODEL if nlp else "not loaded",
-            "summarizer": SUMMARIZATION_MODEL if summarizer else "not loaded",
-        },
-        "device": DEVICE,
-        "models_loaded": {
-            "whisper": whisper_model is not None,
-            "sentiment": sentiment_analyzer is not None,
-            "spacy": nlp is not None,
-            "summarizer": summarizer is not None,
-        },
-        "note": "100% FREE & Open-Source Models"
+        "models_available": models_available,
+        "device": os.getenv("DEVICE", "cpu"),
+        "note": "100% FREE & Open-Source Models - Models loaded on demand"
     }
 
 
@@ -213,23 +311,14 @@ async def transcribe_audio(request: TranscribeRequest):
         if not os.path.exists(request.audio_path):
             raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
         
-        if whisper_model is None:
-            raise HTTPException(status_code=503, detail="Whisper model not loaded")
-        
+        # Load Whisper model if not already loaded
+        model = load_whisper_model()
+        if model is None:
+            raise HTTPException(status_code=503, detail="Whisper model failed to load")
+
         # Transcribe audio locally using FREE Whisper
-        print(f"🎙️ Transcribing (FREE Whisper): {request.audio_path}")
-        result = whisper_model.transcribe(
-            request.audio_path,
-            verbose=False,
-            word_timestamps=True,
-            language="en"  # Force English for BPO calls
-        )
-        
-        # Extract text and timestamps
-        text = result["text"].strip()
-        language = result.get("language", "en")
-        word_count = len(text.split())
-        
+        logger.info(f"🎙️ Transcribing (FREE Whisper): {request.audio_path}")
+        result = model.transcribe(request.audio_path)
         # Format timestamps with speaker segments
         timestamps = []
         if "segments" in result:
@@ -240,7 +329,7 @@ async def transcribe_audio(request: TranscribeRequest):
                     "text": segment["text"].strip()
                 })
         
-        print(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
+        logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
         
         return TranscribeResponse(
             text=text,
@@ -253,7 +342,7 @@ async def transcribe_audio(request: TranscribeRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Transcription error: {e}")
+        logger.error(f"❌ Transcription error: {e}")
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
@@ -263,26 +352,21 @@ async def analyze_sentiment(request: SentimentRequest):
     Analyze sentiment using FREE DistilBERT model (no training required)
     """
     try:
-        if sentiment_analyzer is None:
-            raise HTTPException(status_code=503, detail="Sentiment analyzer not loaded")
-        
+        # Load sentiment model if not already loaded
+        analyzer = load_sentiment_model()
+        if analyzer is None:
+            raise HTTPException(status_code=503, detail="Sentiment analyzer failed to load")
+
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
-        
+
         # Truncate text for BERT (max 512 tokens)
         text = request.text[:5000]
-        
-        print(f"🔍 Analyzing sentiment (FREE DistilBERT): {len(text)} chars")
-        
+
+        logger.info(f"🔍 Analyzing sentiment (FREE DistilBERT): {len(text)} chars")
+
         # Analyze using FREE pre-trained model
-        result = sentiment_analyzer(text)[0]
-        
-        # Map labels
-        label_map = {
-            "POSITIVE": "positive",
-            "NEGATIVE": "negative",
-            "NEUTRAL": "neutral"
-        }
+        result = analyzer(text)[0]
         
         label = label_map.get(result["label"].upper(), result["label"].lower())
         score = result["score"]
@@ -297,7 +381,7 @@ async def analyze_sentiment(request: SentimentRequest):
         else:
             confidence = "low"
         
-        print(f"✅ Sentiment: {label} (confidence: {score:.2f})")
+        logger.info(f"✅ Sentiment: {label} (confidence: {score:.2f})")
         
         return SentimentResponse(
             label=label,
@@ -308,7 +392,7 @@ async def analyze_sentiment(request: SentimentRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Sentiment analysis error: {e}")
+        logger.error(f"❌ Sentiment analysis error: {e}")
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
 
@@ -318,22 +402,18 @@ async def extract_entities(request: EntityRequest):
     Extract entities using FREE spaCy model (en_core_web_sm)
     """
     try:
+        # Load spaCy model if not already loaded
+        nlp = load_spacy_model()
         if nlp is None:
             raise HTTPException(
-                status_code=503, 
-                detail=f"spaCy model not loaded. Run: python -m spacy download {SPACY_MODEL}"
+                status_code=503,
+                detail="spaCy model failed to load. Run: python -m spacy download en_core_web_sm"
             )
-        
+
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
-        
-        print(f"🔍 Extracting entities (FREE spaCy): {len(request.text)} chars")
-        
-        # Process with spaCy
-        doc = nlp(request.text[:100000])  # Limit to 100k chars
-        
-        # Extract entities
-        entities = []
+
+        logger.info(f"🔍 Extracting entities (FREE spaCy): {len(request.text)} chars")
         for ent in doc.ents:
             entities.append({
                 "text": ent.text,
@@ -345,7 +425,7 @@ async def extract_entities(request: EntityRequest):
         # Extract key noun phrases
         key_phrases = [chunk.text for chunk in doc.noun_chunks][:20]
         
-        print(f"✅ Extracted {len(entities)} entities, {len(key_phrases)} key phrases")
+        logger.info(f"✅ Extracted {len(entities)} entities, {len(key_phrases)} key phrases")
         
         return EntityResponse(
             entities=entities,
@@ -355,7 +435,7 @@ async def extract_entities(request: EntityRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Entity extraction error: {e}")
+        logger.error(f"❌ Entity extraction error: {e}")
         raise HTTPException(status_code=500, detail=f"Entity extraction failed: {str(e)}")
 
 
@@ -365,17 +445,19 @@ async def summarize_text(request: SummarizeRequest):
     Summarize text using FREE BART model (facebook/bart-large-cnn)
     """
     try:
+        # Load summarizer model if not already loaded
+        summarizer = load_summarizer_model()
         if summarizer is None:
-            raise HTTPException(status_code=503, detail="Summarizer not loaded")
-        
+            raise HTTPException(status_code=503, detail="Summarizer failed to load")
+
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
-        
-        print(f"📄 Summarizing (FREE BART): {len(request.text)} chars")
-        
+
+        logger.info(f"📄 Summarizing (FREE BART): {len(request.text)} chars")
+
         # BART can handle ~1024 tokens, we'll use first 3000 chars as safe limit
         text = request.text[:3000]
-        
+
         # Generate summary
         summary_result = summarizer(
             text,
@@ -386,14 +468,14 @@ async def summarize_text(request: SummarizeRequest):
         
         summary = summary_result[0]["summary_text"]
         
-        print(f"✅ Summary generated: {len(summary)} chars")
+        logger.info(f"✅ Summary generated: {len(summary)} chars")
         
         return SummarizeResponse(summary=summary)
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Summarization error: {e}")
+        logger.error(f"❌ Summarization error: {e}")
         raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
 
 
@@ -406,7 +488,7 @@ async def check_compliance(request: ComplianceCheckRequest):
     try:
         transcript_lower = request.transcript.lower()
         
-        print(f"🔍 Checking compliance (FREE rapidfuzz): {len(request.mandatory_phrases)} mandatory, {len(request.forbidden_phrases)} forbidden")
+        logger.info(f"🔍 Checking compliance (FREE rapidfuzz): {len(request.mandatory_phrases)} mandatory, {len(request.forbidden_phrases)} forbidden")
         
         missing_mandatory = []
         detected_forbidden = []
@@ -472,7 +554,7 @@ async def check_compliance(request: ComplianceCheckRequest):
         
         compliance_score = max(0, mandatory_score - forbidden_penalty)
         
-        print(f"✅ Compliance check complete: score={compliance_score:.1f}, missing={len(missing_mandatory)}, violations={len(detected_forbidden)}")
+        logger.info(f"✅ Compliance check complete: score={compliance_score:.1f}, missing={len(missing_mandatory)}, violations={len(detected_forbidden)}")
         
         return ComplianceCheckResponse(
             missing_mandatory=missing_mandatory,
@@ -489,7 +571,7 @@ async def check_compliance(request: ComplianceCheckRequest):
         )
         
     except Exception as e:
-        print(f"❌ Compliance check error: {e}")
+        logger.error(f"❌ Compliance check error: {e}")
         raise HTTPException(status_code=500, detail=f"Compliance check failed: {str(e)}")
 
 
@@ -517,7 +599,7 @@ async def diarize_audio(request: DiarizeRequest):
         if not os.path.exists(request.audio_path):
             raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
         
-        print(f"🎭 Speaker diarization (FREE pyannote.audio): {request.audio_path}")
+        logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {request.audio_path}")
         
         # Load diarization pipeline
         pipeline = Pipeline.from_pretrained(
@@ -559,7 +641,7 @@ async def diarize_audio(request: DiarizeRequest):
         # Round talk times
         talk_time = {k: round(v, 2) for k, v in talk_time.items()}
         
-        print(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
         
         return DiarizeResponse(
             speakers=list(speakers.values()),
@@ -576,7 +658,7 @@ async def diarize_audio(request: DiarizeRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Diarization error: {e}")
+        logger.error(f"❌ Diarization error: {e}")
         raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
 
 
@@ -591,7 +673,7 @@ async def calculate_talk_time(request: TalkTimeRequest):
         if not os.path.exists(request.audio_path):
             raise HTTPException(status_code=404, detail=f"Audio file not found: {request.audio_path}")
         
-        print(f"📊 Calculating talk-time metrics...")
+        logger.info(f"📊 Calculating talk-time metrics...")
         
         # Get total audio duration
         duration = librosa.get_duration(path=request.audio_path)
@@ -647,7 +729,7 @@ async def calculate_talk_time(request: TalkTimeRequest):
         else:
             agent_customer_ratio = "N/A"
         
-        print(f"✅ Talk-time calculated: Agent={agent_time:.1f}s, Customer={customer_time:.1f}s, Dead air={dead_air_total:.1f}s")
+        logger.info(f"✅ Talk-time calculated: Agent={agent_time:.1f}s, Customer={customer_time:.1f}s, Dead air={dead_air_total:.1f}s")
         
         return TalkTimeResponse(
             total_duration=round(duration, 2),
@@ -659,7 +741,7 @@ async def calculate_talk_time(request: TalkTimeRequest):
         )
         
     except Exception as e:
-        print(f"❌ Talk-time calculation error: {e}")
+        logger.error(f"❌ Talk-time calculation error: {e}")
         raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
 
 
@@ -672,12 +754,12 @@ async def analyze_batch(audio_path: str):
         results = {}
         
         # 1. Transcribe (FREE Whisper)
-        print("🎙️ Step 1: Transcribing audio...")
+        logger.info("🎙️ Step 1: Transcribing audio...")
         transcribe_result = await transcribe_audio(TranscribeRequest(audio_path=audio_path))
         results["transcription"] = transcribe_result.dict()
         
         # 2. Speaker Diarization (FREE pyannote.audio) - CRITICAL
-        print("🎭 Step 2: Speaker diarization...")
+        logger.info("🎭 Step 2: Speaker diarization...")
         try:
             diarize_result = await diarize_audio(DiarizeRequest(audio_path=audio_path))
             results["diarization"] = diarize_result.dict()
@@ -689,18 +771,18 @@ async def analyze_batch(audio_path: str):
             ))
             results["talk_time"] = talk_time_result.dict()
         except Exception as e:
-            print(f"⚠️  Diarization skipped: {e}")
+            logger.warning(f"⚠️  Diarization skipped: {e}")
             results["diarization"] = None
             results["talk_time"] = None
         
         # 3. Sentiment Analysis (FREE DistilBERT) - Overall
-        print("😊 Step 3: Analyzing sentiment...")
+        logger.info("😊 Step 3: Analyzing sentiment...")
         sentiment_result = await analyze_sentiment(SentimentRequest(text=transcribe_result.text))
         results["sentiment"] = sentiment_result.dict()
         
         # 4. Per-speaker sentiment (if diarization succeeded)
         if results.get("diarization"):
-            print("😊 Step 4: Per-speaker sentiment...")
+            logger.info("😊 Step 4: Per-speaker sentiment...")
             results["speaker_sentiments"] = {}
             
             # Group transcript by speaker
@@ -720,7 +802,7 @@ async def analyze_batch(audio_path: str):
         
         # 5. Entity Extraction (FREE spaCy) - optional
         if nlp:
-            print("🔍 Step 5: Extracting entities...")
+            logger.info("🔍 Step 5: Extracting entities...")
             try:
                 entity_result = await extract_entities(EntityRequest(text=transcribe_result.text))
                 results["entities"] = entity_result.dict()
@@ -729,14 +811,14 @@ async def analyze_batch(audio_path: str):
         
         # 6. Summarization (FREE BART) - optional
         if summarizer and len(transcribe_result.text) > 500:
-            print("📄 Step 6: Generating summary...")
+            logger.info("📄 Step 6: Generating summary...")
             try:
                 summary_result = await summarize_text(SummarizeRequest(text=transcribe_result.text))
                 results["summary"] = summary_result.dict()
             except:
                 results["summary"] = None
         
-        print("✅ Batch analysis complete!")
+        logger.info("✅ Batch analysis complete!")
         return results
         
     except Exception as e:
