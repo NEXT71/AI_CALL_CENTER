@@ -91,13 +91,14 @@ const AddSales = () => {
       }
 
       const salesData = isOfficeData ? {
-        isOfficeData: true,
+        recordType: 'office',
         campaign: formData.campaign,
         salesDate: formData.salesDate,
         officeRevenue: parseFloat(formData.officeRevenue) || 0,
         officeTargets: parseInt(formData.officeTargets) || 0,
         officeNotes: formData.officeNotes,
       } : {
+        recordType: 'agent',
         agentId: formData.agentId,
         campaign: formData.campaign,
         salesDate: formData.salesDate,
@@ -180,26 +181,28 @@ const AddSales = () => {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Agent & Campaign Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                Agent *
-              </label>
-              <select
-                name="agentId"
-                value={formData.agentId}
-                onChange={handleChange}
-                required
-                className="input w-full"
-              >
-                <option value="">Select Agent</option>
-                {agents.map((agent) => (
-                  <option key={agent._id} value={agent._id}>
-                    {agent.name} - {agent.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isOfficeData && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
+                  Agent *
+                </label>
+                <select
+                  name="agentId"
+                  value={formData.agentId}
+                  onChange={handleChange}
+                  required
+                  className="input w-full"
+                >
+                  <option value="">Select Agent</option>
+                  {agents.map((agent) => (
+                    <option key={agent._id} value={agent._id}>
+                      {agent.name} - {agent.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
