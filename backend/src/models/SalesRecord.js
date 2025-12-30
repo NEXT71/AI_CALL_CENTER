@@ -2,17 +2,43 @@ const mongoose = require('mongoose');
 
 const salesRecordSchema = new mongoose.Schema(
   {
-    // Agent Information
+    // Record Type
+    recordType: {
+      type: String,
+      enum: ['agent', 'office'],
+      required: true,
+      default: 'agent',
+    },
+    
+    // Agent Information (required for agent records)
     agentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: function() { return this.recordType === 'agent'; },
     },
     agentName: {
       type: String,
-      required: true,
+      required: function() { return this.recordType === 'agent'; },
       trim: true,
     },
+    
+    // Office Information (required for office records)
+    officeRevenue: {
+      type: Number,
+      required: function() { return this.recordType === 'office'; },
+      min: 0,
+    },
+    officeTargets: {
+      type: Number,
+      required: function() { return this.recordType === 'office'; },
+      min: 0,
+    },
+    officeNotes: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+    
     campaign: {
       type: String,
       required: true,
@@ -23,20 +49,20 @@ const salesRecordSchema = new mongoose.Schema(
       required: true,
     },
     
-    // Sales Metrics
+    // Sales Metrics (required for agent records)
     totalCalls: {
       type: Number,
-      required: true,
+      required: function() { return this.recordType === 'agent'; },
       min: 0,
     },
     successfulSales: {
       type: Number,
-      required: true,
+      required: function() { return this.recordType === 'agent'; },
       min: 0,
     },
     failedSales: {
       type: Number,
-      required: true,
+      required: function() { return this.recordType === 'agent'; },
       min: 0,
     },
     warmTransfers: {
@@ -112,11 +138,11 @@ const salesRecordSchema = new mongoose.Schema(
   }
 );
 
-// Calculate success rate before saving
+// Calculate success rate before saving (only for agent records)
 salesRecordSchema.pre('save', function (next) {
-  if (this.totalCalls > 0) {
+  if (this.recordType === 'agent' && this.totalCalls > 0) {
     this.successRate = ((this.successfulSales / this.totalCalls) * 100).toFixed(2);
-  } else {
+  } else if (this.recordType === 'agent') {
     this.successRate = 0;
   }
   next();
@@ -124,6 +150,7 @@ salesRecordSchema.pre('save', function (next) {
 
 // Indexes for efficient querying
 salesRecordSchema.index({ agentId: 1, salesDate: -1 });
+salesRecordSchema.index({ recordType: 1, salesDate: -1 });
 salesRecordSchema.index({ campaign: 1 });
 salesRecordSchema.index({ submittedBy: 1 });
 salesRecordSchema.index({ salesDate: -1 });
@@ -132,11 +159,24 @@ salesRecordSchema.index({ successRate: -1 });
 // Compound indexes
 salesRecordSchema.index({ campaign: 1, salesDate: -1 });
 salesRecordSchema.index({ agentId: 1, campaign: 1, salesDate: -1 });
+salesRecordSchema.index({ recordType: 1, campaign: 1, salesDate: -1 });
 
-// Unique index to prevent duplicate entries for same agent, date, and campaign
+// Unique index to prevent duplicate entries for agent records
 salesRecordSchema.index(
   { agentId: 1, salesDate: 1, campaign: 1 }, 
-  { unique: true }
+  { 
+    unique: true,
+    partialFilterExpression: { recordType: 'agent' }
+  }
+);
+
+// Unique index to prevent duplicate office entries for same date and campaign
+salesRecordSchema.index(
+  { salesDate: 1, campaign: 1 }, 
+  { 
+    unique: true,
+    partialFilterExpression: { recordType: 'office' }
+  }
 );
 
 module.exports = mongoose.model('SalesRecord', salesRecordSchema);

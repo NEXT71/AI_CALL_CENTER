@@ -59,8 +59,14 @@ const ViewSales = () => {
 
   const filteredSales = sales.filter((record) =>
     searchTerm === '' ||
-    record.agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.campaign.toLowerCase().includes(searchTerm.toLowerCase())
+    (record.recordType === 'agent' && (
+      record.agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.campaign.toLowerCase().includes(searchTerm.toLowerCase())
+    )) ||
+    (record.recordType === 'office' && (
+      record.campaign.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      'office data'.includes(searchTerm.toLowerCase())
+    ))
   );
 
   const handleSelectAll = (e) => {
@@ -106,15 +112,19 @@ const ViewSales = () => {
   };
 
   const convertToCSV = (data) => {
-    const headers = ['Date', 'Agent', 'Campaign', 'Total Calls', 'Successful', 'Failed', 'Success Rate', 'Status'];
+    const headers = ['Date', 'Type', 'Agent/Office', 'Campaign', 'Total Calls', 'Successful', 'Failed', 'Success Rate', 'Office Revenue', 'Office Targets', 'Achievement %', 'Status'];
     const rows = data.map(r => [
       new Date(r.salesDate).toLocaleDateString(),
-      r.agentName,
+      r.recordType === 'agent' ? 'Agent' : 'Office',
+      r.recordType === 'agent' ? r.agentName : 'Office Data',
       r.campaign,
-      r.totalCalls,
-      r.successfulSales,
-      r.failedSales,
-      `${r.successRate}%`,
+      r.recordType === 'agent' ? r.totalCalls : '',
+      r.recordType === 'agent' ? r.successfulSales : '',
+      r.recordType === 'agent' ? r.failedSales : '',
+      r.recordType === 'agent' ? `${r.successRate}%` : '',
+      r.recordType === 'office' ? r.officeRevenue : '',
+      r.recordType === 'office' ? r.officeTargets : '',
+      r.recordType === 'office' && r.officeTargets > 0 ? `${((r.officeRevenue / r.officeTargets) * 100).toFixed(1)}%` : '',
       r.status
     ]);
     return [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -302,36 +312,18 @@ const ViewSales = () => {
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
                     onClick={() => handleSort('agentName')}
                   >
                     <div className="flex items-center gap-2">
-                      Agent
+                      Agent/Office
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Campaign</th>
-                  <th 
-                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
-                    onClick={() => handleSort('totalCalls')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Calls
-                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Success</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Failed</th>
-                  <th 
-                    className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-200 transition-colors duration-200 group"
-                    onClick={() => handleSort('successRate')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Rate
-                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
-                    </div>
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Metrics</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -352,15 +344,60 @@ const ViewSales = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {new Date(record.salesDate).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{record.agentName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{record.campaign}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{record.totalCalls}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">{record.successfulSales}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{record.failedSales}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-3 py-1.5 rounded-full font-semibold text-xs ${record.successRate >= 70 ? 'bg-green-100 text-green-700 ring-1 ring-green-200' : record.successRate >= 50 ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200' : 'bg-red-100 text-red-700 ring-1 ring-red-200'}`}>
-                        {record.successRate}%
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        record.recordType === 'agent' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {record.recordType === 'agent' ? 'Agent' : 'Office'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                      {record.recordType === 'agent' ? record.agentName : 'Office Data'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{record.campaign}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.recordType === 'agent' ? (
+                        <div className="space-y-1">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-600">Calls:</span>
+                            <span className="font-medium">{record.totalCalls}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-green-600">Success:</span>
+                            <span className="font-medium text-green-600">{record.successfulSales}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-red-600">Failed:</span>
+                            <span className="font-medium text-red-600">{record.failedSales}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-600">Rate:</span>
+                            <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                              record.successRate >= 70 ? 'bg-green-100 text-green-700' : 
+                              record.successRate >= 50 ? 'bg-yellow-100 text-yellow-700' : 
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {record.successRate}%
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-600">Revenue:</span>
+                            <span className="font-medium text-green-600">${record.officeRevenue?.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-slate-600">Target:</span>
+                            <span className="font-medium">${record.officeTargets?.toLocaleString()}</span>
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Achievement: {record.officeTargets > 0 ? ((record.officeRevenue / record.officeTargets) * 100).toFixed(1) : 0}%
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`badge ${getStatusBadge(record.status)}`}>

@@ -9,6 +9,7 @@ const { AppError } = require('../utils/errors');
 exports.createSalesRecord = async (req, res, next) => {
   try {
     const {
+      recordType = 'agent',
       agentId,
       campaign,
       salesDate,
@@ -18,34 +19,52 @@ exports.createSalesRecord = async (req, res, next) => {
       warmTransfers,
       callbacksScheduled,
       notes,
+      officeRevenue,
+      officeTargets,
+      officeNotes,
     } = req.body;
 
-    // Verify agent exists
-    const agent = await User.findById(agentId);
-    if (!agent) {
-      throw new AppError('Agent not found', 404);
-    }
-
-    // Create sales record
-    const salesRecord = await SalesRecord.create({
-      agentId,
-      agentName: agent.name,
+    let salesRecordData = {
+      recordType,
       campaign,
       salesDate,
-      totalCalls,
-      successfulSales,
-      failedSales,
-      warmTransfers: warmTransfers || 0,
-      callbacksScheduled: callbacksScheduled || 0,
       notes,
       submittedBy: req.user._id,
       submittedByName: req.user.name,
       submittedByRole: req.user.role,
-    });
+    };
+
+    if (recordType === 'agent') {
+      // Verify agent exists
+      const agent = await User.findById(agentId);
+      if (!agent) {
+        throw new AppError('Agent not found', 404);
+      }
+
+      // Add agent-specific fields
+      salesRecordData.agentId = agentId;
+      salesRecordData.agentName = agent.name;
+      salesRecordData.totalCalls = totalCalls;
+      salesRecordData.successfulSales = successfulSales;
+      salesRecordData.failedSales = failedSales;
+      salesRecordData.warmTransfers = warmTransfers || 0;
+      salesRecordData.callbacksScheduled = callbacksScheduled || 0;
+    } else if (recordType === 'office') {
+      // Add office-specific fields
+      salesRecordData.officeRevenue = officeRevenue;
+      salesRecordData.officeTargets = officeTargets;
+      salesRecordData.officeNotes = officeNotes;
+    } else {
+      throw new AppError('Invalid record type. Must be "agent" or "office"', 400);
+    }
+
+    // Create sales record
+    const salesRecord = await SalesRecord.create(salesRecordData);
 
     logger.info('Sales record created', {
       salesRecordId: salesRecord._id,
-      agentId,
+      recordType,
+      agentId: recordType === 'agent' ? agentId : undefined,
       submittedBy: req.user._id,
     });
 
@@ -179,17 +198,28 @@ exports.updateSalesRecord = async (req, res, next) => {
       throw new AppError('Access denied - you can only edit your own submissions', 403);
     }
 
-    // Update allowed fields
-    const allowedUpdates = [
+    // Update allowed fields based on record type
+    let allowedUpdates = [
       'campaign',
       'salesDate',
-      'totalCalls',
-      'successfulSales',
-      'failedSales',
-      'warmTransfers',
-      'callbacksScheduled',
       'notes',
     ];
+
+    if (salesRecord.recordType === 'agent') {
+      allowedUpdates.push(
+        'totalCalls',
+        'successfulSales',
+        'failedSales',
+        'warmTransfers',
+        'callbacksScheduled'
+      );
+    } else if (salesRecord.recordType === 'office') {
+      allowedUpdates.push(
+        'officeRevenue',
+        'officeTargets',
+        'officeNotes'
+      );
+    }
 
     allowedUpdates.forEach((field) => {
       if (updates[field] !== undefined) {
