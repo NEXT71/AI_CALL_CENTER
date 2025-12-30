@@ -2,12 +2,31 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { callService } from '../services/apiService';
-import { Search, Filter, Eye, ChevronLeft, ChevronRight, Download, Calendar, User, Building2 } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Calendar,
+  User,
+  Building2,
+  RefreshCw,
+  X,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
+} from 'lucide-react';
 
 const CallsList = () => {
   const { user } = useAuth();
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sortField, setSortField] = useState('callDate');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [filters, setFilters] = useState({
     campaign: '',
     agentName: '',
@@ -24,22 +43,33 @@ const CallsList = () => {
     totalPages: 0,
     currentPage: 1,
   });
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchCalls();
     }
-  }, [filters, user]);
+  }, [filters, user, sortField, sortDirection]);
 
-  const fetchCalls = async () => {
+  const fetchCalls = async (isRefresh = false) => {
     if (!user) {
       setLoading(false);
       return;
     }
-    
+
     try {
-      setLoading(true);
-      const response = await callService.getCalls(filters);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await callService.getCalls({
+        ...filters,
+        sort: sortField,
+        order: sortDirection
+      });
+
       setCalls(response.data);
       setPagination({
         total: response.total,
@@ -48,6 +78,25 @@ const CallsList = () => {
       });
     } catch (error) {
       console.error('Error fetching calls:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setFilters({ ...filters, page: 1 });
+  };
+
+  const handleRefresh = () => {
+    fetchCalls(true);
+  };
     } finally {
       setLoading(false);
     }
@@ -262,66 +311,225 @@ const CallsList = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Call ID</th>
-                      <th>Agent</th>
-                      <th>Customer</th>
-                      <th>Campaign</th>
-                      <th>Date</th>
-                      <th>Duration</th>
-                      <th>Quality</th>
-                      <th>Compliance</th>
-                      <th>Status</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {calls.map((call) => (
-                      <tr key={call._id}>
-                        <td className="font-mono text-xs font-semibold text-slate-900">{call.callId}</td>
-                        <td className="font-medium text-slate-900">{call.agentName}</td>
-                        <td className="text-slate-600">{call.customerName || '-'}</td>
-                        <td className="text-slate-600">{call.campaign}</td>
-                        <td className="text-slate-500 text-xs">{formatDate(call.callDate)}</td>
-                        <td className="text-slate-600 text-xs">
-                          {call.duration ? `${Math.floor(call.duration / 60)}:${String(call.duration % 60).padStart(2, '0')}` : '-'}
-                        </td>
-                        <td>
-                          <span className={`badge ${getScoreBadge(call.qualityScore)}`}>
-                            {call.qualityScore || 'N/A'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${getScoreBadge(call.complianceScore)}`}>
-                            {call.complianceScore || 'N/A'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${
-                            call.status === 'completed' ? 'badge-success' :
-                            call.status === 'processing' ? 'badge-info' :
-                            call.status === 'failed' ? 'badge-danger' :
-                            'badge-neutral'
-                          }`}>
-                            {call.status}
-                          </span>
-                        </td>
-                        <td>
-                          <Link
-                            to={`/calls/${call._id}`}
-                            className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1.5 text-sm font-medium"
-                          >
-                            <Eye size={16} />
-                            View
-                          </Link>
-                        </td>
+              {/* Table Controls */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-lg border border-slate-200">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="btn btn-secondary flex items-center gap-2"
+                  >
+                    <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="btn btn-secondary lg:hidden flex items-center gap-2"
+                  >
+                    <SlidersHorizontal size={16} />
+                    Filters
+                  </button>
+                </div>
+                <div className="text-sm text-slate-600">
+                  {pagination.total} calls found
+                </div>
+              </div>
+
+              {/* Enhanced Table Container */}
+              <div className="table-container-enhanced">
+                <div className="overflow-x-auto">
+                  <table className="table-enhanced min-w-full">
+                    <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
+                      <tr>
+                        <th onClick={() => handleSort('callId')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            Call ID
+                            {sortField === 'callId' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'callId' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th onClick={() => handleSort('agentName')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <User size={14} />
+                            Agent
+                            {sortField === 'agentName' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'agentName' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th>Customer</th>
+                        <th onClick={() => handleSort('campaign')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Building2 size={14} />
+                            Campaign
+                            {sortField === 'campaign' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'campaign' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th onClick={() => handleSort('callDate')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} />
+                            Date & Time
+                            {sortField === 'callDate' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'callDate' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th>Duration</th>
+                        <th onClick={() => handleSort('qualityScore')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            Quality Score
+                            {sortField === 'qualityScore' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'qualityScore' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th onClick={() => handleSort('complianceScore')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-2">
+                            Compliance
+                            {sortField === 'complianceScore' && (
+                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                            )}
+                            {sortField !== 'complianceScore' && <ArrowUpDown size={14} className="opacity-30" />}
+                          </div>
+                        </th>
+                        <th>Status</th>
+                        <th className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {calls.map((call, index) => (
+                        <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
+                          <td className="font-mono text-xs font-semibold text-slate-900 bg-slate-50/50">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
+                                {call.callId}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                                {call.agentName?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <span>{call.agentName}</span>
+                            </div>
+                          </td>
+                          <td className="text-slate-600">
+                            <span className="px-2 py-1 bg-slate-100 rounded-full text-xs">
+                              {call.customerName || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="text-slate-600">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {call.campaign}
+                            </span>
+                          </td>
+                          <td className="text-slate-500 text-xs">
+                            <div className="space-y-1">
+                              <div className="font-medium">{formatDate(call.callDate)}</div>
+                              <div className="text-slate-400">{formatTime(call.callDate)}</div>
+                            </div>
+                          </td>
+                          <td className="text-slate-600">
+                            {call.duration ? (
+                              <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                {Math.floor(call.duration / 60)}:{String(call.duration % 60).padStart(2, '0')}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {call.qualityScore !== null && call.qualityScore !== undefined ? (
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  call.qualityScore >= 80 ? 'bg-green-500' :
+                                  call.qualityScore >= 60 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}></div>
+                                <span className={`badge ${
+                                  call.qualityScore >= 80 ? 'badge-success' :
+                                  call.qualityScore >= 60 ? 'badge-warning' :
+                                  'badge-danger'
+                                }`}>
+                                  {call.qualityScore}%
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">N/A</span>
+                            )}
+                          </td>
+                          <td>
+                            {call.complianceScore !== null && call.complianceScore !== undefined ? (
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  call.complianceScore >= 80 ? 'bg-green-500' :
+                                  call.complianceScore >= 60 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}></div>
+                                <span className={`badge ${
+                                  call.complianceScore >= 80 ? 'badge-success' :
+                                  call.complianceScore >= 60 ? 'badge-warning' :
+                                  'badge-danger'
+                                }`}>
+                                  {call.complianceScore}%
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">N/A</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              call.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              call.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                              call.status === 'failed' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              <div className={`w-2 h-2 rounded-full mr-1.5 ${
+                                call.status === 'completed' ? 'bg-green-500' :
+                                call.status === 'processing' ? 'bg-blue-500 animate-pulse' :
+                                call.status === 'failed' ? 'bg-red-500' :
+                                'bg-gray-500'
+                              }`}></div>
+                              {call.status}
+                            </span>
+                          </td>
+                          <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-6">
+                            <Link
+                              to={`/calls/${call._id}`}
+                              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
+                            >
+                              <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                              <span>View Details</span>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer with Summary */}
+                <div className="bg-slate-50 px-6 py-4 border-t border-slate-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-slate-600">
+                    <div className="flex items-center gap-6">
+                      <span>📊 {calls.length} calls displayed</span>
+                      <span>📅 {formatDate(new Date())}</span>
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Scroll horizontally to see all columns →
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Pagination */}

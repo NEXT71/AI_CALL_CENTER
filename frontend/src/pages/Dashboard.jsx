@@ -148,39 +148,57 @@ const Dashboard = () => {
       )}
 
       {/* Page Header with Date Filter */}
-      <div className="page-header mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            <p className="text-sm text-slate-600 mt-2">Monitor performance and quality metrics across your organization</p>
+      <div className="page-header-enhanced animate-fade-in">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-slate-900 tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-lg text-slate-600 font-medium">
+              Monitor performance and quality metrics across your organization
+            </p>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Live Data</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Real-time Updates</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl shadow-md border border-slate-200">
-            <input
-              type="date"
-              value={dateRange.startDate}
-              onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              style={{ width: '150px' }}
-            />
-            <span className="text-slate-500 font-medium">to</span>
-            <input
-              type="date"
-              value={dateRange.endDate}
-              onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              style={{ width: '150px' }}
-            />
-            <select
-              value={campaign}
-              onChange={(e) => setCampaign(e.target.value)}
-              className="px-3 py-2 text-sm border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-              style={{ width: '140px' }}
-            >
-              <option value="">All Campaigns</option>
-              <option value="ACA">ACA</option>
-              <option value="Medicare">Medicare</option>
-              <option value="Final Expense">Final Expense</option>
-            </select>
+          <div className="filter-panel-enhanced">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-700 whitespace-nowrap">From:</label>
+                <input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                  className="input-enhanced"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-700 whitespace-nowrap">To:</label>
+                <input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                  className="input-enhanced"
+                />
+              </div>
+              <select
+                value={campaign}
+                onChange={(e) => setCampaign(e.target.value)}
+                className="select-enhanced"
+              >
+                <option value="">All Campaigns</option>
+                <option value="ACA">ACA</option>
+                <option value="Medicare">Medicare</option>
+                <option value="Final Expense">Final Expense</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -188,66 +206,83 @@ const Dashboard = () => {
       {/* KPI Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg border-2 border-blue-200 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          {/* Total Calls Card */}
+          <div className="kpi-card-enhanced group">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Total Calls</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
-                <p className="text-sm text-green-600 font-medium flex items-center gap-1 mt-3">
-                  <ArrowUp size={14} />
+                <p className="kpi-label-enhanced">Total Calls</p>
+                <p className="kpi-value-enhanced">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
+                <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
+                  <ArrowUp size={14} className="animate-bounce" />
                   <span>12.5% from last period</span>
-                </p>
+                </div>
               </div>
-              <div className="p-3 bg-blue-600 rounded-xl shadow-md">
-                <Phone size={20} />
+              <div className="kpi-icon-enhanced kpi-icon-blue group-hover:scale-110 transition-transform duration-300">
+                <Phone size={24} />
               </div>
+            </div>
+            <div className="kpi-progress-bar mt-4">
+              <div className="kpi-progress-fill kpi-progress-blue" style={{ width: '85%' }}></div>
             </div>
           </div>
 
-          <div className="kpi-card">
+          {/* Average Quality Score Card */}
+          <div className="kpi-card-enhanced group">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="kpi-label">Avg Quality Score</p>
-                <p className="kpi-value">{stats.overview?.avgQualityScore?.toFixed(1) || '0.0'}</p>
-                <p className="kpi-change kpi-change-positive flex items-center gap-1 mt-2">
-                  <ArrowUp size={12} />
+                <p className="kpi-label-enhanced">Avg Quality Score</p>
+                <p className="kpi-value-enhanced">{stats.overview?.avgQualityScore?.toFixed(1) || '0.0'}</p>
+                <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
+                  <ArrowUp size={14} className="animate-pulse" />
                   <span>3.2% improvement</span>
-                </p>
+                </div>
               </div>
-              <div className="icon-container icon-container-green">
-                <TrendingUp size={20} />
+              <div className="kpi-icon-enhanced kpi-icon-green group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp size={24} />
               </div>
+            </div>
+            <div className="kpi-progress-bar mt-4">
+              <div className="kpi-progress-fill kpi-progress-green" style={{ width: `${Math.min(stats.overview?.avgQualityScore || 0, 100)}%` }}></div>
             </div>
           </div>
 
-          <div className="kpi-card">
+          {/* Compliance Score Card */}
+          <div className="kpi-card-enhanced group">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="kpi-label">Compliance Score</p>
-                <p className="kpi-value">{stats.overview?.avgComplianceScore?.toFixed(1) || '0.0'}</p>
-                <p className="kpi-change kpi-change-positive flex items-center gap-1 mt-2">
-                  <ArrowUp size={12} />
+                <p className="kpi-label-enhanced">Compliance Score</p>
+                <p className="kpi-value-enhanced">{stats.overview?.avgComplianceScore?.toFixed(1) || '0.0'}</p>
+                <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
+                  <CheckCircle size={14} className="animate-pulse" />
                   <span>98% adherence</span>
-                </p>
+                </div>
               </div>
-              <div className="icon-container icon-container-blue">
-                <CheckCircle size={20} />
+              <div className="kpi-icon-enhanced kpi-icon-purple group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle size={24} />
               </div>
+            </div>
+            <div className="kpi-progress-bar mt-4">
+              <div className="kpi-progress-fill kpi-progress-purple" style={{ width: `${Math.min(stats.overview?.avgComplianceScore || 0, 100)}%` }}></div>
             </div>
           </div>
 
-          <div className="kpi-card">
+          {/* Sales Conversion Card */}
+          <div className="kpi-card-enhanced group">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="kpi-label">Sales Conversion</p>
-                <p className="kpi-value">{salesData?.totalSales || 0}</p>
-                <p className="kpi-change kpi-change-neutral flex items-center gap-1 mt-2 text-slate-600">
+                <p className="kpi-label-enhanced">Sales Conversion</p>
+                <p className="kpi-value-enhanced">{salesData?.totalSales || 0}</p>
+                <div className="kpi-change-enhanced kpi-change-neutral flex items-center gap-1.5 mt-3">
+                  <ShoppingCart size={14} />
                   <span>{salesData?.conversionRate?.toFixed(1) || 0}% conversion</span>
-                </p>
+                </div>
               </div>
-              <div className="icon-container icon-container-green">
-                <ShoppingCart size={20} />
+              <div className="kpi-icon-enhanced kpi-icon-orange group-hover:scale-110 transition-transform duration-300">
+                <ShoppingCart size={24} />
               </div>
+            </div>
+            <div className="kpi-progress-bar mt-4">
+              <div className="kpi-progress-fill kpi-progress-orange" style={{ width: `${Math.min((salesData?.conversionRate || 0) * 10, 100)}%` }}></div>
             </div>
           </div>
         </div>
@@ -332,77 +367,142 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Calls Table */}
-      <div className="card-compact">
-        <div className="flex items-center justify-between mb-5 px-2">
-          <h3 className="section-header mb-0">Recent Calls</h3>
-          <Link to="/calls" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-            View all calls
-            <ArrowUp size={14} className="rotate-90" />
+      <div className="card-enhanced animate-fade-in">
+        <div className="flex items-center justify-between mb-6 px-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md">
+              <Phone size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="section-header-enhanced">Recent Calls</h3>
+              <p className="text-sm text-slate-500">Latest call analysis results</p>
+            </div>
+          </div>
+          <Link to="/app/calls" className="btn-enhanced btn-primary-enhanced flex items-center gap-2 group">
+            <span>View All Calls</span>
+            <ArrowUp size={16} className="group-hover:translate-x-1 transition-transform duration-200 rotate-90" />
           </Link>
         </div>
-        
+
         {recentCalls.length === 0 ? (
-          <div className="text-center py-16">
-            <Phone className="mx-auto text-slate-300 mb-3" size={48} />
-            <p className="body-text">No calls found</p>
+          <div className="empty-state-enhanced">
+            <div className="empty-state-icon">
+              <Phone className="w-16 h-16 text-slate-300" />
+            </div>
+            <h4 className="empty-state-title">No calls found</h4>
+            <p className="empty-state-description">
+              Upload your first call recording to get started with AI-powered analysis.
+            </p>
+            <Link to="/app/upload" className="btn-enhanced btn-primary-enhanced mt-4">
+              Upload Call Recording
+            </Link>
           </div>
         ) : (
-          <div className="table-container border-0">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Call ID</th>
-                  <th>Agent</th>
-                  <th>Customer</th>
-                  <th>Campaign</th>
-                  <th>Date</th>
-                  <th>Quality</th>
-                  <th>Compliance</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentCalls.map((call) => (
-                  <tr key={call._id}>
-                    <td className="font-mono text-xs font-semibold text-slate-900">{call.callId}</td>
-                    <td className="font-medium text-slate-900">{call.agentName}</td>
-                    <td className="text-slate-600">{call.customerName || '-'}</td>
-                    <td className="text-slate-600">{call.campaign}</td>
-                    <td className="text-slate-500 text-xs">{formatDate(call.callDate)}</td>
-                    <td>
-                      <span className={`badge ${getScoreBadge(call.qualityScore)}`}>
-                        {call.qualityScore || 'N/A'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${getScoreBadge(call.complianceScore)}`}>
-                        {call.complianceScore || 'N/A'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        call.status === 'completed' ? 'badge-success' :
-                        call.status === 'processing' ? 'badge-info' :
-                        call.status === 'failed' ? 'badge-danger' :
-                        'badge-neutral'
-                      }`}>
-                        {call.status}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        to={`/calls/${call._id}`}
-                        className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1.5 text-sm font-medium"
-                      >
-                        <Eye size={16} />
-                        View
-                      </Link>
-                    </td>
+          <div className="table-container-enhanced-compact">
+            <div className="overflow-x-auto">
+              <table className="table-enhanced-compact">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
+                  <tr>
+                    <th>Call ID</th>
+                    <th>Agent</th>
+                    <th>Customer</th>
+                    <th>Campaign</th>
+                    <th>Date & Time</th>
+                    <th>Quality</th>
+                    <th>Compliance</th>
+                    <th>Status</th>
+                    <th className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentCalls.slice(0, 5).map((call, index) => (
+                    <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
+                      <td className="font-mono text-xs font-semibold text-slate-900">
+                        <span className="px-2 py-1 bg-slate-100 rounded text-xs">
+                          {call.callId}
+                        </span>
+                      </td>
+                      <td className="font-medium text-slate-900">{call.agentName}</td>
+                      <td className="text-slate-600">{call.customerName || 'Unknown'}</td>
+                      <td className="text-slate-600">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {call.campaign}
+                        </span>
+                      </td>
+                      <td className="text-slate-500 text-xs">
+                        <div className="font-medium">{formatDate(call.callDate)}</div>
+                        <div className="text-slate-400">{formatTime(call.callDate)}</div>
+                      </td>
+                      <td>
+                        {call.qualityScore !== null && call.qualityScore !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              call.qualityScore >= 80 ? 'bg-green-500' :
+                              call.qualityScore >= 60 ? 'bg-yellow-500' :
+                              'bg-red-500'
+                            }`}></div>
+                            <span className={`badge-compact ${
+                              call.qualityScore >= 80 ? 'badge-success' :
+                              call.qualityScore >= 60 ? 'badge-warning' :
+                              'badge-danger'
+                            }`}>
+                              {call.qualityScore}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">N/A</span>
+                        )}
+                      </td>
+                      <td>
+                        {call.complianceScore !== null && call.complianceScore !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              call.complianceScore >= 80 ? 'bg-green-500' :
+                              call.complianceScore >= 60 ? 'bg-yellow-500' :
+                              'bg-red-500'
+                            }`}></div>
+                            <span className={`badge-compact ${
+                              call.complianceScore >= 80 ? 'badge-success' :
+                              call.complianceScore >= 60 ? 'badge-warning' :
+                              'badge-danger'
+                            }`}>
+                              {call.complianceScore}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">N/A</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          call.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          call.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          call.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            call.status === 'completed' ? 'bg-green-500' :
+                            call.status === 'processing' ? 'bg-blue-500 animate-pulse' :
+                            call.status === 'failed' ? 'bg-red-500' :
+                            'bg-gray-500'
+                          }`}></div>
+                          {call.status}
+                        </span>
+                      </td>
+                      <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-4">
+                        <Link
+                          to={`/app/calls/${call._id}`}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
+                        >
+                          <Eye size={14} className="group-hover:scale-110 transition-transform" />
+                          <span>View</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

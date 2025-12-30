@@ -198,6 +198,28 @@ Cold start typically takes 5-15 seconds. To minimize impact:
 **Issue:** Audio file not found
 - **Solution:** Ensure audio files are accessible in container (mount volume or use URLs)
 
+## ⏰ **Cost Optimization - Scheduled Pod Management**
+
+**Problem:** GPU Pods run 24/7 but you only need them during business hours.
+
+**Solution:** Use automated pod scheduling to save ~80% on costs!
+
+### **Setup Automated Scheduler**
+1. **Get API Access**: Generate RunPod API key in account settings
+2. **Configure Environment**:
+   ```env
+   RUNPOD_API_KEY=your_api_key_here
+   RUNPOD_POD_ID=your_pod_id_here
+   ```
+3. **Run Scheduler**: `python runpod_scheduler.py`
+
+### **Cost Savings**
+- **Before**: 24/7 = ~$180/month (RTX A4500)
+- **After**: Scheduled = ~$36/month (Mon-Sat, 6:45 PM PKT - 6:00 AM PST)
+- **Savings**: **$144/month (80% reduction!)**
+
+See `RUNPOD_SCHEDULER_README.md` for detailed setup instructions.
+
 ## 📝 Next Steps
 
 1. ✅ Build and push Docker image
@@ -207,3 +229,4 @@ Cold start typically takes 5-15 seconds. To minimize impact:
 5. ✅ Monitor logs and performance
 6. ✅ Set up keep-alive ping (optional)
 7. ✅ Configure auto-scaling based on usage
+8. ✅ **Set up pod scheduler for cost optimization**

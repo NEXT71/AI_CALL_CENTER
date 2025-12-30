@@ -25,20 +25,45 @@ const Toast = ({ message, type = 'info', onClose, duration = 3000 }) => {
 
   return (
     <div className={`fixed top-4 right-4 z-50 max-w-md w-full animate-slide-in-right`}>
-      <div className={`${styles[type]} border-2 rounded-xl shadow-2xl p-5 flex items-start justify-between backdrop-blur-sm`}>
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
+      <div className={`${styles[type]} border-2 rounded-2xl shadow-2xl p-5 flex items-start justify-between backdrop-blur-xl bg-white/95`}>
+        <div className="flex items-start gap-4">
+          <div className={`flex-shrink-0 p-2 rounded-xl ${
+            type === 'success' ? 'bg-green-100' :
+            type === 'error' ? 'bg-red-100' :
+            type === 'warning' ? 'bg-yellow-100' :
+            'bg-blue-100'
+          }`}>
             {icons[type]}
           </div>
-          <p className="text-sm font-semibold leading-relaxed">{message}</p>
+          <div className="flex-1">
+            <p className="text-sm font-semibold leading-relaxed text-slate-900">{message}</p>
+            <div className={`mt-2 h-1 bg-gradient-to-r rounded-full ${
+              type === 'success' ? 'from-green-400 to-green-600' :
+              type === 'error' ? 'from-red-400 to-red-600' :
+              type === 'warning' ? 'from-yellow-400 to-yellow-600' :
+              'from-blue-400 to-blue-600'
+            }`} style={{ width: '100%', animation: 'progress 3s linear' }}></div>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className="flex-shrink-0 ml-3 text-gray-400 hover:text-gray-700 transition-all duration-200 hover:rotate-90 transform"
+          className={`flex-shrink-0 p-2 rounded-xl transition-all duration-200 hover:scale-110 ${
+            type === 'success' ? 'hover:bg-green-50 text-green-600' :
+            type === 'error' ? 'hover:bg-red-50 text-red-600' :
+            type === 'warning' ? 'hover:bg-yellow-50 text-yellow-600' :
+            'hover:bg-blue-50 text-blue-600'
+          }`}
         >
           <X className="w-5 h-5" />
         </button>
       </div>
+
+      <style jsx>{`
+        @keyframes progress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };
