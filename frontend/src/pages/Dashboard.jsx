@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { callService, reportService } from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
-import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award } from 'lucide-react';
+import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
