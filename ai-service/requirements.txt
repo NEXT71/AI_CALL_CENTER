@@ -21,5 +21,8 @@ ffmpeg-python==0.2.0
 spacy==3.7.2
 rapidfuzz==3.5.2
 
+# Timezone handling
+pytz==2023.3
+
 # Utilities
 psutil==5.9.6

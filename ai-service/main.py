@@ -2,8 +2,9 @@ import os
 import uvicorn
 import uuid
 import shutil
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
@@ -12,6 +13,8 @@ import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import torch
+from datetime import datetime, time, timedelta
+import pytz
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -22,6 +25,52 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
+
+def is_service_available():
+    """
+    Check if the AI service is available based on schedule:
+    Monday-Saturday, 6:45 PM PKT to 6:00 AM PST
+    """
+    try:
+        # Get current time in UTC
+        now_utc = datetime.now(pytz.UTC)
+        current_day = now_utc.weekday()  # 0=Monday, 6=Sunday
+        current_time = now_utc.time()
+
+        # Service only runs Monday-Saturday (0-5), not Sunday (6)
+        if current_day == 6:  # Sunday
+            return False
+
+        # Define time zones
+        pkt = pytz.timezone('Asia/Karachi')  # Pakistan Standard Time
+        pst = pytz.timezone('US/Pacific')    # Pacific Standard Time
+
+        # Get today's date in PKT and PST
+        today_pkt = now_utc.astimezone(pkt).date()
+        today_pst = now_utc.astimezone(pst).date()
+
+        # Start time: 6:45 PM PKT
+        start_time_pkt = time(18, 45)  # 6:45 PM
+        start_datetime = pkt.localize(datetime.combine(today_pkt, start_time_pkt))
+
+        # End time: 6:00 AM PST (next day)
+        end_time_pst = time(6, 0)  # 6:00 AM
+        end_datetime = pst.localize(datetime.combine(today_pst, end_time_pst))
+
+        # If end time is before start time (crossing midnight), add a day to end time
+        if end_datetime <= start_datetime:
+            end_datetime = pst.localize(datetime.combine(today_pst + timedelta(days=1), end_time_pst))
+
+        # Convert to UTC for comparison
+        start_utc = start_datetime.astimezone(pytz.UTC)
+        end_utc = end_datetime.astimezone(pytz.UTC)
+
+        # Check if current UTC time is within the window
+        return start_utc <= now_utc <= end_utc
+
+    except Exception as e:
+        logger.error(f"Error checking service availability: {e}")
+        return False  # Default to unavailable on error
 
 # GPU Configuration for RunPod
 CUDA_AVAILABLE = torch.cuda.is_available()
@@ -65,6 +114,28 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Custom middleware for service availability
+@app.middleware("http")
+async def check_service_availability(request: Request, call_next):
+    """Check if service is available based on schedule before processing requests"""
+    # Allow health checks even when service is unavailable
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    if not is_service_available():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Service Unavailable",
+                "message": "AI service is only available Monday-Saturday from 6:45 PM PKT to 6:00 AM PST",
+                "available_days": "Monday-Saturday",
+                "available_hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time"
+            }
+        )
+
+    response = await call_next(request)
+    return response
 
 # Model availability flags
 models_available = {
@@ -317,10 +388,24 @@ async def health_check():
     """Health check endpoint with GPU info"""
     import psutil
     memory = psutil.virtual_memory()
-    
+
+    # Check service availability
+    available = is_service_available()
+    current_time = datetime.now(pytz.UTC)
+
     health_info = {
-        "status": "healthy",
+        "status": "healthy" if available else "service_unavailable",
         "service": "RunPod GPU AI Service",
+        "service_available": available,
+        "availability_schedule": {
+            "days": "Monday-Saturday",
+            "hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time",
+            "timezone_info": {
+                "pkt": "Asia/Karachi (UTC+5)",
+                "pst": "US/Pacific (UTC-8)"
+            }
+        },
+        "current_time_utc": current_time.isoformat(),
         "models_available": models_available,
         "device": DEVICE,
         "memory_usage": {
@@ -330,7 +415,7 @@ async def health_check():
         },
         "note": "Optimized for 30+ minute audio processing"
     }
-    
+
     # Add GPU info if available
     if CUDA_AVAILABLE:
         health_info["gpu"] = {
@@ -339,7 +424,7 @@ async def health_check():
             "vram_allocated_gb": round(torch.cuda.memory_allocated(0) / 1024**3, 2),
             "vram_cached_gb": round(torch.cuda.memory_reserved(0) / 1024**3, 2),
         }
-    
+
     return health_info
 
 
