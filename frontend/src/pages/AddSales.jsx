@@ -16,6 +16,7 @@ const AddSales = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isOfficeData, setIsOfficeData] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
     agentId: '',
     campaign: '',
@@ -49,6 +50,29 @@ const AddSales = () => {
       ...prev,
       [name]: value,
     }));
+
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        [name]: '',
+      }));
+    }
+
+    // Real-time validation for specific fields
+    if (name === 'totalCalls' || name === 'successfulSales' || name === 'failedSales') {
+      const totalCalls = name === 'totalCalls' ? parseInt(value) || 0 : parseInt(formData.totalCalls) || 0;
+      const successfulSales = name === 'successfulSales' ? parseInt(value) || 0 : parseInt(formData.successfulSales) || 0;
+      const failedSales = name === 'failedSales' ? parseInt(value) || 0 : parseInt(formData.failedSales) || 0;
+
+      if (totalCalls > 0 && (successfulSales + failedSales) > totalCalls) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [name]: 'Successful + Failed sales cannot exceed total calls',
+        }));
+      }
+    }
+  };
   };
 
   const handleSubmit = async (e) => {
@@ -259,9 +283,15 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className="input w-full"
+                  className={`input w-full ${fieldErrors.totalCalls ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="0"
                 />
+                {fieldErrors.totalCalls && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <XCircle size={14} />
+                    {fieldErrors.totalCalls}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -276,9 +306,15 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className="input w-full"
+                  className={`input w-full ${fieldErrors.successfulSales ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="0"
                 />
+                {fieldErrors.successfulSales && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <XCircle size={14} />
+                    {fieldErrors.successfulSales}
+                  </p>
+                )}
               </div>
 
               <div>

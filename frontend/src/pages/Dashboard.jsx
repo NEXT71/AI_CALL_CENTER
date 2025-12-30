@@ -210,6 +210,55 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 animate-fade-in">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            to="/app/upload"
+            className="quick-action-btn group"
+          >
+            <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors duration-200">
+              <Upload size={20} className="text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Upload Call</span>
+          </Link>
+          
+          <Link
+            to="/app/sales-data"
+            className="quick-action-btn group"
+          >
+            <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors duration-200">
+              <DollarSign size={20} className="text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Add Sales</span>
+          </Link>
+          
+          <Link
+            to="/app/calls"
+            className="quick-action-btn group"
+          >
+            <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors duration-200">
+              <Phone size={20} className="text-purple-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">View Calls</span>
+          </Link>
+          
+          <Link
+            to="/app/analytics"
+            className="quick-action-btn group"
+          >
+            <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors duration-200">
+              <BarChart3 size={20} className="text-orange-600" />
+            </div>
+            <span className="text-sm font-medium text-slate-700">Analytics</span>
+          </Link>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -300,23 +300,59 @@ const CallsList = () => {
         <div className="col-span-12 lg:col-span-9">
           {loading ? (
             <div className="card">
-              <div className="flex items-center justify-center py-20">
-                <div className="spinner w-12 h-12"></div>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="spinner w-12 h-12 mb-4"></div>
+                <p className="text-slate-600 font-medium">Loading calls...</p>
+                <p className="text-slate-400 text-sm mt-1">Please wait while we fetch your data</p>
               </div>
             </div>
           ) : calls.length === 0 ? (
             <div className="card text-center py-20">
-              <Search className="mx-auto text-slate-300 mb-4" size={48} />
-              <p className="body-text text-slate-500">No calls found matching your filters</p>
-              <button onClick={resetFilters} className="btn btn-secondary mt-4">
-                Clear Filters
-              </button>
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="text-slate-400" size={32} />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">No calls found</h3>
+              <p className="body-text text-slate-500 mb-4">
+                {Object.values(filters).some(v => v && v !== '') 
+                  ? 'Try adjusting your filters or search terms' 
+                  : 'No calls have been uploaded yet'
+                }
+              </p>
+              <div className="flex gap-3 justify-center">
+                {Object.values(filters).some(v => v && v !== '') && (
+                  <button onClick={resetFilters} className="btn btn-secondary">
+                    Clear Filters
+                  </button>
+                )}
+                <Link to="/app/upload" className="btn btn-primary">
+                  Upload First Call
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               {/* Table Controls */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-lg border border-slate-200">
                 <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search calls..."
+                      value={filters.search || ''}
+                      onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
+                      className="pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                    />
+                    {filters.search && (
+                      <button
+                        onClick={() => setFilters({ ...filters, search: '', page: 1 })}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        title="Clear search"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={handleRefresh}
                     disabled={refreshing}

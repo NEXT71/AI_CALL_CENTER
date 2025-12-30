@@ -214,7 +214,7 @@ const ViewSales = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <input
             type="date"
             value={filters.startDate}
@@ -236,8 +236,17 @@ const ViewSales = () => {
             className="input"
             placeholder="Campaign"
           />
+          <select
+            value={filters.recordType || ''}
+            onChange={(e) => setFilters({ ...filters, recordType: e.target.value, page: 1 })}
+            className="input"
+          >
+            <option value="">All Record Types</option>
+            <option value="agent">Agent Data</option>
+            <option value="office">Office Data</option>
+          </select>
           <button
-            onClick={() => setFilters({ startDate: '', endDate: '', agentName: '', campaign: '', page: 1 })}
+            onClick={() => setFilters({ startDate: '', endDate: '', agentName: '', campaign: '', recordType: '', page: 1 })}
             className="btn-secondary"
           >
             Clear Filters
