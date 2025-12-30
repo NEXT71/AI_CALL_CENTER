@@ -508,7 +508,7 @@ const CallsList = () => {
                           </td>
                           <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-6">
                             <Link
-                              to={`/calls/${call._id}`}
+                              to={`${call._id}`}
                               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
                             >
                               <Eye size={16} className="group-hover:scale-110 transition-transform" />
