@@ -369,9 +369,6 @@ const ViewSales = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex space-x-2">
-                        <Link to={`/app/sales-data/${record._id}`} className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200">
-                          <Eye className="w-4 h-4" />
-                        </Link>
                         {canDelete && (
                           <button onClick={() => handleDelete(record._id)} className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200">
                             <Trash2 className="w-4 h-4" />
