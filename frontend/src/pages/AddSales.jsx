@@ -15,6 +15,7 @@ const AddSales = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isOfficeData, setIsOfficeData] = useState(false);
   const [formData, setFormData] = useState({
     agentId: '',
     campaign: '',
@@ -24,6 +25,9 @@ const AddSales = () => {
     failedSales: '',
     warmTransfers: '',
     callbacksScheduled: '',
+    officeRevenue: '',
+    officeTargets: '',
+    officeNotes: '',
     notes: '',
   });
 
@@ -54,30 +58,46 @@ const AddSales = () => {
 
     try {
       // Validation
+      if (!isOfficeData && !formData.agentId) {
+        throw new Error('Please select an agent');
+      }
+      if (!formData.campaign) {
+        throw new Error('Please select a campaign');
+      }
+      if (!formData.salesDate) {
+        throw new Error('Please select a sales date');
+      }
+
       const totalCalls = parseInt(formData.totalCalls) || 0;
       const successfulSales = parseInt(formData.successfulSales) || 0;
       const failedSales = parseInt(formData.failedSales) || 0;
       const warmTransfers = parseInt(formData.warmTransfers) || 0;
       const callbacksScheduled = parseInt(formData.callbacksScheduled) || 0;
 
-      // Enhanced validation
-      if (totalCalls < (successfulSales + failedSales)) {
-        throw new Error('Total calls must be greater than or equal to successful + failed sales');
+      // Enhanced validation for agent data
+      if (!isOfficeData) {
+        if (totalCalls < (successfulSales + failedSales)) {
+          throw new Error('Total calls must be greater than or equal to successful + failed sales');
+        }
+        if (warmTransfers > totalCalls) {
+          throw new Error('Warm transfers cannot exceed total calls');
+        }
+        if (callbacksScheduled > totalCalls) {
+          throw new Error('Callbacks scheduled cannot exceed total calls');
+        }
+        if (successfulSales + failedSales > totalCalls) {
+          throw new Error('Successful + Failed sales cannot exceed total calls');
+        }
       }
 
-      if (warmTransfers > totalCalls) {
-        throw new Error('Warm transfers cannot exceed total calls');
-      }
-
-      if (callbacksScheduled > totalCalls) {
-        throw new Error('Callbacks scheduled cannot exceed total calls');
-      }
-
-      if (successfulSales + failedSales > totalCalls) {
-        throw new Error('Successful + Failed sales cannot exceed total calls');
-      }
-
-      const salesData = {
+      const salesData = isOfficeData ? {
+        isOfficeData: true,
+        campaign: formData.campaign,
+        salesDate: formData.salesDate,
+        officeRevenue: parseFloat(formData.officeRevenue) || 0,
+        officeTargets: parseInt(formData.officeTargets) || 0,
+        officeNotes: formData.officeNotes,
+      } : {
         agentId: formData.agentId,
         campaign: formData.campaign,
         salesDate: formData.salesDate,
@@ -92,7 +112,7 @@ const AddSales = () => {
       await salesService.createSalesRecord(salesData);
       
       // Success feedback
-      success('Sales record created successfully!');
+      success(isOfficeData ? 'Office sales data added successfully!' : 'Sales record created successfully!');
       setTimeout(() => navigate('/app/sales-data'), 1500);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to create sales record';
@@ -121,16 +141,33 @@ const AddSales = () => {
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Add Sales Record</h1>
-            <p className="text-sm text-slate-600 mt-2">Enter daily sales data for an agent</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+              {isOfficeData ? 'Add Office Sales Data' : 'Add Sales Record'}
+            </h1>
+            <p className="text-sm text-slate-600 mt-2">
+              {isOfficeData ? 'Enter office-wide sales metrics and performance data' : 'Enter daily sales data for an agent'}
+            </p>
           </div>
-          <button
-            onClick={() => navigate('/app/sales-data')}
-            className="btn-secondary"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancel
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsOfficeData(!isOfficeData)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                isOfficeData 
+                  ? 'bg-blue-100 text-blue-700 border-2 border-blue-200' 
+                  : 'bg-slate-100 text-slate-700 border-2 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              {isOfficeData ? '📊 Office Data' : '👤 Agent Data'}
+            </button>
+            <button
+              onClick={() => navigate('/app/sales-data')}
+              className="btn-secondary"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </button>
+          </div>
         </div>
 
         {error && (
