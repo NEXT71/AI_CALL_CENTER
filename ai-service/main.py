@@ -9,6 +9,9 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 import warnings
 import logging
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import torch
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -20,6 +23,24 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# GPU Configuration for RunPod
+CUDA_AVAILABLE = torch.cuda.is_available()
+DEVICE = "cuda" if CUDA_AVAILABLE else "cpu"
+DEVICE_ID = 0 if CUDA_AVAILABLE else -1
+
+if CUDA_AVAILABLE:
+    GPU_NAME = torch.cuda.get_device_name(0)
+    VRAM_GB = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    logger.info(f"🎮 GPU Detected: {GPU_NAME}")
+    logger.info(f"💾 VRAM Available: {VRAM_GB:.1f} GB")
+    logger.info(f"✅ CUDA Version: {torch.version.cuda}")
+else:
+    logger.warning("⚠️  No GPU detected! Running on CPU (will be slower)")
+
+# Thread pool for parallel chunk processing
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "4"))
+executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+
 # Global model variables (lazy loaded)
 whisper_model = None
 sentiment_pipeline = None
@@ -29,13 +50,21 @@ nlp_spacy = None
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="AI Call Center - AI Service",
-    description="FREE & Open-Source Speech-to-Text and NLP Analysis Service",
-    version="1.0.0"
+    title="AI Call Center - RunPod GPU Service",
+    description="Optimized for NVIDIA RTX 2000 Ada on RunPod - Handles 30+ minute calls",
+    version="2.0.0"
 )
 
-# CORS configuration
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5000").split(",")
+# CORS configuration - Allow all origins for RunPod
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 # Model availability flags
 models_available = {
@@ -43,81 +72,114 @@ models_available = {
     "sentiment": False,
     "summarizer": False,
     "ner": False,
-    "spacy": False
+    "spacy": False,
+    "gpu_enabled": CUDA_AVAILABLE
 }
 
 def load_whisper_model():
-    """Lazy load Whisper model"""
+    """Lazy load Whisper model with GPU support"""
     global whisper_model, models_available
     if whisper_model is not None:
         return whisper_model
 
     try:
         import whisper
-        model_size = os.getenv("WHISPER_MODEL", "tiny")  # Changed from "base" to "tiny" for faster processing
-        logger.info(f"Loading Whisper model: {model_size}")
+        
+        # Choose model based on GPU availability
+        if CUDA_AVAILABLE:
+            model_size = os.getenv("WHISPER_MODEL", "medium")  # medium or large-v2 for GPU
+            logger.info(f"🚀 Loading Whisper model on GPU: {model_size}")
+        else:
+            model_size = os.getenv("WHISPER_MODEL", "base")
+            logger.info(f"Loading Whisper model on CPU: {model_size}")
+        
         whisper_model = whisper.load_model(model_size)
+        
+        # Move to GPU if available
+        if CUDA_AVAILABLE:
+            whisper_model = whisper_model.cuda()
+            logger.info(f"✅ Whisper model loaded on GPU")
+        
         models_available["whisper"] = True
-        logger.info("Whisper model loaded successfully")
         return whisper_model
     except Exception as e:
-        logger.error(f"Failed to load Whisper model: {e}")
+        logger.error(f"❌ Failed to load Whisper model: {e}")
         models_available["whisper"] = False
         return None
 
 def load_sentiment_model():
-    """Lazy load sentiment analysis model"""
+    """Lazy load sentiment analysis model with GPU support"""
     global sentiment_pipeline, models_available
     if sentiment_pipeline is not None:
         return sentiment_pipeline
 
     try:
         from transformers import pipeline
+        
         model_name = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
-        logger.info(f"Loading sentiment model: {model_name}")
-        sentiment_pipeline = pipeline("sentiment-analysis", model=model_name)
+        logger.info(f"Loading sentiment model on device {DEVICE_ID}: {model_name}")
+        
+        sentiment_pipeline = pipeline(
+            "sentiment-analysis", 
+            model=model_name, 
+            device=DEVICE_ID  # 0 for GPU, -1 for CPU
+        )
+        
         models_available["sentiment"] = True
-        logger.info("Sentiment model loaded successfully")
+        logger.info("✅ Sentiment model loaded successfully")
         return sentiment_pipeline
     except Exception as e:
-        logger.error(f"Failed to load sentiment model: {e}")
+        logger.error(f"❌ Failed to load sentiment model: {e}")
         models_available["sentiment"] = False
         return None
 
 def load_summarizer_model():
-    """Lazy load summarization model"""
+    """Lazy load summarization model with GPU support"""
     global summarizer_pipeline, models_available
     if summarizer_pipeline is not None:
         return summarizer_pipeline
 
     try:
         from transformers import pipeline
+        
         model_name = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
-        logger.info(f"Loading summarizer model: {model_name}")
-        summarizer_pipeline = pipeline("summarization", model=model_name)
+        logger.info(f"Loading summarizer model on device {DEVICE_ID}: {model_name}")
+        
+        summarizer_pipeline = pipeline(
+            "summarization", 
+            model=model_name, 
+            device=DEVICE_ID
+        )
+        
         models_available["summarizer"] = True
-        logger.info("Summarizer model loaded successfully")
+        logger.info("✅ Summarizer model loaded successfully")
         return summarizer_pipeline
     except Exception as e:
-        logger.error(f"Failed to load summarizer model: {e}")
+        logger.error(f"❌ Failed to load summarizer model: {e}")
         models_available["summarizer"] = False
         return None
 
 def load_ner_model():
-    """Lazy load NER model"""
+    """Lazy load NER model with GPU support"""
     global ner_pipeline, models_available
     if ner_pipeline is not None:
         return ner_pipeline
 
     try:
         from transformers import pipeline
-        logger.info("Loading NER model")
-        ner_pipeline = pipeline("ner", aggregation_strategy="simple")
+        
+        logger.info(f"Loading NER model on device {DEVICE_ID}")
+        ner_pipeline = pipeline(
+            "ner", 
+            aggregation_strategy="simple", 
+            device=DEVICE_ID
+        )
+        
         models_available["ner"] = True
-        logger.info("NER model loaded successfully")
+        logger.info("✅ NER model loaded successfully")
         return ner_pipeline
     except Exception as e:
-        logger.error(f"Failed to load NER model: {e}")
+        logger.error(f"❌ Failed to load NER model: {e}")
         models_available["ner"] = False
         return None
 
@@ -132,24 +194,15 @@ def load_spacy_model():
         logger.info("Loading spaCy model: en_core_web_sm")
         nlp_spacy = spacy.load("en_core_web_sm")
         models_available["spacy"] = True
-        logger.info("spaCy model loaded successfully")
+        logger.info("✅ spaCy model loaded successfully")
         return nlp_spacy
     except Exception as e:
-        logger.error(f"Failed to load spaCy model: {e}")
+        logger.error(f"❌ Failed to load spaCy model: {e}")
         models_available["spacy"] = False
         return None
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Restrict to specific domains
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Only allow needed methods
-    allow_headers=["*"],
-)
-
 # Configuration
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "medium")
-DEVICE = os.getenv("DEVICE", "cpu")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "medium" if CUDA_AVAILABLE else "base")
 SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
 SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
 SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
@@ -200,114 +253,209 @@ class ComplianceCheckResponse(BaseModel):
     compliance_score: float
     details: Dict
 
-class DiarizeRequest(BaseModel):
-    audio_path: str
-    min_speakers: Optional[int] = 2
-    max_speakers: Optional[int] = 2
 
-class DiarizeResponse(BaseModel):
-    speakers: List[Dict]
-    speaker_segments: List[Dict]
-    talk_time: Dict[str, float]
-    num_speakers: int
+def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000):
+    """
+    Split audio file into chunks for processing long recordings
+    chunk_length_ms: chunk length in milliseconds (default 10 minutes)
+    """
+    try:
+        from pydub import AudioSegment
+        
+        logger.info(f"📦 Chunking audio file: {audio_path}")
+        audio = AudioSegment.from_file(audio_path)
+        duration_ms = len(audio)
+        
+        chunks = []
+        for i in range(0, duration_ms, chunk_length_ms):
+            chunk = audio[i:i + chunk_length_ms]
+            chunk_path = f"{audio_path}_chunk_{i//chunk_length_ms}.wav"
+            chunk.export(chunk_path, format="wav")
+            chunks.append({
+                "path": chunk_path,
+                "start_time": i / 1000,
+                "end_time": min((i + chunk_length_ms) / 1000, duration_ms / 1000)
+            })
+        
+        logger.info(f"✅ Created {len(chunks)} chunks")
+        return chunks, duration_ms / 1000
+    except Exception as e:
+        logger.error(f"❌ Failed to chunk audio: {e}")
+        return None, None
 
-class TalkTimeRequest(BaseModel):
-    audio_path: str
-    speaker_segments: List[Dict]
 
-class TalkTimeResponse(BaseModel):
-    total_duration: float
-    speaker_talk_time: Dict[str, float]
-    speaker_percentage: Dict[str, float]
-    dead_air_segments: List[Dict]
-    dead_air_total: float
-    agent_customer_ratio: Optional[str] = None
+def transcribe_chunk(model, chunk_path, chunk_info):
+    """Transcribe a single audio chunk with GPU acceleration"""
+    try:
+        logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
+        
+        # Enable FP16 only on GPU for 2x speed boost
+        use_fp16 = CUDA_AVAILABLE
+        
+        result = model.transcribe(
+            chunk_path,
+            verbose=False,
+            fp16=use_fp16,  # FP16 for GPU, disabled for CPU
+            language=None   # Auto-detect language
+        )
+        
+        # Adjust timestamps based on chunk start time
+        if "segments" in result:
+            for segment in result["segments"]:
+                segment["start"] += chunk_info["start_time"]
+                segment["end"] += chunk_info["start_time"]
+        
+        logger.info(f"✅ Chunk transcribed: {len(result.get('text', ''))} chars")
+        return result
+    except Exception as e:
+        logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
+        return None
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with GPU info"""
     import psutil
     memory = psutil.virtual_memory()
-    return {
+    
+    health_info = {
         "status": "healthy",
+        "service": "RunPod GPU AI Service",
         "models_available": models_available,
-        "device": os.getenv("DEVICE", "cpu"),
+        "device": DEVICE,
         "memory_usage": {
-            "total": memory.total,
-            "available": memory.available,
+            "total_gb": round(memory.total / 1024**3, 2),
+            "available_gb": round(memory.available / 1024**3, 2),
             "percent": memory.percent,
-            "used": memory.used
         },
-        "note": "100% FREE & Open-Source Models - Models loaded on demand"
+        "note": "Optimized for 30+ minute audio processing"
     }
+    
+    # Add GPU info if available
+    if CUDA_AVAILABLE:
+        health_info["gpu"] = {
+            "name": GPU_NAME,
+            "vram_total_gb": round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2),
+            "vram_allocated_gb": round(torch.cuda.memory_allocated(0) / 1024**3, 2),
+            "vram_cached_gb": round(torch.cuda.memory_reserved(0) / 1024**3, 2),
+        }
+    
+    return health_info
 
 
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(audio: UploadFile = File(...)):
     """
-    Transcribe audio file to text using FREE Whisper model (local processing)
-    NO paid APIs, NO cloud services
+    Transcribe audio file using Whisper on GPU
+    Handles 30+ minute recordings with automatic chunking
     """
+    temp_path = None
+    chunk_files = []
+    
     try:
-        # Save uploaded file temporarily
+        # Save uploaded file
         temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
         
-        try:
-            # Load Whisper model if not already loaded
-            model = load_whisper_model()
-            if model is None:
-                raise HTTPException(status_code=503, detail="Whisper model failed to load")
+        # Load Whisper model
+        model = load_whisper_model()
+        if model is None:
+            raise HTTPException(status_code=503, detail="Whisper model failed to load")
 
-            # Transcribe audio locally using FREE Whisper
-            logger.info(f"🎙️ Transcribing (FREE Whisper): {audio.filename}")
-            logger.info(f"Audio file size: {os.path.getsize(temp_path)} bytes")
+        file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
+        logger.info(f"🎙️ Processing audio: {audio.filename} ({file_size_mb:.2f} MB)")
+        
+        # Get audio duration
+        import librosa
+        duration = librosa.get_duration(path=temp_path)
+        logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+        
+        # Process based on duration
+        if duration > 600:  # 10+ minutes
+            logger.info(f"📦 Long audio detected - using chunked processing")
             
-            # Add timeout and progress logging
+            # Split into chunks
+            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=600000)
+            if not chunks:
+                raise HTTPException(status_code=500, detail="Failed to chunk audio")
+            
+            chunk_files = [chunk["path"] for chunk in chunks]
+            logger.info(f"✅ Split into {len(chunks)} chunks (10 min each)")
+            
+            # Process chunks in parallel
             import time
-            import psutil
             start_time = time.time()
             
-            memory_before = psutil.virtual_memory()
-            logger.info(f"Memory before transcription: {memory_before.percent}% used, {memory_before.available / 1024 / 1024:.1f}MB available")
+            loop = asyncio.get_event_loop()
+            chunk_results = await asyncio.gather(*[
+                loop.run_in_executor(executor, transcribe_chunk, model, chunk["path"], chunk)
+                for chunk in chunks
+            ])
             
-            logger.info("Starting Whisper transcription...")
+            processing_time = time.time() - start_time
+            logger.info(f"⚡ Parallel processing completed in {processing_time:.1f}s")
             
-            try:
-                logger.info("Calling model.transcribe()...")
-                result = model.transcribe(temp_path, verbose=True)  # Add verbose logging
-                logger.info("model.transcribe() returned successfully")
-                
-                # Check if result is valid
-                if not result or not isinstance(result, dict):
-                    logger.error(f"Invalid transcription result: {type(result)}")
-                    raise HTTPException(status_code=500, detail="Invalid transcription result")
-                    
-                logger.info(f"Transcription result keys: {list(result.keys()) if result else 'None'}")
-                
-            except Exception as e:
-                logger.error(f"Whisper transcription failed: {e}")
-                logger.error(f"Exception type: {type(e)}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+            # Merge results
+            merged_text = []
+            merged_segments = []
+            detected_language = None
             
-            end_time = time.time()
-            processing_time = end_time - start_time
+            for result in chunk_results:
+                if result:
+                    merged_text.append(result.get("text", "").strip())
+                    if "segments" in result:
+                        merged_segments.extend(result["segments"])
+                    if not detected_language and "language" in result:
+                        detected_language = result["language"]
             
-            memory_after = psutil.virtual_memory()
-            logger.info(f"Memory after transcription: {memory_after.percent}% used, {memory_after.available / 1024 / 1024:.1f}MB available")
+            full_text = " ".join(merged_text)
             
-            logger.info(f"Whisper transcription completed in {processing_time:.2f} seconds")
+            # Format timestamps
+            timestamps = []
+            for segment in merged_segments:
+                timestamps.append({
+                    "start": round(segment["start"], 2),
+                    "end": round(segment["end"], 2),
+                    "text": segment["text"].strip()
+                })
             
-            # Extract text and metadata
+            word_count = len(full_text.split()) if full_text else 0
+            
+            logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
+            logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
+            
+            return TranscribeResponse(
+                text=full_text,
+                timestamps=timestamps,
+                language=detected_language,
+                duration=total_duration,
+                word_count=word_count
+            )
+        
+        else:
+            # Short audio - process directly
+            logger.info("🎯 Processing directly (no chunking needed)")
+            
+            import time
+            start_time = time.time()
+            
+            use_fp16 = CUDA_AVAILABLE
+            result = model.transcribe(
+                temp_path,
+                verbose=False,
+                fp16=use_fp16,
+                language=None
+            )
+            
+            processing_time = time.time() - start_time
+            logger.info(f"⚡ Transcription completed in {processing_time:.1f}s")
+            logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
+            
             text = result.get("text", "").strip()
             language = result.get("language")
             word_count = len(text.split()) if text else 0
             
-            # Format timestamps with speaker segments
             timestamps = []
             if "segments" in result:
                 for segment in result["segments"]:
@@ -317,38 +465,44 @@ async def transcribe_audio(audio: UploadFile = File(...)):
                         "text": segment["text"].strip()
                     })
             
-            logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
+            logger.info(f"✅ Complete: {word_count} words, {len(timestamps)} segments")
             
             return TranscribeResponse(
                 text=text,
                 timestamps=timestamps,
                 language=language,
-                duration=result.get("duration"),
+                duration=duration,
                 word_count=word_count
             )
-        
-        finally:
-            # Clean up temporary file
-            try:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-            except Exception as e:
-                logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
-        
+    
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Transcription error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    
+    finally:
+        # Cleanup
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except Exception as e:
+                logger.warning(f"Cleanup warning: {e}")
+        
+        for chunk_file in chunk_files:
+            if os.path.exists(chunk_file):
+                try:
+                    os.unlink(chunk_file)
+                except Exception as e:
+                    logger.warning(f"Cleanup warning: {e}")
 
 
 @app.post("/analyze-sentiment", response_model=SentimentResponse)
 async def analyze_sentiment(request: SentimentRequest):
-    """
-    Analyze sentiment using FREE DistilBERT model (no training required)
-    """
+    """Analyze sentiment using GPU-accelerated DistilBERT"""
     try:
-        # Load sentiment model if not already loaded
         analyzer = load_sentiment_model()
         if analyzer is None:
             raise HTTPException(status_code=503, detail="Sentiment analyzer failed to load")
@@ -356,18 +510,22 @@ async def analyze_sentiment(request: SentimentRequest):
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        # Truncate text for BERT (max 512 tokens)
-        text = request.text[:5000]
+        # Truncate for BERT (max 512 tokens)
+        text = request.text[:2000]
 
-        logger.info(f"🔍 Analyzing sentiment (FREE DistilBERT): {len(text)} chars")
+        logger.info(f"🔍 Analyzing sentiment: {len(text)} chars")
 
-        # Analyze using FREE pre-trained model
         result = analyzer(text)[0]
+        
+        label_map = {
+            "POSITIVE": "positive",
+            "NEGATIVE": "negative",
+            "NEUTRAL": "neutral"
+        }
         
         label = label_map.get(result["label"].upper(), result["label"].lower())
         score = result["score"]
         
-        # Confidence level
         if score >= 0.9:
             confidence = "very high"
         elif score >= 0.75:
@@ -377,7 +535,7 @@ async def analyze_sentiment(request: SentimentRequest):
         else:
             confidence = "low"
         
-        logger.info(f"✅ Sentiment: {label} (confidence: {score:.2f})")
+        logger.info(f"✅ Sentiment: {label} ({score:.2f})")
         
         return SentimentResponse(
             label=label,
@@ -388,28 +546,31 @@ async def analyze_sentiment(request: SentimentRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Sentiment analysis error: {e}")
+        logger.error(f"❌ Sentiment error: {e}")
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
 
 @app.post("/extract-entities", response_model=EntityResponse)
 async def extract_entities(request: EntityRequest):
-    """
-    Extract entities using FREE spaCy model (en_core_web_sm)
-    """
+    """Extract entities using spaCy"""
     try:
-        # Load spaCy model if not already loaded
         nlp = load_spacy_model()
         if nlp is None:
             raise HTTPException(
                 status_code=503,
-                detail="spaCy model failed to load. Run: python -m spacy download en_core_web_sm"
+                detail="spaCy model not loaded. Run: python -m spacy download en_core_web_sm"
             )
 
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        logger.info(f"🔍 Extracting entities (FREE spaCy): {len(request.text)} chars")
+        logger.info(f"🔍 Extracting entities: {len(request.text)} chars")
+        
+        # Process in chunks for very long text
+        text = request.text[:100000]
+        doc = nlp(text)
+        
+        entities = []
         for ent in doc.ents:
             entities.append({
                 "text": ent.text,
@@ -418,10 +579,9 @@ async def extract_entities(request: EntityRequest):
                 "end": ent.end_char
             })
         
-        # Extract key noun phrases
         key_phrases = [chunk.text for chunk in doc.noun_chunks][:20]
         
-        logger.info(f"✅ Extracted {len(entities)} entities, {len(key_phrases)} key phrases")
+        logger.info(f"✅ Found {len(entities)} entities, {len(key_phrases)} phrases")
         
         return EntityResponse(
             entities=entities,
@@ -437,11 +597,8 @@ async def extract_entities(request: EntityRequest):
 
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_text(request: SummarizeRequest):
-    """
-    Summarize text using FREE BART model (facebook/bart-large-cnn)
-    """
+    """Summarize text using GPU-accelerated BART"""
     try:
-        # Load summarizer model if not already loaded
         summarizer = load_summarizer_model()
         if summarizer is None:
             raise HTTPException(status_code=503, detail="Summarizer failed to load")
@@ -449,22 +606,51 @@ async def summarize_text(request: SummarizeRequest):
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        logger.info(f"📄 Summarizing (FREE BART): {len(request.text)} chars")
+        logger.info(f"📄 Summarizing: {len(request.text)} chars")
 
-        # BART can handle ~1024 tokens, we'll use first 3000 chars as safe limit
-        text = request.text[:3000]
-
-        # Generate summary
-        summary_result = summarizer(
-            text,
-            max_length=request.max_length,
-            min_length=request.min_length,
-            do_sample=False
-        )
+        max_chunk_size = 3000
         
-        summary = summary_result[0]["summary_text"]
+        if len(request.text) > max_chunk_size:
+            # Hierarchical summarization for long text
+            chunks = [request.text[i:i+max_chunk_size] for i in range(0, len(request.text), max_chunk_size)]
+            logger.info(f"📦 Processing {len(chunks)} chunks")
+            
+            chunk_summaries = []
+            for i, chunk in enumerate(chunks):
+                try:
+                    result = summarizer(chunk, max_length=150, min_length=40, do_sample=False)
+                    chunk_summaries.append(result[0]["summary_text"])
+                except Exception as e:
+                    logger.warning(f"Chunk {i} summarization failed: {e}")
+            
+            # Final summary
+            combined = " ".join(chunk_summaries)
+            if len(combined) > max_chunk_size:
+                final_result = summarizer(
+                    combined[:max_chunk_size],
+                    max_length=request.max_length,
+                    min_length=request.min_length,
+                    do_sample=False
+                )
+            else:
+                final_result = summarizer(
+                    combined,
+                    max_length=request.max_length,
+                    min_length=request.min_length,
+                    do_sample=False
+                )
+            
+            summary = final_result[0]["summary_text"]
+        else:
+            result = summarizer(
+                request.text,
+                max_length=request.max_length,
+                min_length=request.min_length,
+                do_sample=False
+            )
+            summary = result[0]["summary_text"]
         
-        logger.info(f"✅ Summary generated: {len(summary)} chars")
+        logger.info(f"✅ Summary: {len(summary)} chars")
         
         return SummarizeResponse(summary=summary)
         
@@ -477,31 +663,27 @@ async def summarize_text(request: SummarizeRequest):
 
 @app.post("/check-compliance", response_model=ComplianceCheckResponse)
 async def check_compliance(request: ComplianceCheckRequest):
-    """
-    Check compliance using FREE rapidfuzz (fuzzy matching) + regex
-    NO ML training required - pure rule-based approach
-    """
+    """Check compliance using rapidfuzz"""
     try:
+        from rapidfuzz import fuzz
+        
         transcript_lower = request.transcript.lower()
         
-        logger.info(f"🔍 Checking compliance (FREE rapidfuzz): {len(request.mandatory_phrases)} mandatory, {len(request.forbidden_phrases)} forbidden")
+        logger.info(f"🔍 Compliance check: {len(request.mandatory_phrases)} mandatory, {len(request.forbidden_phrases)} forbidden")
         
         missing_mandatory = []
         detected_forbidden = []
         
-        # Check mandatory phrases using fuzzy matching
+        # Check mandatory phrases
         for phrase in request.mandatory_phrases:
             phrase_lower = phrase.lower()
             
-            # Try exact match first
             if phrase_lower in transcript_lower:
                 continue
             
-            # Try fuzzy matching
+            # Fuzzy matching
             best_match = 0
             words = transcript_lower.split()
-            
-            # Check all possible n-grams
             phrase_words = phrase_lower.split()
             n = len(phrase_words)
             
@@ -511,7 +693,6 @@ async def check_compliance(request: ComplianceCheckRequest):
                 if ratio > best_match:
                     best_match = ratio
             
-            # If no good match found, mark as missing
             if best_match < request.fuzzy_threshold:
                 missing_mandatory.append(phrase)
         
@@ -519,12 +700,10 @@ async def check_compliance(request: ComplianceCheckRequest):
         for phrase in request.forbidden_phrases:
             phrase_lower = phrase.lower()
             
-            # Exact match
             if phrase_lower in transcript_lower:
                 detected_forbidden.append(phrase)
                 continue
             
-            # Fuzzy match for common variations
             words = transcript_lower.split()
             phrase_words = phrase_lower.split()
             n = len(phrase_words)
@@ -536,21 +715,18 @@ async def check_compliance(request: ComplianceCheckRequest):
                     detected_forbidden.append(phrase)
                     break
         
-        # Calculate compliance score
+        # Calculate score
         total_mandatory = len(request.mandatory_phrases)
-        total_forbidden = len(request.forbidden_phrases)
         
         if total_mandatory > 0:
             mandatory_score = ((total_mandatory - len(missing_mandatory)) / total_mandatory) * 100
         else:
             mandatory_score = 100
         
-        # Heavy penalty for forbidden phrases
         forbidden_penalty = len(detected_forbidden) * 20
-        
         compliance_score = max(0, mandatory_score - forbidden_penalty)
         
-        logger.info(f"✅ Compliance check complete: score={compliance_score:.1f}, missing={len(missing_mandatory)}, violations={len(detected_forbidden)}")
+        logger.info(f"✅ Compliance: {compliance_score:.1f}%")
         
         return ComplianceCheckResponse(
             missing_mandatory=missing_mandatory,
@@ -559,7 +735,7 @@ async def check_compliance(request: ComplianceCheckRequest):
             details={
                 "total_mandatory": total_mandatory,
                 "found_mandatory": total_mandatory - len(missing_mandatory),
-                "total_forbidden": total_forbidden,
+                "total_forbidden": len(request.forbidden_phrases),
                 "violations": len(detected_forbidden),
                 "mandatory_score": round(mandatory_score, 2),
                 "forbidden_penalty": forbidden_penalty
@@ -567,318 +743,32 @@ async def check_compliance(request: ComplianceCheckRequest):
         )
         
     except Exception as e:
-        logger.error(f"❌ Compliance check error: {e}")
+        logger.error(f"❌ Compliance error: {e}")
         raise HTTPException(status_code=500, detail=f"Compliance check failed: {str(e)}")
-
-
-@app.post("/diarize", response_model=DiarizeResponse)
-async def diarize_audio(audio: UploadFile = File(...), min_speakers: int = 2, max_speakers: int = 2):
-    """
-    Perform speaker diarization using FREE pyannote.audio
-    Identifies who spoke when (Agent vs Customer)
-    """
-    try:
-        # Note: pyannote.audio requires HuggingFace token for model download
-        # User must set HF_TOKEN in .env file
-        # Run: huggingface-cli login OR set HF_TOKEN env var
-        
-        from pyannote.audio import Pipeline
-        import torch
-        
-        hf_token = os.getenv("HF_TOKEN")
-        if not hf_token:
-            raise HTTPException(
-                status_code=503, 
-                detail="HF_TOKEN not set. Get token from https://huggingface.co/settings/tokens"
-            )
-        
-        # Save uploaded file temporarily
-        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(audio.file, buffer)
-        
-        logger.info(f"🎭 Speaker diarization (FREE pyannote.audio): {audio.filename}")
-        
-        # Load diarization pipeline
-        pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=hf_token
-        )
-        
-        # Run diarization
-        diarization = pipeline(temp_path, min_speakers=min_speakers, max_speakers=max_speakers)
-        
-        # Extract speaker segments
-        speakers = {}
-        speaker_segments = []
-        talk_time = {}
-        
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            speaker_id = f"SPEAKER_{speaker}"
-            
-            if speaker_id not in speakers:
-                speakers[speaker_id] = {
-                    "id": speaker_id,
-                    "label": "Agent" if len(speakers) == 0 else "Customer",  # First speaker = Agent
-                    "segment_count": 0
-                }
-                talk_time[speaker_id] = 0.0
-            
-            duration = turn.end - turn.start
-            speakers[speaker_id]["segment_count"] += 1
-            talk_time[speaker_id] += duration
-            
-            speaker_segments.append({
-                "speaker": speaker_id,
-                "label": speakers[speaker_id]["label"],
-                "start": round(turn.start, 2),
-                "end": round(turn.end, 2),
-                "duration": round(duration, 2)
-            })
-        
-        # Round talk times
-        talk_time = {k: round(v, 2) for k, v in talk_time.items()}
-        
-        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
-        
-        return DiarizeResponse(
-            speakers=list(speakers.values()),
-            speaker_segments=speaker_segments,
-            talk_time=talk_time,
-            num_speakers=len(speakers)
-        )
-    
-    except ImportError:
-        raise HTTPException(
-            status_code=503, 
-            detail="pyannote.audio not installed. Run: pip install pyannote.audio"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Diarization error: {e}")
-        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
-    finally:
-        # Clean up temporary file
-        try:
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-        except Exception as e:
-            logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
-
-
-@app.post("/calculate-talk-time", response_model=TalkTimeResponse)
-async def calculate_talk_time(audio: UploadFile = File(...), speaker_segments: str = Form(...)):
-    """
-    Calculate talk-time metrics, dead air, agent/customer ratio
-    """
-    try:
-        import librosa
-        import json
-        
-        # Save uploaded file temporarily
-        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(audio.file, buffer)
-        
-        # Parse speaker segments from JSON string
-        segments = json.loads(speaker_segments)
-        
-        logger.info(f"📊 Calculating talk-time metrics...")
-        
-        # Get total audio duration
-        duration = librosa.get_duration(path=temp_path)
-        
-        # Calculate talk time per speaker
-        speaker_talk_time = {}
-        for segment in segments:
-            speaker = segment["speaker"]
-            seg_duration = segment["duration"]
-            
-            if speaker not in speaker_talk_time:
-                speaker_talk_time[speaker] = 0.0
-            speaker_talk_time[speaker] += seg_duration
-        
-        # Calculate percentages
-        speaker_percentage = {
-            speaker: round((time / duration) * 100, 2)
-            for speaker, time in speaker_talk_time.items()
-        }
-        
-        # Detect dead air (gaps between segments)
-        dead_air_segments = []
-        sorted_segments = sorted(segments, key=lambda x: x["start"])
-        
-        for i in range(len(sorted_segments) - 1):
-            gap_start = sorted_segments[i]["end"]
-            gap_end = sorted_segments[i + 1]["start"]
-            gap_duration = gap_end - gap_start
-            
-            # Consider gaps > 2 seconds as dead air
-            if gap_duration > 2.0:
-                dead_air_segments.append({
-                    "start": round(gap_start, 2),
-                    "end": round(gap_end, 2),
-                    "duration": round(gap_duration, 2)
-                })
-        
-        dead_air_total = sum(seg["duration"] for seg in dead_air_segments)
-        
-        # Calculate agent/customer ratio
-        agent_time = 0.0
-        customer_time = 0.0
-        
-        for segment in segments:
-            if segment.get("label") == "Agent":
-                agent_time += segment["duration"]
-            elif segment.get("label") == "Customer":
-                customer_time += segment["duration"]
-        
-        if customer_time > 0:
-            ratio = agent_time / customer_time
-            agent_customer_ratio = f"{ratio:.2f}:1"
-        else:
-            agent_customer_ratio = "N/A"
-        
-        logger.info(f"✅ Talk-time calculated: Agent={agent_time:.1f}s, Customer={customer_time:.1f}s, Dead air={dead_air_total:.1f}s")
-        
-        return TalkTimeResponse(
-            total_duration=round(duration, 2),
-            speaker_talk_time={k: round(v, 2) for k, v in speaker_talk_time.items()},
-            speaker_percentage=speaker_percentage,
-            dead_air_segments=dead_air_segments,
-            dead_air_total=round(dead_air_total, 2),
-            agent_customer_ratio=agent_customer_ratio
-        )
-    
-    except Exception as e:
-        logger.error(f"❌ Talk-time calculation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
-    finally:
-        # Clean up temporary file
-        try:
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-        except Exception as e:
-            logger.warning(f"Failed to clean up temp file {temp_path}: {e}")
-
-
-@app.post("/analyze-batch")
-async def analyze_batch(audio_path: str):
-    """
-    Combined endpoint for full analysis pipeline (all FREE models)
-    """
-    try:
-        results = {}
-        
-        # 1. Transcribe (FREE Whisper)
-        logger.info("🎙️ Step 1: Transcribing audio...")
-        transcribe_result = await transcribe_audio(TranscribeRequest(audio_path=audio_path))
-        results["transcription"] = transcribe_result.dict()
-        
-        # 2. Speaker Diarization (FREE pyannote.audio) - CRITICAL
-        logger.info("🎭 Step 2: Speaker diarization...")
-        try:
-            diarize_result = await diarize_audio(DiarizeRequest(audio_path=audio_path))
-            results["diarization"] = diarize_result.dict()
-            
-            # 2b. Calculate talk-time metrics
-            talk_time_result = await calculate_talk_time(TalkTimeRequest(
-                audio_path=audio_path,
-                speaker_segments=diarize_result.speaker_segments
-            ))
-            results["talk_time"] = talk_time_result.dict()
-        except Exception as e:
-            logger.warning(f"⚠️  Diarization skipped: {e}")
-            results["diarization"] = None
-            results["talk_time"] = None
-        
-        # 3. Sentiment Analysis (FREE DistilBERT) - Overall
-        logger.info("😊 Step 3: Analyzing sentiment...")
-        sentiment_result = await analyze_sentiment(SentimentRequest(text=transcribe_result.text))
-        results["sentiment"] = sentiment_result.dict()
-        
-        # 4. Per-speaker sentiment (if diarization succeeded)
-        if results.get("diarization"):
-            logger.info("😊 Step 4: Per-speaker sentiment...")
-            results["speaker_sentiments"] = {}
-            
-            # Group transcript by speaker
-            for speaker_info in diarize_result.speakers:
-                speaker_id = speaker_info["id"]
-                speaker_text = ""
-                
-                # Combine all segments for this speaker
-                for seg in diarize_result.speaker_segments:
-                    if seg["speaker"] == speaker_id:
-                        # Extract text from transcript timestamps (simplified)
-                        speaker_text += " "
-                
-                # For now, use overall sentiment (TODO: map timestamps to text)
-                # This is a placeholder - proper implementation needs timestamp alignment
-                results["speaker_sentiments"][speaker_id] = sentiment_result.dict()
-        
-        # 5. Entity Extraction (FREE spaCy) - optional
-        if nlp:
-            logger.info("🔍 Step 5: Extracting entities...")
-            try:
-                entity_result = await extract_entities(EntityRequest(text=transcribe_result.text))
-                results["entities"] = entity_result.dict()
-            except:
-                results["entities"] = None
-        
-        # 6. Summarization (FREE BART) - optional
-        if summarizer and len(transcribe_result.text) > 500:
-            logger.info("📄 Step 6: Generating summary...")
-            try:
-                summary_result = await summarize_text(SummarizeRequest(text=transcribe_result.text))
-                results["summary"] = summary_result.dict()
-            except:
-                results["summary"] = None
-        
-        logger.info("✅ Batch analysis complete!")
-        return results
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
 
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "service": "AI Call Center - AI Service",
+        "service": "AI Call Center - RunPod GPU Service",
         "version": "2.0.0",
-        "status": "running",
-        "models": "100% FREE & Open-Source",
-        "stack": [
-            "Whisper (OpenAI - FREE)",
-            "DistilBERT (Hugging Face - FREE)",
-            "spaCy (Explosion AI - FREE)",
-            "BART (Facebook - FREE)",
-            "pyannote.audio (FREE - Speaker Diarization)",
-            "rapidfuzz (FREE)"
-        ],
-        "features": [
-            "Speech-to-Text Transcription",
-            "Speaker Diarization (Agent vs Customer)",
-            "Sentiment Analysis (Overall + Per-Speaker)",
-            "Entity Extraction",
-            "Call Summarization",
-            "Compliance Checking with Fuzzy Matching",
-            "Talk-Time Ratio Analysis",
-            "Dead Air Detection"
+        "gpu_enabled": CUDA_AVAILABLE,
+        "gpu_name": GPU_NAME if CUDA_AVAILABLE else "N/A",
+        "optimizations": [
+            "GPU-accelerated Whisper transcription",
+            "Chunked processing for 30+ minute audio",
+            "Parallel chunk processing",
+            "FP16 precision for 2x speed",
+            "GPU-accelerated sentiment & summarization"
         ],
         "endpoints": {
             "health": "/health",
             "transcribe": "/transcribe",
-            "diarize": "/diarize",
-            "talk_time": "/calculate-talk-time",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance",
-            "batch": "/analyze-batch"
+            "compliance": "/check-compliance"
         }
     }
 
@@ -890,20 +780,21 @@ if __name__ == "__main__":
     print(f"""
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
-    ║   🤖 AI Service - 100% FREE & Open-Source Models             ║
+    ║   🚀 RunPod GPU AI Service - Production Ready                ║
+    ║                                                               ║
+    ║   GPU: {GPU_NAME[:50].ljust(50)} ║
+    ║   VRAM: {f"{VRAM_GB:.1f} GB" if CUDA_AVAILABLE else "N/A".ljust(55)} ║
+    ║   Device: {DEVICE.upper().ljust(56)} ║
     ║                                                               ║
     ║   ✅ Whisper: {WHISPER_MODEL.ljust(48)} ║
-    ║   ✅ DistilBERT: {SENTIMENT_MODEL[:40].ljust(40)} ║
-    ║   ✅ spaCy: {SPACY_MODEL.ljust(50)} ║
-    ║   ✅ BART: {SUMMARIZATION_MODEL[:42].ljust(42)} ║
-    ║   ✅ rapidfuzz: Free fuzzy matching                          ║
+    ║   ✅ Optimized for 30+ minute audio recordings               ║
+    ║   ✅ Parallel chunk processing ({MAX_WORKERS} workers)                    ║
+    ║   ✅ FP16 precision enabled                                  ║
     ║                                                               ║
-    ║   Device: {DEVICE.ljust(56)} ║
     ║   Port: {str(port).ljust(58)} ║
-    ║                                                               ║
-    ║   NO PAID APIs • NO CLOUD SERVICES • 100% LOCAL               ║
+    ║   Host: {host.ljust(58)} ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host=host, port=port, log_level="info")

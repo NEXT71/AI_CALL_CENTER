@@ -1,37 +1,44 @@
-# RunPod GPU-Optimized Dockerfile for AI Call Center Service
-FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+# Use NVIDIA CUDA base image for GPU support
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_HOME=/usr/local/cuda
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    ffmpeg \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
+# Copy requirements first (for better caching)
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install PyTorch with CUDA support
+RUN pip3 install --no-cache-dir torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+
+# Install other Python packages
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Download spaCy model
-RUN python -m spacy download en_core_web_sm
+RUN python3 -m spacy download en_core_web_sm
 
 # Copy application code
 COPY . .
-
-# Create uploads directory for audio files
-RUN mkdir -p /app/uploads
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD python -c "import requests; requests.get('http://localhost:8000/health')"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD python3 -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
-# Start the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run the application
+CMD ["python3", "main.py"]
