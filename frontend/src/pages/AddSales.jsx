@@ -73,7 +73,6 @@ const AddSales = () => {
       }
     }
   };
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
