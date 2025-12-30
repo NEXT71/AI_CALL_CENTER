@@ -97,10 +97,6 @@ const CallsList = () => {
   const handleRefresh = () => {
     fetchCalls(true);
   };
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getScoreBadge = (score) => {
     if (!score) return 'badge-neutral';
