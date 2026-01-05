@@ -10,7 +10,11 @@ import {
   Menu,
   X,
   CreditCard,
-  DollarSign
+  DollarSign,
+  ChevronRight,
+  Settings,
+  Bell,
+  Search
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -58,124 +62,165 @@ const Layout = () => {
   const filteredNavigation = navigation.filter(item => hasRole(item.roles));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30">
-      {/* Enhanced Top Navigation */}
-      <nav className="bg-white/95 backdrop-blur-md shadow-lg border-b border-slate-200/60 sticky top-0 z-40">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 group"
-              >
-                {sidebarOpen ? <X size={24} className="group-hover:rotate-90 transition-transform duration-200" /> : <Menu size={24} className="group-hover:scale-110 transition-transform duration-200" />}
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <img 
-                    src="/logo.jpg" 
-                    alt="QualityPulse" 
-                    className="h-10 w-10 object-contain rounded-lg shadow-md ring-2 ring-white"
-                  />
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-2 border-white animate-pulse"></div>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    QualityPulse
-                  </h1>
-                  <p className="text-xs text-slate-500 -mt-0.5 font-medium">AI-powered Quality Assurance</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-md">
-                  {user?.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
-                  title="Logout"
-                >
-                  <LogOut size={20} className="group-hover:scale-110 transition-transform duration-200" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50 flex font-sans">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      <div className="flex">
-        {/* Enhanced Sidebar */}
-        <aside
-          className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-md border-r border-slate-200/60 transition-all duration-300 ease-in-out mt-16 lg:mt-0 shadow-2xl lg:shadow-none`}
-        >
-          <nav className="px-4 py-6 space-y-2">
-            {filteredNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`group flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 font-semibold shadow-md border border-blue-200/50'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:shadow-sm'
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg mr-3 transition-all duration-200 ${
-                    isActive 
-                      ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-md' 
-                      : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200 group-hover:scale-105'
-                  }`}>
-                    <Icon size={18} className={isActive ? '' : 'group-hover:scale-110 transition-transform duration-200'} />
-                  </div>
-                  <span className="font-medium">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-2 h-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full animate-pulse"></div>
-                  )}
-                </Link>
-              );
-            })}
+      {/* Sidebar */}
+      <aside 
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo Area */}
+          <div className="h-20 flex items-center px-6 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="relative group cursor-pointer" onClick={() => navigate('/')}>
+                <img src="/logo.jpg" alt="QualityPulse" className="w-20 h-20 rounded-xl shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-105 object-cover" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></div>
+              </div>
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 tracking-tight">
+                QualityPulse
+              </span>
+            </div>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="ml-auto lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+            <div className="mb-8">
+              <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
+                Main Menu
+              </p>
+              <div className="space-y-1">
+                {filteredNavigation.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`
+                        group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 relative overflow-hidden
+                        ${isActive 
+                          ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' 
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }
+                      `}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full"></div>
+                      )}
+                      <item.icon 
+                        className={`
+                          mr-3 h-5 w-5 transition-colors duration-200
+                          ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}
+                        `} 
+                      />
+                      {item.name}
+                      {isActive && (
+                        <ChevronRight className="ml-auto h-4 w-4 text-blue-400" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quick Actions or Secondary Menu could go here */}
           </nav>
 
-          {/* User Info Section */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-blue-50/50 backdrop-blur-sm">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/80 shadow-sm">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                {user?.name?.charAt(0)?.toUpperCase() || '?'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-900 truncate">{user?.name}</p>
-                <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+          {/* User Profile & Logout */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-md ring-2 ring-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 truncate capitalize flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                    {user?.role}
+                  </p>
+                </div>
               </div>
             </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 rounded-xl transition-all duration-200 group"
+            >
+              <LogOut className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+              Sign Out
+            </button>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8 bg-transparent">
-          <div className="animate-fade-in">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        {/* Top Header */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30 transition-all duration-200">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            >
+              <Menu size={24} />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 hidden sm:block tracking-tight">
+                {navigation.find(n => n.href === location.pathname)?.name || 'Dashboard'}
+              </h1>
+              <p className="text-xs text-slate-500 hidden sm:block mt-0.5">
+                Welcome back, {user?.name?.split(' ')[0]}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Search Bar (Hidden on mobile) */}
+            <div className="hidden md:flex items-center relative">
+              <Search className="absolute left-3 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+              />
+            </div>
+
+            <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
+
+            <button className="p-2.5 rounded-full text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors relative group">
+              <Bell size={20} className="group-hover:animate-swing" />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            </button>
+            
+            <button className="p-2.5 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors md:hidden">
+              <Search size={20} />
+            </button>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth">
+          <div className="max-w-7xl mx-auto animate-fade-in pb-10">
             <Outlet />
           </div>
         </main>
       </div>
-
-      {/* Enhanced Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30 mt-16"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 };

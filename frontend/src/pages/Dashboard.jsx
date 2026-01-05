@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { callService, reportService } from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
-import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3 } from 'lucide-react';
+import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -345,10 +345,10 @@ const Dashboard = () => {
       )}
 
       {/* Sales Performance & Agent Leaderboard & Sales Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Widget - Today's Performance */}
         {['Admin', 'Manager', 'QA'].includes(user?.role) && (
-          <div>
+          <div className="h-full">
             <SalesWidget />
           </div>
         )}
@@ -356,70 +356,84 @@ const Dashboard = () => {
         {salesData && salesData.totalSales > 0 && (
           <>
             {/* Sales Metrics */}
-            <div className={`${['Admin', 'Manager', 'QA'].includes(user?.role) ? 'lg:col-span-2' : 'lg:col-span-3'} card`}>
-              <h3 className="section-header">Sales Performance</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <p className="caption-text">Total Revenue</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  ${salesData.totalRevenue?.toLocaleString() || 0}
-                </p>
-                <div className="flex items-center gap-1 text-xs text-green-700">
-                  <ArrowUp size={12} />
-                  <span>8.2%</span>
+            <div className={`${['Admin', 'Manager', 'QA'].includes(user?.role) ? 'lg:col-span-2' : 'lg:col-span-3'} card-enhanced`}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-md">
+                  <TrendingUp size={20} className="text-white" />
                 </div>
+                <h3 className="section-header-enhanced mb-0">Sales Performance</h3>
               </div>
-              <div className="space-y-2">
-                <p className="caption-text">Avg Sale Value</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  ${salesData.avgSaleAmount?.toFixed(2) || 0}
-                </p>
-                <div className="flex items-center gap-1 text-xs text-green-700">
-                  <ArrowUp size={12} />
-                  <span>5.1%</span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                  <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    ${salesData.totalRevenue?.toLocaleString() || 0}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
+                    <ArrowUp size={12} />
+                    <span>8.2% vs last week</span>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <p className="caption-text">Quality Score</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {salesData.avgQualityScore?.toFixed(1) || 0}
-                </p>
-                <div className="flex items-center gap-1 text-xs text-slate-600">
-                  <span>Sale calls avg</span>
+                
+                <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                  <p className="text-sm font-medium text-slate-500 mb-1">Avg Sale Value</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    ${salesData.avgSaleAmount?.toFixed(2) || 0}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
+                    <ArrowUp size={12} />
+                    <span>5.1% vs last week</span>
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                  <p className="text-sm font-medium text-slate-500 mb-1">Quality Score</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {salesData.avgQualityScore?.toFixed(1) || 0}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-fit">
+                    <span>Sale calls avg</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Quick Stats */}
-          <div className="card">
-            <h3 className="section-header">Quick Stats</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="status-dot status-dot-success"></div>
-                  <span className="body-text">Completed</span>
+            {/* Quick Stats */}
+            <div className="card-enhanced">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg shadow-md">
+                  <Activity size={20} className="text-white" />
                 </div>
-                <span className="font-semibold text-slate-900">{stats?.overview?.totalCalls || 0}</span>
+                <h3 className="section-header-enhanced mb-0">Quick Stats</h3>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="status-dot status-dot-warning"></div>
-                  <span className="body-text">Violations</span>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
+                    <span className="text-sm font-medium text-slate-700">Completed Calls</span>
+                  </div>
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">{stats?.overview?.totalCalls || 0}</span>
                 </div>
-                <span className="font-semibold text-slate-900">{stats?.compliance?.totalViolations || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="status-dot status-dot-info"></div>
-                  <span className="body-text">Processing</span>
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]"></div>
+                    <span className="text-sm font-medium text-slate-700">Compliance Violations</span>
+                  </div>
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">{stats?.compliance?.totalViolations || 0}</span>
                 </div>
-                <span className="font-semibold text-slate-900">0</span>
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)] animate-pulse"></div>
+                    <span className="text-sm font-medium text-slate-700">Processing</span>
+                  </div>
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">0</span>
+                </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
       </div>
 
       {/* Recent Calls Table */}

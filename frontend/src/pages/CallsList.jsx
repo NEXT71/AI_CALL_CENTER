@@ -137,161 +137,166 @@ const CallsList = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="page-header">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">Call Records</h1>
-            <p className="page-subtitle">
-              {pagination.total} total calls • {calls.filter(c => c.status === 'completed').length} completed
-            </p>
-          </div>
-          <button className="btn btn-secondary">
-            <Download size={18} />
-            Export
-          </button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Call Records</h1>
+          <p className="text-slate-600 mt-1">
+            {pagination.total} total calls • {calls.filter(c => c.status === 'completed').length} completed
+          </p>
         </div>
+        <button className="btn-enhanced btn-secondary-enhanced flex items-center gap-2">
+          <Download size={18} />
+          Export Data
+        </button>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
         {/* Left Sidebar Filters */}
-        <div className="col-span-12 lg:col-span-3 space-y-5">
-          <div className="filter-panel">
+        <div className={`col-span-12 lg:col-span-3 space-y-5 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+          <div className="card-enhanced p-5 sticky top-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="filter-title flex items-center gap-2">
-                <Filter size={16} />
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Filter size={18} className="text-blue-600" />
                 Filters
               </h3>
-              <button onClick={resetFilters} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                Reset
+              <button onClick={resetFilters} className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                Reset All
               </button>
             </div>
 
-            {/* Search */}
-            <div className="filter-section">
-              <label className="input-label">
-                <Search size={14} className="inline mr-1.5" />
-                Search
-              </label>
-              <input
-                type="text"
-                placeholder="Call ID, customer..."
-                className="input"
-                value={filters.campaign}
-                onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-              />
-            </div>
-
-            {/* Agent Filter */}
-            <div className="filter-section">
-              <label className="input-label">
-                <User size={14} className="inline mr-1.5" />
-                Agent
-              </label>
-              <input
-                type="text"
-                placeholder="Agent name..."
-                className="input"
-                value={filters.agentName}
-                onChange={(e) => setFilters({ ...filters, agentName: e.target.value, page: 1 })}
-              />
-            </div>
-
-            {/* Campaign Filter */}
-            <div className="filter-section">
-              <label className="input-label">
-                <Building2 size={14} className="inline mr-1.5" />
-                Campaign
-              </label>
-              <select
-                className="select"
-                value={filters.campaign}
-                onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-              >
-                <option value="">All Campaigns</option>
-                <option value="ACA">ACA</option>
-                <option value="Medicare">Medicare</option>
-                <option value="Final Expense">Final Expense</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="filter-section">
-              <label className="input-label">Status</label>
-              <select
-                className="select"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
-              >
-                <option value="">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="processing">Processing</option>
-                <option value="queued">Queued</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-
-            {/* Quality Score Range */}
-            <div className="filter-section">
-              <label className="input-label">Quality Score Range</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  className="input"
-                  min="0"
-                  max="100"
-                  value={filters.minQuality}
-                  onChange={(e) => setFilters({ ...filters, minQuality: e.target.value, page: 1 })}
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  className="input"
-                  min="0"
-                  max="100"
-                  value={filters.maxQuality}
-                  onChange={(e) => setFilters({ ...filters, maxQuality: e.target.value, page: 1 })}
-                />
+            <div className="space-y-4">
+              {/* Search */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Call ID, customer..."
+                    className="input-enhanced w-full pl-9 py-2 text-sm"
+                    value={filters.campaign}
+                    onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Date Range */}
-            <div className="filter-section">
-              <label className="input-label">
-                <Calendar size={14} className="inline mr-1.5" />
-                Date Range
-              </label>
-              <div className="space-y-2">
-                <input
-                  type="date"
-                  className="input"
-                  value={filters.startDate}
-                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value, page: 1 })}
-                />
-                <input
-                  type="date"
-                  className="input"
-                  value={filters.endDate}
-                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value, page: 1 })}
-                />
+              {/* Agent Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  Agent
+                </label>
+                <div className="relative">
+                  <User size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Agent name..."
+                    className="input-enhanced w-full pl-9 py-2 text-sm"
+                    value={filters.agentName}
+                    onChange={(e) => setFilters({ ...filters, agentName: e.target.value, page: 1 })}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Results per page */}
-            <div className="filter-section">
-              <label className="input-label">Results per page</label>
-              <select
-                className="select"
-                value={filters.limit}
-                onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value), page: 1 })}
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
+              {/* Campaign Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  Campaign
+                </label>
+                <div className="relative">
+                  <Building2 size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <select
+                    className="input-enhanced w-full pl-9 py-2 text-sm appearance-none bg-white"
+                    value={filters.campaign}
+                    onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
+                  >
+                    <option value="">All Campaigns</option>
+                    <option value="ACA">ACA</option>
+                    <option value="Medicare">Medicare</option>
+                    <option value="Final Expense">Final Expense</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Status</label>
+                <select
+                  className="input-enhanced w-full py-2 text-sm bg-white"
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="completed">Completed</option>
+                  <option value="processing">Processing</option>
+                  <option value="queued">Queued</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+
+              {/* Quality Score Range */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Quality Score</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    className="input-enhanced w-full py-2 text-sm"
+                    min="0"
+                    max="100"
+                    value={filters.minQuality}
+                    onChange={(e) => setFilters({ ...filters, minQuality: e.target.value, page: 1 })}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    className="input-enhanced w-full py-2 text-sm"
+                    min="0"
+                    max="100"
+                    value={filters.maxQuality}
+                    onChange={(e) => setFilters({ ...filters, maxQuality: e.target.value, page: 1 })}
+                  />
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                  Date Range
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    className="input-enhanced w-full py-2 text-sm"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value, page: 1 })}
+                  />
+                  <input
+                    type="date"
+                    className="input-enhanced w-full py-2 text-sm"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value, page: 1 })}
+                  />
+                </div>
+              </div>
+
+              {/* Results per page */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Rows per page</label>
+                <select
+                  className="input-enhanced w-full py-2 text-sm bg-white"
+                  value={filters.limit}
+                  onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value), page: 1 })}
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -299,32 +304,30 @@ const CallsList = () => {
         {/* Main Content */}
         <div className="col-span-12 lg:col-span-9">
           {loading ? (
-            <div className="card">
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="spinner w-12 h-12 mb-4"></div>
-                <p className="text-slate-600 font-medium">Loading calls...</p>
-                <p className="text-slate-400 text-sm mt-1">Please wait while we fetch your data</p>
-              </div>
+            <div className="card-enhanced p-12 flex flex-col items-center justify-center">
+              <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+              <p className="text-slate-600 font-medium">Loading calls...</p>
+              <p className="text-slate-400 text-sm mt-1">Please wait while we fetch your data</p>
             </div>
           ) : calls.length === 0 ? (
-            <div className="card text-center py-20">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="text-slate-400" size={32} />
+            <div className="card-enhanced p-12 text-center">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="text-slate-400" size={40} />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No calls found</h3>
-              <p className="body-text text-slate-500 mb-4">
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No calls found</h3>
+              <p className="text-slate-500 mb-6 max-w-md mx-auto">
                 {Object.values(filters).some(v => v && v !== '') 
-                  ? 'Try adjusting your filters or search terms' 
-                  : 'No calls have been uploaded yet'
+                  ? 'We couldn\'t find any calls matching your current filters. Try adjusting them or search for something else.' 
+                  : 'No calls have been uploaded yet. Get started by uploading your first call recording.'
                 }
               </p>
               <div className="flex gap-3 justify-center">
                 {Object.values(filters).some(v => v && v !== '') && (
-                  <button onClick={resetFilters} className="btn btn-secondary">
+                  <button onClick={resetFilters} className="btn-enhanced btn-secondary-enhanced">
                     Clear Filters
                   </button>
                 )}
-                <Link to="/app/upload" className="btn btn-primary">
+                <Link to="/app/upload" className="btn-enhanced btn-primary-enhanced">
                   Upload First Call
                 </Link>
               </div>
@@ -332,45 +335,43 @@ const CallsList = () => {
           ) : (
             <div className="space-y-4">
               {/* Table Controls */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-lg border border-slate-200">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="lg:hidden btn-enhanced btn-secondary-enhanced p-2"
+                  >
+                    <SlidersHorizontal size={20} />
+                  </button>
+                  <div className="relative flex-1 sm:flex-none">
                     <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search calls..."
+                      placeholder="Quick search..."
                       value={filters.search || ''}
                       onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
-                      className="pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                      className="input-enhanced pl-10 pr-10 py-2 w-full sm:w-64"
                     />
                     {filters.search && (
                       <button
                         onClick={() => setFilters({ ...filters, search: '', page: 1 })}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        title="Clear search"
                       >
-                        <X size={16} />
+                        <X size={14} />
                       </button>
                     )}
                   </div>
                   <button
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="btn btn-secondary flex items-center gap-2"
+                    className="btn-enhanced btn-secondary-enhanced p-2"
+                    title="Refresh list"
                   >
-                    <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                    Refresh
-                  </button>
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="btn btn-secondary lg:hidden flex items-center gap-2"
-                  >
-                    <SlidersHorizontal size={16} />
-                    Filters
+                    <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
                   </button>
                 </div>
-                <div className="text-sm text-slate-600">
-                  {pagination.total} calls found
+                <div className="text-sm font-medium text-slate-600">
+                  Showing {calls.length} of {pagination.total} calls
                 </div>
               </div>
 
@@ -378,65 +379,65 @@ const CallsList = () => {
               <div className="table-container-enhanced">
                 <div className="overflow-x-auto">
                   <table className="table-enhanced min-w-full">
-                    <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
+                    <thead>
                       <tr>
-                        <th onClick={() => handleSort('callId')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('callId')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
                             Call ID
                             {sortField === 'callId' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'callId' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'callId' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
-                        <th onClick={() => handleSort('agentName')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('agentName')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
-                            <User size={14} />
+                            <User size={14} className="text-slate-400" />
                             Agent
                             {sortField === 'agentName' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'agentName' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'agentName' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
                         <th>Customer</th>
-                        <th onClick={() => handleSort('campaign')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('campaign')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
-                            <Building2 size={14} />
+                            <Building2 size={14} className="text-slate-400" />
                             Campaign
                             {sortField === 'campaign' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'campaign' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'campaign' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
-                        <th onClick={() => handleSort('callDate')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('callDate')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
-                            <Calendar size={14} />
+                            <Calendar size={14} className="text-slate-400" />
                             Date & Time
                             {sortField === 'callDate' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'callDate' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'callDate' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
                         <th>Duration</th>
-                        <th onClick={() => handleSort('qualityScore')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('qualityScore')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
                             Quality Score
                             {sortField === 'qualityScore' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'qualityScore' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'qualityScore' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
-                        <th onClick={() => handleSort('complianceScore')} className="cursor-pointer hover:bg-slate-100 transition-colors">
+                        <th onClick={() => handleSort('complianceScore')} className="cursor-pointer group">
                           <div className="flex items-center gap-2">
                             Compliance
                             {sortField === 'complianceScore' && (
-                              sortDirection === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                              sortDirection === 'asc' ? <ArrowUp size={14} className="text-blue-600" /> : <ArrowDown size={14} className="text-blue-600" />
                             )}
-                            {sortField !== 'complianceScore' && <ArrowUpDown size={14} className="opacity-30" />}
+                            {sortField !== 'complianceScore' && <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-30 transition-opacity" />}
                           </div>
                         </th>
                         <th>Status</th>
@@ -445,41 +446,37 @@ const CallsList = () => {
                     </thead>
                     <tbody>
                       {calls.map((call, index) => (
-                        <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
-                          <td className="font-mono text-xs font-semibold text-slate-900 bg-slate-50/50">
-                            <div className="flex items-center gap-2">
-                              <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
-                                {call.callId}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="font-medium text-slate-900">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                                {call.agentName?.charAt(0)?.toUpperCase() || '?'}
-                              </div>
-                              <span>{call.agentName}</span>
-                            </div>
-                          </td>
-                          <td className="text-slate-600">
-                            <span className="px-2 py-1 bg-slate-100 rounded-full text-xs">
-                              {call.customerName || 'Unknown'}
+                        <tr key={call._id} className="group hover:bg-blue-50/50 transition-colors">
+                          <td className="font-mono text-xs font-semibold text-slate-600">
+                            <span className="px-2 py-1 bg-slate-100 rounded border border-slate-200 group-hover:border-blue-200 group-hover:bg-white transition-colors">
+                              {call.callId}
                             </span>
                           </td>
+                          <td>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                                {call.agentName?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                              <span className="font-medium text-slate-900">{call.agentName}</span>
+                            </div>
+                          </td>
                           <td className="text-slate-600">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {call.customerName || 'Unknown'}
+                          </td>
+                          <td>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                               {call.campaign}
                             </span>
                           </td>
-                          <td className="text-slate-500 text-xs">
-                            <div className="space-y-1">
-                              <div className="font-medium">{formatDate(call.callDate)}</div>
-                              <div className="text-slate-400">{formatTime(call.callDate)}</div>
+                          <td>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-slate-900">{formatDate(call.callDate)}</span>
+                              <span className="text-xs text-slate-500">{formatTime(call.callDate)}</span>
                             </div>
                           </td>
-                          <td className="text-slate-600">
+                          <td>
                             {call.duration ? (
-                              <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                              <span className="font-mono text-sm text-slate-600">
                                 {Math.floor(call.duration / 60)}:{String(call.duration % 60).padStart(2, '0')}
                               </span>
                             ) : (
@@ -489,66 +486,49 @@ const CallsList = () => {
                           <td>
                             {call.qualityScore !== null && call.qualityScore !== undefined ? (
                               <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  call.qualityScore >= 80 ? 'bg-green-500' :
+                                <div className={`w-2.5 h-2.5 rounded-full ${
+                                  call.qualityScore >= 80 ? 'bg-emerald-500' :
                                   call.qualityScore >= 60 ? 'bg-yellow-500' :
                                   'bg-red-500'
                                 }`}></div>
-                                <span className={`badge ${
-                                  call.qualityScore >= 80 ? 'badge-success' :
-                                  call.qualityScore >= 60 ? 'badge-warning' :
-                                  'badge-danger'
-                                }`}>
-                                  {call.qualityScore}%
-                                </span>
+                                <span className="font-semibold text-slate-900">{call.qualityScore}%</span>
                               </div>
                             ) : (
-                              <span className="text-slate-400">N/A</span>
+                              <span className="text-slate-400 text-xs">Pending</span>
                             )}
                           </td>
                           <td>
                             {call.complianceScore !== null && call.complianceScore !== undefined ? (
                               <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${
-                                  call.complianceScore >= 80 ? 'bg-green-500' :
+                                <div className={`w-2.5 h-2.5 rounded-full ${
+                                  call.complianceScore >= 80 ? 'bg-emerald-500' :
                                   call.complianceScore >= 60 ? 'bg-yellow-500' :
                                   'bg-red-500'
                                 }`}></div>
-                                <span className={`badge ${
-                                  call.complianceScore >= 80 ? 'badge-success' :
-                                  call.complianceScore >= 60 ? 'badge-warning' :
-                                  'badge-danger'
-                                }`}>
-                                  {call.complianceScore}%
-                                </span>
+                                <span className="font-semibold text-slate-900">{call.complianceScore}%</span>
                               </div>
                             ) : (
-                              <span className="text-slate-400">N/A</span>
+                              <span className="text-slate-400 text-xs">Pending</span>
                             )}
                           </td>
                           <td>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              call.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              call.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                              call.status === 'failed' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                              call.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              call.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                              call.status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
+                              'bg-slate-50 text-slate-700 border-slate-100'
                             }`}>
-                              <div className={`w-2 h-2 rounded-full mr-1.5 ${
-                                call.status === 'completed' ? 'bg-green-500' :
-                                call.status === 'processing' ? 'bg-blue-500 animate-pulse' :
-                                call.status === 'failed' ? 'bg-red-500' :
-                                'bg-gray-500'
-                              }`}></div>
-                              {call.status}
+                              {call.status === 'processing' && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse mr-1.5"></div>}
+                              {call.status.charAt(0).toUpperCase() + call.status.slice(1)}
                             </span>
                           </td>
-                          <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-6">
+                          <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-4">
                             <Link
                               to={`${call._id}`}
-                              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
+                              className="btn-enhanced btn-secondary-enhanced py-1.5 px-3 text-xs flex items-center gap-1.5"
                             >
-                              <Eye size={16} className="group-hover:scale-110 transition-transform" />
-                              <span>View Details</span>
+                              <Eye size={14} />
+                              View
                             </Link>
                           </td>
                         </tr>
@@ -557,14 +537,16 @@ const CallsList = () => {
                   </table>
                 </div>
 
-                {/* Table Footer with Summary */}
-                <div className="bg-slate-50 px-6 py-4 border-t border-slate-200">
+                {/* Table Footer */}
+                <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 rounded-b-xl">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-slate-600">
                     <div className="flex items-center gap-6">
-                      <span>📊 {calls.length} calls displayed</span>
-                      <span>📅 {formatDate(new Date())}</span>
+                      <span className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                        {calls.length} calls displayed
+                      </span>
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 italic">
                       Scroll horizontally to see all columns →
                     </div>
                   </div>
@@ -573,32 +555,32 @@ const CallsList = () => {
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="pagination">
-                  <p className="pagination-info">
-                    Showing <span className="font-semibold">{(pagination.currentPage - 1) * filters.limit + 1}</span> to{' '}
-                    <span className="font-semibold">{Math.min(pagination.currentPage * filters.limit, pagination.total)}</span> of{' '}
-                    <span className="font-semibold">{pagination.total}</span> calls
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                  <p className="text-sm text-slate-600">
+                    Showing <span className="font-semibold text-slate-900">{(pagination.currentPage - 1) * filters.limit + 1}</span> to{' '}
+                    <span className="font-semibold text-slate-900">{Math.min(pagination.currentPage * filters.limit, pagination.total)}</span> of{' '}
+                    <span className="font-semibold text-slate-900">{pagination.total}</span> results
                   </p>
-                  <div className="pagination-buttons">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
                       disabled={pagination.currentPage === 1}
-                      className="pagination-button pagination-button-inactive disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      <ChevronLeft size={16} />
-                      Previous
+                      <ChevronLeft size={18} />
                     </button>
                     <div className="flex items-center gap-1">
                       {[...Array(Math.min(pagination.totalPages, 5))].map((_, idx) => {
                         const page = idx + 1;
+                        // Simple pagination logic for display
                         return (
                           <button
                             key={page}
                             onClick={() => setFilters({ ...filters, page })}
-                            className={`pagination-button ${
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
                               page === pagination.currentPage
-                                ? 'pagination-button-active'
-                                : 'pagination-button-inactive'
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                : 'text-slate-600 hover:bg-slate-100'
                             }`}
                           >
                             {page}
@@ -609,10 +591,9 @@ const CallsList = () => {
                     <button
                       onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                       disabled={pagination.currentPage === pagination.totalPages}
-                      className="pagination-button pagination-button-inactive disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      Next
-                      <ChevronRight size={16} />
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 </div>

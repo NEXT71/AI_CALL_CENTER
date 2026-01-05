@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { callService, ruleService } from '../services/apiService';
 import { 
   Upload as UploadIcon, X, File, Check, Clock, 
-  FileAudio, User, Hash, Calendar, DollarSign, Tag
+  FileAudio, User, Hash, Calendar, DollarSign, Tag,
+  AlertCircle, CheckCircle, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DOMPurify from 'dompurify';
@@ -166,32 +167,37 @@ const UploadCall = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">Upload Call Recording</h1>
-        <p className="page-subtitle">Upload and process call recordings with AI-powered quality analysis</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Upload Call Recording</h1>
+          <p className="text-slate-600 mt-1">Upload and process call recordings with AI-powered quality analysis</p>
+        </div>
       </div>
 
       {error && (
-        <div className="alert alert-danger">
-          <p className="font-semibold">Error</p>
-          <p className="text-sm mt-1">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 text-red-700 animate-slide-in-right">
+          <AlertCircle className="shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="font-semibold">Error</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* File Upload Section */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="icon-container icon-container-blue">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
               <FileAudio size={20} />
             </div>
-            <h2 className="heading-3">Audio File</h2>
+            <h2 className="text-lg font-bold text-slate-900">Audio File</h2>
           </div>
 
           <div 
-            className={`border-2 border-dashed rounded-xl p-10 text-center transition-all ${
+            className={`border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200 ${
               dragActive 
                 ? 'border-blue-500 bg-blue-50' 
                 : audioFile 
@@ -206,13 +212,13 @@ const UploadCall = () => {
             {audioFile ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
-                  <div className="icon-container icon-container-green">
+                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-600 animate-bounce-small">
                     <Check size={32} />
                   </div>
                 </div>
                 <div>
-                  <p className="heading-4 text-slate-900">{audioFile.name}</p>
-                  <p className="caption-text mt-2 flex items-center justify-center gap-2">
+                  <p className="text-lg font-bold text-slate-900">{audioFile.name}</p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center justify-center gap-2">
                     <File size={14} />
                     {(audioFile.size / 1024 / 1024).toFixed(2)} MB
                     {formData.duration && (
@@ -230,22 +236,24 @@ const UploadCall = () => {
                     setAudioFile(null);
                     setFormData(prev => ({ ...prev, duration: '' }));
                   }}
-                  className="btn btn-secondary btn-sm"
+                  className="btn-enhanced btn-secondary-enhanced py-2 px-4 text-sm"
                 >
-                  <X size={16} />
+                  <X size={16} className="mr-2" />
                   Remove File
                 </button>
               </div>
             ) : (
               <div>
-                <UploadIcon className="mx-auto text-slate-400 mb-4" size={56} />
-                <p className="heading-4 text-slate-700 mb-2">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
+                  <UploadIcon size={32} />
+                </div>
+                <p className="text-lg font-bold text-slate-900 mb-2">
                   Drag & drop audio file here
                 </p>
-                <p className="caption-text text-slate-500 mb-4">
+                <p className="text-slate-500 mb-6">
                   or click the button below to browse
                 </p>
-                <p className="caption-text text-slate-400">
+                <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-6">
                   Supported formats: WAV, MP3, M4A, OGG • Max size: 100MB
                 </p>
               </div>
@@ -263,9 +271,9 @@ const UploadCall = () => {
             {!audioFile && (
               <label
                 htmlFor="audio-upload"
-                className="mt-6 inline-flex btn btn-primary cursor-pointer"
+                className="inline-flex items-center justify-center btn-enhanced btn-primary-enhanced cursor-pointer"
               >
-                <UploadIcon size={18} />
+                <UploadIcon size={18} className="mr-2" />
                 Select Audio File
               </label>
             )}
@@ -275,22 +283,22 @@ const UploadCall = () => {
         {/* Call Information Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Agent Information */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="icon-container icon-container-purple">
+          <div className="card-enhanced p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
                 <User size={20} />
               </div>
-              <h2 className="heading-3">Agent Information</h2>
+              <h2 className="text-lg font-bold text-slate-900">Agent Information</h2>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Agent ID <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  className="input"
+                  className="input-enhanced w-full"
                   value={formData.agentId}
                   onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
                   placeholder="EMP001"
@@ -298,13 +306,13 @@ const UploadCall = () => {
               </div>
 
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Agent Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  className="input"
+                  className="input-enhanced w-full"
                   value={formData.agentName}
                   onChange={(e) => setFormData({ ...formData, agentName: e.target.value })}
                   placeholder="John Doe"
@@ -314,21 +322,21 @@ const UploadCall = () => {
           </div>
 
           {/* Customer Information */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="icon-container icon-container-green">
+          <div className="card-enhanced p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                 <User size={20} />
               </div>
-              <h2 className="heading-3">Customer Information</h2>
+              <h2 className="text-lg font-bold text-slate-900">Customer Information</h2>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Customer ID
                 </label>
                 <input
                   type="text"
-                  className="input"
+                  className="input-enhanced w-full"
                   value={formData.customerId}
                   onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
                   placeholder="CUST001"
@@ -336,12 +344,12 @@ const UploadCall = () => {
               </div>
 
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Customer Name
                 </label>
                 <input
                   type="text"
-                  className="input"
+                  className="input-enhanced w-full"
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                   placeholder="Jane Smith"
@@ -352,41 +360,46 @@ const UploadCall = () => {
         </div>
 
         {/* Call Details */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="icon-container icon-container-amber">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
               <Hash size={20} />
             </div>
-            <h2 className="heading-3">Call Details</h2>
+            <h2 className="text-lg font-bold text-slate-900">Call Details</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="input-label">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
                 Campaign <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                className="select"
-                value={formData.campaign}
-                onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
-              >
-                <option value="">Select Campaign</option>
-                {campaigns.map(campaign => (
-                  <option key={campaign} value={campaign}>{campaign}</option>
-                ))}
-                <option value="Other">Other</option>
-              </select>
+              <div className="relative">
+                <select
+                  required
+                  className="input-enhanced w-full appearance-none bg-white"
+                  value={formData.campaign}
+                  onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
+                >
+                  <option value="">Select Campaign</option>
+                  {campaigns.map(campaign => (
+                    <option key={campaign} value={campaign}>{campaign}</option>
+                  ))}
+                  <option value="Other">Other</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ArrowRight size={16} className="rotate-90" />
+                </div>
+              </div>
             </div>
 
             <div>
-              <label className="input-label">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
                 Duration (seconds) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 required
                 min="1"
-                className="input"
+                className="input-enhanced w-full"
                 value={formData.duration}
                 onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 placeholder="180"
@@ -394,13 +407,13 @@ const UploadCall = () => {
             </div>
 
             <div>
-              <label className="input-label">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
                 Call Date & Time <span className="text-red-500">*</span>
               </label>
               <input
                 type="datetime-local"
                 required
-                className="input"
+                className="input-enhanced w-full"
                 value={formData.callDate}
                 onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
               />
@@ -409,19 +422,19 @@ const UploadCall = () => {
         </div>
 
         {/* Sale Information */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="icon-container icon-container-green">
+        <div className="card-enhanced p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
               <DollarSign size={20} />
             </div>
-            <h2 className="heading-3">Sale Information</h2>
+            <h2 className="text-lg font-bold text-slate-900">Sale Information</h2>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 transition-colors hover:bg-blue-100/50">
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 border-gray-300"
                 checked={formData.isSale}
                 onChange={(e) => setFormData({ 
                   ...formData, 
@@ -430,50 +443,58 @@ const UploadCall = () => {
                   productSold: e.target.checked ? formData.productSold : '',
                 })}
               />
-              <span className="ml-3 font-semibold text-slate-900">
+              <span className="ml-3 font-bold text-slate-900">
                 This call resulted in a sale
               </span>
             </label>
-            <p className="caption-text text-slate-600 mt-2 ml-8">
+            <p className="text-sm text-slate-600 mt-2 ml-8">
               Check this box if the call successfully resulted in a sale transaction
             </p>
           </div>
 
           {formData.isSale && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Sale Amount ($) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  className="input"
-                  value={formData.saleAmount}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    saleAmount: e.target.value 
-                  })}
-                  placeholder="299.99"
-                />
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</div>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    className="input-enhanced w-full pl-8"
+                    value={formData.saleAmount}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      saleAmount: e.target.value 
+                    })}
+                    placeholder="299.99"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="input-label">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Product/Service Sold
                 </label>
-                <input
-                  type="text"
-                  className="input"
-                  value={formData.productSold}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    productSold: e.target.value 
-                  })}
-                  placeholder="Premium Package"
-                />
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Tag size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    className="input-enhanced w-full pl-10"
+                    value={formData.productSold}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      productSold: e.target.value 
+                    })}
+                    placeholder="Premium Package"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -481,41 +502,40 @@ const UploadCall = () => {
 
         {/* Upload Progress */}
         {uploading && (
-          <div className="card bg-blue-50 border-blue-200">
+          <div className="card-enhanced p-6 bg-blue-50 border-blue-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="spinner h-6 w-6"></div>
-                <span className="font-semibold text-slate-900">Uploading...</span>
+                <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                <span className="font-bold text-slate-900">Uploading...</span>
               </div>
-              <span className="font-semibold text-blue-600">{uploadProgress}%</span>
+              <span className="font-bold text-blue-600">{uploadProgress}%</span>
             </div>
-            <div className="progress-bar">
+            <div className="w-full bg-blue-200 rounded-full h-2.5 overflow-hidden">
               <div
-                className="progress-fill"
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="caption-text text-slate-600 mt-2">
+            <p className="text-sm text-slate-600 mt-3 font-medium">
               Please wait while your call is being uploaded and queued for processing
             </p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-4">
           <button
             type="submit"
             disabled={uploading || !audioFile}
-            className="flex-1 btn btn-primary btn-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 btn-enhanced btn-primary-enhanced py-4 text-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
           >
             {uploading ? (
               <>
-                <div className="spinner h-5 w-5"></div>
-                Uploading {uploadProgress}%
+                <span>Uploading {uploadProgress}%</span>
               </>
             ) : (
               <>
-                <UploadIcon size={20} />
+                <UploadIcon size={24} />
                 Upload & Process Call
               </>
             )}
@@ -524,7 +544,7 @@ const UploadCall = () => {
             type="button"
             onClick={() => navigate('/app/calls')}
             disabled={uploading}
-            className="btn btn-secondary btn-lg disabled:opacity-50"
+            className="btn-enhanced btn-secondary-enhanced px-8 font-semibold"
           >
             Cancel
           </button>

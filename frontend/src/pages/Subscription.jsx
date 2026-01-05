@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard } from 'lucide-react';
+import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard, Star, Shield, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/apiService';
 
@@ -12,6 +12,7 @@ const Subscription = () => {
       name: 'Starter',
       price: 49,
       interval: 'month',
+      icon: Zap,
       features: [
         '100 calls/month',
         'Basic analytics',
@@ -24,6 +25,7 @@ const Subscription = () => {
       name: 'Professional',
       price: 99,
       interval: 'month',
+      icon: Star,
       features: [
         '500 calls/month',
         'Advanced analytics',
@@ -38,6 +40,7 @@ const Subscription = () => {
       name: 'Enterprise',
       price: 249,
       interval: 'month',
+      icon: Shield,
       features: [
         'Unlimited calls',
         'Full analytics suite',
@@ -68,7 +71,12 @@ const Subscription = () => {
       ]);
       
       if (plansResponse.success && plansResponse.data?.length > 0) {
-        setPlans(plansResponse.data);
+        // Merge icons into fetched plans
+        const mergedPlans = plansResponse.data.map(plan => {
+          const defaultPlan = defaultPlans.find(p => p.id === plan.id);
+          return { ...plan, icon: defaultPlan?.icon || Star };
+        });
+        setPlans(mergedPlans);
       }
       
       if (subResponse.success) {
@@ -135,40 +143,40 @@ const Subscription = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 animate-fade-in">
       {/* Navigation Bar */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+      <div className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors duration-200"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Back</span>
+                <span className="hidden sm:inline font-medium">Back</span>
               </button>
-              <div className="h-8 w-px bg-gray-300"></div>
-              <h1 className="text-xl font-semibold text-gray-900">Subscription Plans</h1>
+              <div className="h-6 w-px bg-slate-200"></div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Subscription Plans</h1>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/app/dashboard')}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 font-medium"
               >
                 <Home className="w-4 h-4" />
                 <span className="hidden sm:inline">Home</span>
               </button>
               <button
                 onClick={() => navigate('/app/dashboard')}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition"
+                className="btn-enhanced btn-primary-enhanced flex items-center gap-2"
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -181,27 +189,25 @@ const Subscription = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-4xl font-bold text-slate-900 mb-4 tracking-tight">
           Choose Your Plan
         </h1>
-        <p className="text-xl text-gray-600">
-          Select the perfect plan for your call center needs
+        <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+          Select the perfect plan for your call center needs. Upgrade or downgrade at any time.
         </p>
       </div>
 
       {/* Current Subscription Info - Only show for paid subscribers */}
       {currentSubscription && currentSubscription.status === 'active' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-8 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-blue-900">
+              <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2">
                 Current Plan: {currentSubscription.plan?.toUpperCase()}
+                <span className="badge-compact badge-success capitalize">{currentSubscription.status}</span>
               </h3>
-              <p className="text-blue-700">
-                Status: <span className="font-medium capitalize">{currentSubscription.status}</span>
-              </p>
               {currentSubscription.currentPeriodEnd && (
-                <p className="text-blue-600 text-sm mt-1">
+                <p className="text-blue-700 text-sm mt-1 font-medium">
                   {currentSubscription.cancelAtPeriodEnd 
                     ? `Cancels on ${new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}`
                     : `Renews on ${new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}`
@@ -212,16 +218,16 @@ const Subscription = () => {
             <button
               onClick={handleManageBilling}
               disabled={processingPlan === 'portal'}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+              className="btn-enhanced bg-white text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 shadow-sm"
             >
               {processingPlan === 'portal' ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Loading...
                 </>
               ) : (
                 <>
-                  <CreditCard className="w-4 h-4" />
+                  <CreditCard className="w-4 h-4 mr-2" />
                   Manage Billing
                 </>
               )}
@@ -232,16 +238,16 @@ const Subscription = () => {
 
       {/* Trial Info - Only show for trial users */}
       {currentSubscription && currentSubscription.status === 'trial' && currentSubscription.trialEndsAt && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6 mb-8">
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-yellow-900 mb-2">
-                🎉 You're on a Free Trial
+              <h3 className="text-lg font-bold text-amber-900 mb-2 flex items-center gap-2">
+                <span className="text-2xl">🎉</span> You're on a Free Trial
               </h3>
-              <p className="text-yellow-800 mb-1">
-                Your trial ends on <span className="font-semibold">{new Date(currentSubscription.trialEndsAt).toLocaleDateString()}</span>
+              <p className="text-amber-800 mb-1 font-medium">
+                Your trial ends on <span className="font-bold">{new Date(currentSubscription.trialEndsAt).toLocaleDateString()}</span>
               </p>
-              <p className="text-yellow-700 text-sm">
+              <p className="text-amber-700 text-sm">
                 Choose a plan below to continue using QualityPulse after your trial ends.
               </p>
             </div>
@@ -254,40 +260,59 @@ const Subscription = () => {
         {plans.map((plan) => {
           const isCurrentPlan = currentSubscription?.plan === plan.id;
           const isMostPopular = plan.id === 'professional';
+          const Icon = plan.icon || Star;
 
           return (
             <div
               key={plan.id}
-              className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transition-transform hover:scale-105 ${
-                isMostPopular ? 'ring-2 ring-blue-600' : ''
+              className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border ${
+                isMostPopular ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200'
               }`}
             >
               {isMostPopular && (
-                <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 text-sm font-semibold rounded-bl-lg">
+                <div className="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-bl-xl shadow-md z-10">
                   Most Popular
                 </div>
               )}
 
               <div className="p-8">
                 {/* Plan Name */}
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h3>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2.5 rounded-lg ${
+                    isMostPopular ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">
+                    {plan.name}
+                  </h3>
+                </div>
 
                 {/* Price */}
                 <div className="mb-6">
-                  <span className="text-5xl font-bold text-gray-900">
-                    ${plan.price}
-                  </span>
-                  <span className="text-gray-600">/{plan.interval}</span>
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-bold text-slate-900">
+                      ${plan.price}
+                    </span>
+                    <span className="text-slate-500 font-medium ml-1">/{plan.interval}</span>
+                  </div>
+                  <p className="text-sm text-slate-500 mt-2">
+                    {plan.id === 'starter' ? 'Perfect for small teams' : 
+                     plan.id === 'professional' ? 'Best for growing businesses' : 
+                     'For large scale operations'}
+                  </p>
                 </div>
+
+                <div className="h-px bg-slate-100 w-full mb-6"></div>
 
                 {/* Features */}
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{feature}</span>
+                      <div className="mt-0.5 p-0.5 rounded-full bg-emerald-100 text-emerald-600">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-slate-600 text-sm font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -296,12 +321,12 @@ const Subscription = () => {
                 <button
                   onClick={() => handleSubscribe(plan.id)}
                   disabled={isCurrentPlan || processingPlan === plan.id}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                  className={`w-full py-3 px-6 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform active:scale-95 ${
                     isCurrentPlan
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
                       : isMostPopular
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
+                      : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
                 >
                   {processingPlan === plan.id ? (
@@ -322,12 +347,12 @@ const Subscription = () => {
       </div>
 
       {/* FAQ or Additional Info */}
-      <div className="mt-16 text-center">
-        <p className="text-gray-600 mb-4">
+      <div className="mt-16 text-center pb-12">
+        <p className="text-slate-600 mb-4 font-medium">
           All plans include 14-day free trial. No credit card required to start.
         </p>
-        <p className="text-gray-600">
-          Need a custom plan? <a href="mailto:sales@qualitypulse.com" className="text-blue-600 hover:underline">Contact sales</a>
+        <p className="text-slate-500 text-sm">
+          Need a custom plan? <a href="mailto:sales@qualitypulse.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">Contact sales</a>
         </p>
       </div>
       </div>

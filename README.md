@@ -248,6 +248,8 @@ ai-service/
 - `POST /ai-service/analyze-sentiment` - Analyze sentiment
 - `GET /ai-service/health` - Health check
 
+**⏰ Service Availability**: Monday-Saturday, 6:45 PM Pakistan Standard Time (PKT) to 6:00 AM Pacific Standard Time (PST)
+
 ## 🎨 User Interface
 
 ### Pages

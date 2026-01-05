@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn } from 'lucide-react';
+import { LogIn, Mail, Lock, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
 const Login = () => {
@@ -60,7 +60,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 px-4 relative overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 opacity-30 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 via-transparent to-purple-100/20"></div>
         <div className="absolute top-10 left-10 w-32 h-32 bg-blue-200/10 rounded-full blur-xl"></div>
         <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-200/10 rounded-full blur-xl"></div>
@@ -70,7 +70,7 @@ const Login = () => {
       <div className="max-w-md w-full relative z-10 animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl mb-6 transform hover:scale-105 transition-transform duration-300">
             <LogIn className="text-white" size={36} />
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
@@ -89,12 +89,8 @@ const Login = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-800 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 animate-slide-in-right">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 animate-slide-in-right">
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <p className="text-sm font-medium">{error}</p>
             </div>
           )}
@@ -104,20 +100,18 @@ const Login = () => {
               <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
                 Email Address
               </label>
-              <div className="relative">
+              <div className="relative group">
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="input-enhanced w-full pl-12"
+                  className="input-enhanced w-full pl-12 transition-all duration-200"
                   placeholder="you@company.com"
                 />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                  </svg>
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200">
+                  <Mail size={20} />
                 </div>
               </div>
             </div>
@@ -126,20 +120,18 @@ const Login = () => {
               <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
                 Password
               </label>
-              <div className="relative">
+              <div className="relative group">
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="input-enhanced w-full pl-12"
+                  className="input-enhanced w-full pl-12 transition-all duration-200"
                   placeholder="••••••••"
                 />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200">
+                  <Lock size={20} />
                 </div>
               </div>
             </div>
@@ -147,19 +139,17 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-enhanced btn-primary-enhanced py-4 text-base font-semibold group"
+              className="w-full btn-enhanced btn-primary-enhanced py-3.5 text-base font-semibold group shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
             >
               {loading ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center gap-3">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>Signing in...</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center gap-3">
                   <span>Sign In</span>
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
                 </div>
               )}
             </button>
@@ -186,25 +176,23 @@ const Login = () => {
           {import.meta.env.MODE === 'development' && (
             <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
               <p className="text-xs text-slate-600 font-semibold mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
+                <Info size={16} className="text-blue-500" />
                 Demo Credentials (Dev Only)
               </p>
               <div className="text-xs text-slate-500 space-y-1.5">
-                <div className="flex justify-between items-center py-1 px-2 bg-white rounded">
+                <div className="flex justify-between items-center py-1 px-2 bg-white rounded border border-slate-100">
                   <span>Admin:</span>
-                  <code className="font-mono">admin@nextel.com</code>
+                  <code className="font-mono text-blue-600">admin@nextel.com</code>
                 </div>
-                <div className="flex justify-between items-center py-1 px-2 bg-white rounded">
+                <div className="flex justify-between items-center py-1 px-2 bg-white rounded border border-slate-100">
                   <span>Manager:</span>
-                  <code className="font-mono">manager@nextel.com</code>
+                  <code className="font-mono text-blue-600">manager@nextel.com</code>
                 </div>
-                <div className="flex justify-between items-center py-1 px-2 bg-white rounded">
+                <div className="flex justify-between items-center py-1 px-2 bg-white rounded border border-slate-100">
                   <span>Agent:</span>
-                  <code className="font-mono">agent1@nextel.com</code>
+                  <code className="font-mono text-blue-600">agent1@nextel.com</code>
                 </div>
-                <div className="text-center pt-2 border-t border-slate-200">
+                <div className="text-center pt-2 border-t border-slate-200 mt-2">
                   <code className="font-mono text-slate-600">Password: [Role]123!</code>
                 </div>
               </div>

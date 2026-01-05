@@ -50,43 +50,18 @@ function App() {
           <Route path="/subscription/success" element={<ProtectedRoute><SubscriptionSuccess /></ProtectedRoute>} />
           <Route path="/subscription/cancelled" element={<ProtectedRoute><SubscriptionCancelled /></ProtectedRoute>} />
           
-          {/* App Pages - Protected */}
+          {/* Protected App Pages */}
           <Route path="/app" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/app/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="calls" element={<CallsList />} />
-            <Route path="calls/:id" element={<CallDetails />} />
-            <Route path="upload" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
-                <UploadCall />
-              </RoleGuard>
-            } />
-            <Route path="rules" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager']}>
-                <ComplianceRules />
-              </RoleGuard>
-            } />
-            <Route path="analytics" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
-                <Analytics />
-              </RoleGuard>
-            } />
-            {/* Sales Data Module - QA/Manager/Admin only */}
-            <Route path="sales-data" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
-                <ViewSales />
-              </RoleGuard>
-            } />
-            <Route path="sales-data/add" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
-                <AddSales />
-              </RoleGuard>
-            } />
-            <Route path="sales-reports" element={
-              <RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}>
-                <SalesReports />
-              </RoleGuard>
-            } />
+            <Route path="calls" element={<RoleGuard allowedRoles={['admin', 'manager', 'qa']}><CallsList /></RoleGuard>} />
+            <Route path="calls/:id" element={<RoleGuard allowedRoles={['admin', 'manager', 'qa']}><CallDetails /></RoleGuard>} />
+            <Route path="upload" element={<RoleGuard allowedRoles={['admin', 'manager', 'qa']}><UploadCall /></RoleGuard>} />
+            <Route path="rules" element={<RoleGuard allowedRoles={['admin', 'manager']}><ComplianceRules /></RoleGuard>} />
+            <Route path="analytics" element={<RoleGuard allowedRoles={['admin', 'manager']}><Analytics /></RoleGuard>} />
+            <Route path="sales-data" element={<RoleGuard allowedRoles={['admin', 'manager', 'qa']}><ViewSales /></RoleGuard>} />
+            <Route path="sales-data/add" element={<RoleGuard allowedRoles={['admin', 'manager', 'qa']}><AddSales /></RoleGuard>} />
+            <Route path="sales-reports" element={<RoleGuard allowedRoles={['admin', 'manager']}><SalesReports /></RoleGuard>} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

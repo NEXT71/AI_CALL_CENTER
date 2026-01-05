@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import { CheckCircle, XCircle, Loader2, ArrowRight, UserPlus } from 'lucide-react';
 
 const VerifyEmail = () => {
   const [status, setStatus] = useState('verifying'); // verifying, success, error
@@ -40,114 +41,82 @@ const VerifyEmail = () => {
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-        <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="max-w-md w-full animate-fade-in">
+        <div className="card-enhanced p-8 text-center shadow-xl">
           {/* Icon */}
-          <div className="mb-6">
+          <div className="mb-6 flex justify-center">
             {status === 'verifying' && (
-              <div className="inline-block">
-                <svg
-                  className="animate-spin h-16 w-16 text-blue-600 mx-auto"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
+                <Loader2 className="text-blue-600 animate-spin" size={40} />
               </div>
             )}
 
             {status === 'success' && (
-              <div className="inline-block">
-                <svg
-                  className="h-16 w-16 text-green-500 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-bounce-small">
+                <CheckCircle className="text-green-600" size={40} />
               </div>
             )}
 
             {status === 'error' && (
-              <div className="inline-block">
-                <svg
-                  className="h-16 w-16 text-red-500 mx-auto"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center animate-shake">
+                <XCircle className="text-red-600" size={40} />
               </div>
             )}
           </div>
 
           {/* Title */}
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
             {status === 'verifying' && 'Verifying Email'}
             {status === 'success' && 'Email Verified!'}
             {status === 'error' && 'Verification Failed'}
           </h2>
 
           {/* Message */}
-          <p className="text-gray-600 mb-6">{message}</p>
+          <p className="text-slate-600 mb-8 leading-relaxed">{message}</p>
 
           {/* Actions */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {status === 'success' && (
-              <p className="text-sm text-gray-500">
-                Redirecting to login page in 3 seconds...
-              </p>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 animate-pulse">
+                <p className="text-sm text-blue-800 font-medium">
+                  Redirecting to login page in 3 seconds...
+                </p>
+              </div>
             )}
 
             {status === 'error' && (
-              <div className="space-y-3">
+              <div className="space-y-3 animate-fade-in">
                 <Link
                   to="/login"
-                  className="block w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  className="w-full btn-enhanced btn-primary-enhanced py-3 flex items-center justify-center gap-2"
                 >
                   Go to Login
+                  <ArrowRight size={18} />
                 </Link>
                 <Link
                   to="/signup"
-                  className="block w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+                  className="w-full btn-enhanced btn-secondary-enhanced py-3 flex items-center justify-center gap-2"
                 >
+                  <UserPlus size={18} />
                   Create New Account
                 </Link>
               </div>
             )}
 
             {status === 'verifying' && (
-              <p className="text-sm text-gray-500">Please wait...</p>
+              <p className="text-sm text-slate-500 animate-pulse">
+                Please wait while we verify your email address...
+              </p>
             )}
           </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-slate-500">
+            &copy; {new Date().getFullYear()} QualityPulse. All rights reserved.
+          </p>
         </div>
       </div>
     </div>

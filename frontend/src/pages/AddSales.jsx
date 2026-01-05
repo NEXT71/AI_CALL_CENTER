@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as salesService from '../services/salesService';
 import api from '../services/api';
-import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, ArrowUpCircle, PhoneCall } from 'lucide-react';
+import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, ArrowUpCircle, PhoneCall, BarChart2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/Toast';
 
@@ -162,31 +162,36 @@ const AddSales = () => {
           duration={toast.duration}
         />
       ))}
-      <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+      <div className="card-enhanced">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {isOfficeData ? 'Add Office Sales Data' : 'Add Sales Record'}
-            </h1>
-            <p className="text-sm text-slate-600 mt-2">
-              {isOfficeData ? 'Enter office-wide sales metrics and performance data' : 'Enter daily sales data for an agent'}
-            </p>
-          </div>
           <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <BarChart2 className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                {isOfficeData ? 'Add Office Sales Data' : 'Add Sales Record'}
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                {isOfficeData ? 'Enter office-wide sales metrics and performance data' : 'Enter daily sales data for an agent'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsOfficeData(!isOfficeData)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
                 isOfficeData 
-                  ? 'bg-blue-100 text-blue-700 border-2 border-blue-200' 
-                  : 'bg-slate-100 text-slate-700 border-2 border-slate-200 hover:bg-slate-200'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm' 
+                  : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
               }`}
             >
               {isOfficeData ? '📊 Office Data' : '👤 Agent Data'}
             </button>
             <button
               onClick={() => navigate('/app/sales-data')}
-              className="btn-secondary"
+              className="btn-enhanced btn-secondary-enhanced"
             >
               <X className="w-4 h-4 mr-2" />
               Cancel
@@ -195,7 +200,7 @@ const AddSales = () => {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-start shadow-sm">
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-start shadow-sm animate-shake">
             <XCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
             <span className="font-medium">{error}</span>
           </div>
@@ -215,7 +220,7 @@ const AddSales = () => {
                   value={formData.agentId}
                   onChange={handleChange}
                   required
-                  className="input w-full"
+                  className="input-enhanced w-full"
                 >
                   <option value="">Select Agent</option>
                   {agents.map((agent) => (
@@ -240,7 +245,7 @@ const AddSales = () => {
                 list="campaigns"
                 required
                 placeholder="e.g., Inbound Sales"
-                className="input w-full"
+                className="input-enhanced w-full"
               />
               <datalist id="campaigns">
                 {campaigns.map((campaign, idx) => (
@@ -261,18 +266,18 @@ const AddSales = () => {
                 onChange={handleChange}
                 max={new Date().toISOString().split('T')[0]}
                 required
-                className="input w-full"
+                className="input-enhanced w-full"
               />
             </div>
           </div>
 
           {/* Sales Metrics */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales Metrics</h3>
+          <div className="border-t border-slate-100 pt-8">
+            <h3 className="section-header-enhanced mb-6">Sales Metrics</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <Phone className="w-4 h-4 inline mr-1.5 text-slate-500" />
                   Total Calls *
                 </label>
                 <input
@@ -282,7 +287,7 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className={`input w-full ${fieldErrors.totalCalls ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`input-enhanced w-full ${fieldErrors.totalCalls ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="0"
                 />
                 {fieldErrors.totalCalls && (
@@ -294,8 +299,8 @@ const AddSales = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <CheckCircle className="w-4 h-4 inline mr-1 text-green-600" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-1.5 text-emerald-600" />
                   Successful Sales *
                 </label>
                 <input
@@ -305,7 +310,7 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className={`input w-full ${fieldErrors.successfulSales ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  className={`input-enhanced w-full ${fieldErrors.successfulSales ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="0"
                 />
                 {fieldErrors.successfulSales && (
@@ -317,8 +322,8 @@ const AddSales = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <XCircle className="w-4 h-4 inline mr-1 text-red-600" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <XCircle className="w-4 h-4 inline mr-1.5 text-rose-600" />
                   Failed Sales *
                 </label>
                 <input
@@ -328,14 +333,14 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className="input w-full"
+                  className="input-enhanced w-full"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <ArrowUpCircle className="w-4 h-4 inline mr-1 text-blue-600" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <ArrowUpCircle className="w-4 h-4 inline mr-1.5 text-blue-600" />
                   Warm Transfers
                 </label>
                 <input
@@ -344,14 +349,14 @@ const AddSales = () => {
                   value={formData.warmTransfers}
                   onChange={handleChange}
                   min="0"
-                  className="input w-full"
+                  className="input-enhanced w-full"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <PhoneCall className="w-4 h-4 inline mr-1 text-purple-600" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <PhoneCall className="w-4 h-4 inline mr-1.5 text-purple-600" />
                   Callbacks Scheduled
                 </label>
                 <input
@@ -360,21 +365,21 @@ const AddSales = () => {
                   value={formData.callbacksScheduled}
                   onChange={handleChange}
                   min="0"
-                  className="input w-full"
+                  className="input-enhanced w-full"
                   placeholder="0"
                 />
               </div>
 
               {/* Success Rate Display */}
               <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Success Rate
                 </label>
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 shadow-sm">
                   <div className="text-3xl font-bold text-blue-600">
                     {successRate}%
                   </div>
-                  <div className="text-xs text-blue-800 mt-1">Auto-calculated</div>
+                  <div className="text-xs text-blue-600/80 mt-1 font-medium">Auto-calculated</div>
                 </div>
               </div>
             </div>
@@ -382,7 +387,7 @@ const AddSales = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Additional Notes
             </label>
             <textarea
@@ -391,27 +396,27 @@ const AddSales = () => {
               onChange={handleChange}
               rows="3"
               maxLength="1000"
-              className="input w-full"
+              className="input-enhanced w-full"
               placeholder="Any additional comments or observations..."
             />
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-slate-400 mt-1 text-right">
               {formData.notes.length}/1000 characters
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
             <button
               type="button"
               onClick={() => navigate('/app/sales-data')}
-              className="btn-secondary"
+              className="btn-enhanced btn-secondary-enhanced"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className="btn-enhanced btn-primary-enhanced"
               disabled={loading}
             >
               {loading ? (

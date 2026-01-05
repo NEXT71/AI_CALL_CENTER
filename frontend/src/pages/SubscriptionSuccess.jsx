@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2, Home, LayoutDashboard, AlertCircle } from 'lucide-react';
-import apiService from '../services/apiService';import { useAuth } from '../context/AuthContext';
+import apiService from '../services/apiService';
+import { useAuth } from '../context/AuthContext';
+
 const SubscriptionSuccess = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -93,10 +95,10 @@ const SubscriptionSuccess = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="text-center">
           <Loader2 className="w-16 h-16 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Verifying your subscription...</p>
+          <p className="text-slate-600 font-medium">Verifying your subscription...</p>
         </div>
       </div>
     );
@@ -104,15 +106,15 @@ const SubscriptionSuccess = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b">
+      <div className="min-h-screen bg-slate-50 animate-fade-in">
+        <div className="bg-white shadow-sm border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <h1 className="text-xl font-semibold text-gray-900">Subscription Status</h1>
+              <h1 className="text-xl font-bold text-slate-900">Subscription Status</h1>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('/app/dashboard')}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                  className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 font-medium"
                 >
                   <Home className="w-4 h-4" />
                   <span className="hidden sm:inline">Home</span>
@@ -123,20 +125,20 @@ const SubscriptionSuccess = () => {
         </div>
 
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-12 h-12 text-yellow-600" />
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-slate-100">
+            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <AlertCircle className="w-10 h-10 text-amber-600" />
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-2xl font-bold text-slate-900 mb-4">
               Verification In Progress
             </h1>
 
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-600 mb-6 font-medium">
               {error}
             </p>
 
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-slate-500 mb-8">
               Your payment was successful, but we're still processing your subscription.
               You can try manual activation or check your dashboard in a few moments.
             </p>
@@ -145,14 +147,14 @@ const SubscriptionSuccess = () => {
               <button
                 onClick={handleManualActivation}
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                className="btn-enhanced btn-primary-enhanced w-full justify-center"
               >
                 {loading ? 'Activating...' : 'Activate Subscription Manually'}
               </button>
               
               <button
                 onClick={handleGoToDashboard}
-                className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-200 transition"
+                className="btn-enhanced btn-secondary-enhanced w-full justify-center"
               >
                 Go to Dashboard
               </button>
@@ -164,16 +166,16 @@ const SubscriptionSuccess = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 animate-fade-in">
       {/* Navigation Bar */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <h1 className="text-xl font-semibold text-gray-900">Subscription Confirmed</h1>
+            <h1 className="text-xl font-bold text-slate-900">Subscription Confirmed</h1>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/')}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 font-medium"
               >
                 <Home className="w-4 h-4" />
                 <span className="hidden sm:inline">Home</span>
@@ -184,36 +186,36 @@ const SubscriptionSuccess = () => {
       </div>
 
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle className="w-12 h-12 text-green-600" />
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-slate-100 transform transition-all hover:scale-105 duration-300">
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <CheckCircle className="w-10 h-10 text-emerald-600" />
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <h1 className="text-3xl font-bold text-slate-900 mb-4">
           Subscription Successful!
         </h1>
 
-        <p className="text-gray-600 mb-2">
+        <p className="text-slate-600 mb-2 font-medium">
           Thank you for subscribing to QualityPulse.
         </p>
-        <p className="text-gray-600 mb-8">
+        <p className="text-slate-500 mb-8">
           Your account has been upgraded and you now have access to all premium features.
         </p>
 
         {sessionId && (
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-xs text-slate-400 mb-6 font-mono bg-slate-50 p-2 rounded border border-slate-100">
             Session ID: {sessionId.substring(0, 20)}...
           </p>
         )}
 
         <button
           onClick={handleGoToDashboard}
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition"
+          className="btn-enhanced btn-primary-enhanced w-full justify-center"
         >
           Go to Dashboard
         </button>
 
-        <p className="text-sm text-gray-500 mt-6">
+        <p className="text-xs text-slate-400 mt-6">
           A confirmation email has been sent to your email address.
         </p>
       </div>

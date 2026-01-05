@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, Phone, TrendingUp, Shield, Zap, BarChart3, Clock, Users, ArrowRight, Star, Award, Lock, Globe, HeadphonesIcon, ChevronDown, Plus, Minus } from 'lucide-react';
+import { Check, Phone, TrendingUp, Shield, Zap, BarChart3, Clock, Users, ArrowRight, Star, Award, Lock, Globe, HeadphonesIcon, ChevronDown, Plus, Minus, Play, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 const Landing = () => {
@@ -166,24 +166,24 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white font-sans text-slate-900">
       {/* Navigation */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-24 py-2">
             <div className="flex items-center gap-3">
-              <img src="/logo.jpg" alt="QualityPulse" className="h-10 w-10" />
+              <img src="/logo.jpg" alt="QualityPulse" className="w-20 h-20 rounded-xl shadow-lg shadow-blue-200 object-cover" />
               <div>
-                <h1 className="text-xl font-bold text-blue-600">QualityPulse</h1>
-                <p className="text-xs text-slate-500 -mt-0.5">AI-powered Quality Assurance</p>
+                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">QualityPulse</h1>
+                <p className="text-xs text-slate-500 font-medium">AI-Powered Quality Assurance</p>
               </div>
             </div>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-sm text-slate-600 hover:text-slate-900">Features</a>
-              <a href="#pricing" className="text-sm text-slate-600 hover:text-slate-900">Pricing</a>
-              <a href="#testimonials" className="text-sm text-slate-600 hover:text-slate-900">Testimonials</a>
-              <Link to="/login" className="text-sm text-slate-600 hover:text-slate-900">Login</Link>
-              <Link to="/signup" className="btn btn-primary btn-sm">Start Free Trial</Link>
+              <a href="#features" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Features</a>
+              <a href="#pricing" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Pricing</a>
+              <a href="#testimonials" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Testimonials</a>
+              <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Login</Link>
+              <Link to="/signup" className="btn-enhanced btn-primary-enhanced px-5 py-2 text-sm">Start Free Trial</Link>
             </div>
           </div>
         </div>
@@ -192,119 +192,111 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-24 relative overflow-hidden">
         {/* Background decorations */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-30">
+          <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-blue-400/30 rounded-full blur-[100px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40rem] h-[40rem] bg-purple-400/30 rounded-full blur-[100px]"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-4xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto animate-fade-in">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 animate-bounce">
-              <Star size={16} className="fill-blue-700" />
-              #1 AI-Powered Call Quality Platform
+            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur border border-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8 shadow-sm animate-bounce-slow">
+              <Star size={14} className="fill-blue-700" />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-bold">#1 AI-Powered Call Quality Platform</span>
             </div>
             
-            <h1 className="text-6xl md:text-7xl font-extrabold text-slate-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 mb-8 leading-tight tracking-tight">
               Transform Call Center 
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Quality</span>
-              <br />with AI Intelligence
+              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent pb-2">Quality with AI</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-slate-600 mb-10 leading-relaxed">
-              Automate quality assurance, ensure compliance, and boost performance with <br className="hidden md:inline" />
-              <span className="font-semibold text-slate-800">intelligent call analysis powered by artificial intelligence.</span>
+            <p className="text-xl md:text-2xl text-slate-600 mb-12 leading-relaxed max-w-3xl mx-auto">
+              Automate quality assurance, ensure compliance, and boost performance with <span className="font-semibold text-slate-900">intelligent call analysis</span> powered by next-gen AI.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10">
-              <Link to="/signup" className="btn btn-primary btn-lg group shadow-lg hover:shadow-xl transition-shadow">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <Link to="/signup" className="btn-enhanced btn-primary-enhanced px-8 py-4 text-lg group shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30">
                 Start 14-Day Free Trial
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href="#demo" className="btn btn-secondary btn-lg shadow-lg">
-                Watch Demo
-              </a>
             </div>
             
-            <p className="text-sm text-slate-500 mb-8">
-              ✓ No credit card required  •  ✓ 14-day free trial  •  ✓ Cancel anytime  •  ✓ Setup in 5 minutes
-            </p>
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-slate-500 mb-12">
+              <span className="flex items-center gap-2"><Check size={16} className="text-emerald-500" /> No credit card required</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-emerald-500" /> 14-day free trial</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-emerald-500" /> Cancel anytime</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-emerald-500" /> Setup in 5 minutes</span>
+            </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-wrap justify-center gap-6 mb-8">
+            <div className="flex flex-wrap justify-center gap-8 mb-16 pt-8 border-t border-slate-200/60">
               {trustBadges.map((badge, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-slate-600">
-                  <badge.icon size={18} className="text-green-600" />
-                  <span className="text-sm font-medium">{badge.text}</span>
+                <div key={idx} className="flex items-center gap-2 text-slate-600 bg-white/50 px-4 py-2 rounded-full border border-slate-100 shadow-sm">
+                  <badge.icon size={18} className="text-blue-600" />
+                  <span className="text-sm font-semibold">{badge.text}</span>
                 </div>
               ))}
             </div>
 
-            {/* Trusted By */}
-            <div className="mt-16">
-              <p className="text-sm text-slate-500 mb-6 font-medium">TRUSTED BY LEADING CALL CENTERS</p>
-              <div className="flex flex-wrap justify-center items-center gap-8 opacity-50">
-                {clientLogos.map((logo, idx) => (
-                  <div key={idx} className="text-lg font-bold text-slate-600">
-                    {logo}
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Hero Image/Illustration */}
-            <div className="mt-20">
-              <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-3xl shadow-2xl overflow-hidden">
+            <div className="mt-12 relative mx-auto max-w-5xl">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-[2rem] blur opacity-30"></div>
+              <div className="relative bg-slate-900 rounded-[1.75rem] shadow-2xl overflow-hidden border border-slate-800">
                 {/* Dashboard Preview */}
-                <div className="p-8">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                    {/* Browser-like Header */}
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="flex gap-2">
-                        <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                        <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                      </div>
-                      <div className="flex-1 bg-white/20 rounded px-4 py-1 text-xs text-white/80">
-                        https://ai-call-center.app/dashboard
-                      </div>
+                <div className="p-2 bg-slate-800/50 border-b border-slate-700 flex items-center gap-2 px-4">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                  </div>
+                  <div className="flex-1 text-center">
+                    <div className="inline-block bg-slate-900/50 rounded-md px-3 py-1 text-xs text-slate-400 font-mono">
+                      app.qualitypulse.ai/dashboard
                     </div>
-                    
-                    {/* Dashboard Content Mockup */}
-                    <div className="grid grid-cols-4 gap-4 mb-6">
-                      {[
-                        { label: 'Total Calls', value: '2,847', trend: '+12%', color: 'blue' },
-                        { label: 'Avg Quality', value: '87.5%', trend: '+5%', color: 'green' },
-                        { label: 'Compliance', value: '94.2%', trend: '+3%', color: 'purple' },
-                        { label: 'Violations', value: '23', trend: '-18%', color: 'red' }
-                      ].map((stat, idx) => (
-                        <div key={idx} className="bg-white/90 rounded-xl p-4 backdrop-blur">
-                          <div className="text-xs font-medium text-slate-600 mb-1">{stat.label}</div>
-                          <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                          <div className={`text-xs font-semibold ${stat.color === 'red' ? 'text-red-600' : 'text-green-600'} mt-1`}>
-                            {stat.trend}
-                          </div>
+                  </div>
+                </div>
+                
+                <div className="p-8 bg-slate-900">
+                  {/* Dashboard Content Mockup */}
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    {[
+                      { label: 'Total Calls', value: '2,847', trend: '+12%', color: 'blue' },
+                      { label: 'Avg Quality', value: '87.5%', trend: '+5%', color: 'emerald' },
+                      { label: 'Compliance', value: '94.2%', trend: '+3%', color: 'purple' },
+                      { label: 'Violations', value: '23', trend: '-18%', color: 'red' }
+                    ].map((stat, idx) => (
+                      <div key={idx} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                        <div className="text-xs font-medium text-slate-400 mb-1">{stat.label}</div>
+                        <div className="text-2xl font-bold text-white">{stat.value}</div>
+                        <div className={`text-xs font-semibold ${stat.color === 'red' ? 'text-red-400' : 'text-emerald-400'} mt-1`}>
+                          {stat.trend}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
 
+                  <div className="grid grid-cols-3 gap-6">
                     {/* Chart Visualization */}
-                    <div className="bg-white/90 rounded-xl p-6 backdrop-blur">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-bold text-slate-900">Quality Score Trend</h3>
+                    <div className="col-span-2 bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-sm font-bold text-white">Quality Score Trend</h3>
                         <div className="flex gap-2">
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Last 7 Days</span>
+                          <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-1 rounded border border-blue-500/20">Last 7 Days</span>
                         </div>
                       </div>
                       {/* Simple Chart Bars */}
-                      <div className="flex items-end justify-between gap-2 h-32">
+                      <div className="flex items-end justify-between gap-3 h-40">
                         {[65, 72, 68, 85, 82, 89, 87].map((height, idx) => (
-                          <div key={idx} className="flex-1 flex flex-col justify-end">
+                          <div key={idx} className="flex-1 flex flex-col justify-end group">
                             <div 
-                              className="bg-gradient-to-t from-blue-600 to-indigo-500 rounded-t-lg transition-all hover:from-blue-700 hover:to-indigo-600"
+                              className="bg-gradient-to-t from-blue-600 to-indigo-500 rounded-t-lg transition-all group-hover:from-blue-500 group-hover:to-indigo-400 relative"
                               style={{ height: `${height}%` }}
-                            ></div>
-                            <div className="text-xs text-slate-600 text-center mt-2">
+                            >
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-700 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                {height}%
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500 text-center mt-3 font-medium">
                               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][idx]}
                             </div>
                           </div>
@@ -313,35 +305,37 @@ const Landing = () => {
                     </div>
 
                     {/* Call List Preview */}
-                    <div className="mt-4 bg-white/90 rounded-xl p-4 backdrop-blur">
-                      <div className="text-xs font-bold text-slate-900 mb-3">Recent Calls</div>
-                      {[
-                        { agent: 'John Smith', score: 92, status: 'success' },
-                        { agent: 'Sarah Lee', score: 88, status: 'success' },
-                        { agent: 'Mike Davis', score: 76, status: 'warning' }
-                      ].map((call, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-200 last:border-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                              {call.agent.split(' ').map(n => n[0]).join('')}
+                    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Recent Analysis</div>
+                      <div className="space-y-3">
+                        {[
+                          { agent: 'John Smith', score: 92, status: 'success', time: '2m ago' },
+                          { agent: 'Sarah Lee', score: 88, status: 'success', time: '15m ago' },
+                          { agent: 'Mike Davis', score: 76, status: 'warning', time: '1h ago' },
+                          { agent: 'Emma Wilson', score: 95, status: 'success', time: '2h ago' }
+                        ].map((call, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 hover:bg-slate-700/50 rounded-lg transition-colors cursor-default">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-900/20">
+                                {call.agent.split(' ').map(n => n[0]).join('')}
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-white">{call.agent}</div>
+                                <div className="text-[10px] text-slate-500">{call.time}</div>
+                              </div>
                             </div>
-                            <span className="text-xs font-medium text-slate-900">{call.agent}</span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-xs font-bold ${call.status === 'success' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {call.score}%
+                              </span>
+                              <div className={`w-1.5 h-1.5 rounded-full ${call.status === 'success' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold ${call.status === 'success' ? 'text-green-600' : 'text-yellow-600'}`}>
-                              {call.score}%
-                            </span>
-                            <div className={`w-2 h-2 rounded-full ${call.status === 'success' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl"></div>
               </div>
             </div>
           </div>
@@ -349,48 +343,48 @@ const Landing = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white border-y border-slate-200">
+      <section className="py-16 bg-white border-y border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-600">99%</p>
-              <p className="text-sm text-slate-600 mt-2">Transcription Accuracy</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-slate-100">
+            <div className="text-center px-4">
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">99%</p>
+              <p className="text-sm font-medium text-slate-600 mt-2 uppercase tracking-wide">Transcription Accuracy</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-600">10x</p>
-              <p className="text-sm text-slate-600 mt-2">Faster QA Process</p>
+            <div className="text-center px-4">
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">10x</p>
+              <p className="text-sm font-medium text-slate-600 mt-2 uppercase tracking-wide">Faster QA Process</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-600">40%</p>
-              <p className="text-sm text-slate-600 mt-2">Quality Improvement</p>
+            <div className="text-center px-4">
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">40%</p>
+              <p className="text-sm font-medium text-slate-600 mt-2 uppercase tracking-wide">Quality Improvement</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-600">24/7</p>
-              <p className="text-sm text-slate-600 mt-2">Automated Monitoring</p>
+            <div className="text-center px-4">
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">24/7</p>
+              <p className="text-sm font-medium text-slate-600 mt-2 uppercase tracking-wide">Automated Monitoring</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-24 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Powerful Features for Modern Call Centers
             </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
               Everything you need to elevate your quality assurance and deliver exceptional customer experiences
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, idx) => (
-              <div key={idx} className="card hover:shadow-lg transition-shadow duration-300 group">
-                <div className="icon-container icon-container-blue mb-4 group-hover:scale-110 transition-transform">
-                  <feature.icon size={24} />
+              <div key={idx} className="card-enhanced p-8 hover:translate-y-[-4px] transition-all duration-300 group">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                  <feature.icon size={28} />
                 </div>
-                <h3 className="heading-4 mb-3">{feature.title}</h3>
-                <p className="body-text text-slate-600 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                <p className="text-slate-600 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -398,10 +392,11 @@ const Landing = () => {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+      <section className="py-24 bg-slate-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Get Started in Minutes
             </h2>
             <p className="text-xl text-slate-600">
@@ -410,108 +405,86 @@ const Landing = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
             {/* Connection lines */}
-            <div className="hidden md:block absolute top-8 left-0 right-0 h-1 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-600"></div>
+            <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-blue-200 via-indigo-200 to-purple-200 border-t border-dashed border-slate-300"></div>
             
-            <div className="text-center relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
+            <div className="text-center relative group">
+              <div className="w-16 h-16 bg-white border-4 border-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-8 shadow-lg relative z-10 group-hover:scale-110 group-hover:border-blue-200 transition-all duration-300">
                 1
               </div>
-              {/* Upload Illustration */}
-              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+              <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/50 mb-8 mx-auto max-w-xs transform group-hover:-translate-y-2 transition-transform duration-300 border border-slate-100">
                 <div className="relative">
-                  <div className="w-full h-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-300 flex flex-col items-center justify-center">
-                    <Phone className="w-12 h-12 text-blue-600 mb-2" />
-                    <div className="text-xs font-semibold text-slate-600">Drop audio files here</div>
-                    <div className="mt-2 flex gap-1">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
+                  <div className="w-full h-32 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-dashed border-blue-200 flex flex-col items-center justify-center">
+                    <Phone className="w-10 h-10 text-blue-500 mb-2" />
+                    <div className="text-xs font-semibold text-slate-500">Drop audio files here</div>
                   </div>
                 </div>
               </div>
-              <h3 className="heading-4 mb-3">Upload Calls</h3>
-              <p className="body-text text-slate-600">Upload call recordings in any format. Drag & drop or browse files.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Upload Calls</h3>
+              <p className="text-slate-600 leading-relaxed px-4">Upload call recordings in any format. Drag & drop or browse files.</p>
             </div>
 
-            <div className="text-center relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
+            <div className="text-center relative group">
+              <div className="w-16 h-16 bg-white border-4 border-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-8 shadow-lg relative z-10 group-hover:scale-110 group-hover:border-indigo-200 transition-all duration-300">
                 2
               </div>
-              {/* AI Processing Illustration */}
-              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+              <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/50 mb-8 mx-auto max-w-xs transform group-hover:-translate-y-2 transition-transform duration-300 border border-slate-100">
                 <div className="relative">
                   <div className="w-full h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl flex items-center justify-center overflow-hidden relative">
-                    {/* AI Brain Animation */}
-                    <div className="relative">
-                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Zap className="w-8 h-8 text-white" />
+                    <div className="relative z-10">
+                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <Zap className="w-6 h-6 text-white" />
                       </div>
-                      {/* Pulse rings */}
-                      <div className="absolute inset-0 rounded-full border-2 border-indigo-400 animate-ping"></div>
-                      <div className="absolute inset-0 rounded-full border-2 border-purple-400 animate-ping" style={{ animationDelay: '0.5s' }}></div>
                     </div>
-                    {/* Floating particles */}
-                    <div className="absolute top-2 left-4 w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                    <div className="absolute bottom-4 right-6 w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="absolute top-6 right-4 w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-200/50 via-transparent to-transparent animate-pulse"></div>
                   </div>
                 </div>
               </div>
-              <h3 className="heading-4 mb-3">AI Analysis</h3>
-              <p className="body-text text-slate-600">AI transcribes, scores quality, and checks compliance automatically.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">AI Analysis</h3>
+              <p className="text-slate-600 leading-relaxed px-4">AI transcribes, scores quality, and checks compliance automatically.</p>
             </div>
 
-            <div className="text-center relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-lg relative z-10">
+            <div className="text-center relative group">
+              <div className="w-16 h-16 bg-white border-4 border-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-8 shadow-lg relative z-10 group-hover:scale-110 group-hover:border-emerald-200 transition-all duration-300">
                 3
               </div>
-              {/* Results Illustration */}
-              <div className="bg-white rounded-2xl p-8 shadow-lg mb-6 mx-auto max-w-xs">
+              <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/50 mb-8 mx-auto max-w-xs transform group-hover:-translate-y-2 transition-transform duration-300 border border-slate-100">
                 <div className="relative">
-                  <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 flex flex-col justify-center">
-                    {/* Score Display */}
+                  <div className="w-full h-32 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 flex flex-col justify-center">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-slate-600">Quality Score</span>
-                      <span className="text-xl font-bold text-green-600">89%</span>
+                      <span className="text-xs font-medium text-slate-500">Quality Score</span>
+                      <span className="text-lg font-bold text-emerald-600">89%</span>
                     </div>
-                    {/* Progress bar */}
-                    <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full" style={{ width: '89%' }}></div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 mb-3">
+                      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style={{ width: '89%' }}></div>
                     </div>
-                    {/* Status badges */}
-                    <div className="flex gap-2 mt-2">
-                      <div className="flex-1 bg-green-100 rounded px-2 py-1 flex items-center justify-center gap-1">
-                        <Check className="w-3 h-3 text-green-600" />
-                        <span className="text-xs font-semibold text-green-700">Compliant</span>
-                      </div>
-                      <div className="flex-1 bg-blue-100 rounded px-2 py-1 flex items-center justify-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-blue-600" />
-                        <span className="text-xs font-semibold text-blue-700">Good</span>
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-emerald-100/50 rounded px-1.5 py-1 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5 text-emerald-600" />
+                        <span className="text-[10px] font-bold text-emerald-700">Compliant</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <h3 className="heading-4 mb-3">Get Insights</h3>
-              <p className="body-text text-slate-600">View detailed reports, scores, and actionable recommendations.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Get Insights</h3>
+              <p className="text-slate-600 leading-relaxed px-4">View detailed reports, scores, and actionable recommendations.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white">
+      <section id="pricing" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Simple, Transparent Pricing
             </h2>
-            <p className="text-xl text-slate-600 mb-4">
+            <p className="text-xl text-slate-600 mb-8">
               Choose the plan that fits your needs. All plans include a free trial.
             </p>
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-5 py-2.5 rounded-full text-sm font-medium shadow-sm">
-              <Check size={16} />
+            <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-6 py-3 rounded-full text-sm font-bold shadow-sm border border-emerald-100">
+              <Check size={18} />
               14-30 day free trial • No credit card required • Cancel anytime
             </div>
           </div>
@@ -519,37 +492,42 @@ const Landing = () => {
             {pricingPlans.map((plan, idx) => (
               <div
                 key={idx}
-                className={`card relative transition-transform hover:scale-105 ${
-                  plan.popular ? 'border-2 border-blue-600 shadow-2xl ring-4 ring-blue-100' : 'hover:shadow-xl'
+                className={`card-enhanced p-8 relative transition-all duration-300 hover:translate-y-[-8px] ${
+                  plan.popular 
+                    ? 'border-2 border-blue-600 shadow-2xl shadow-blue-900/10 ring-4 ring-blue-50' 
+                    : 'hover:shadow-xl'
                 }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                      ⭐ MOST POPULAR
+                    <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-1.5 rounded-full text-sm font-bold shadow-lg shadow-blue-600/30">
+                      MOST POPULAR
                     </span>
                   </div>
                 )}
-                <div className="text-center mb-6">
-                  <h3 className="heading-3 mb-3">{plan.name}</h3>
-                  <div className="mb-3">
-                    <span className="text-5xl font-extrabold text-slate-900">{plan.price}</span>
-                    <span className="text-slate-600 text-lg">{plan.period}</span>
+                <div className="text-center mb-8">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">{plan.name}</h3>
+                  <div className="mb-4 flex items-baseline justify-center gap-1">
+                    <span className="text-5xl font-extrabold text-slate-900 tracking-tight">{plan.price}</span>
+                    <span className="text-slate-500 text-lg font-medium">{plan.period}</span>
                   </div>
-                  <p className="text-sm text-slate-600 font-medium">{plan.description}</p>
+                  <p className="text-sm text-slate-500 font-medium">{plan.description}</p>
                 </div>
+                <div className="border-t border-slate-100 my-8"></div>
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, fidx) => (
                     <li key={fidx} className="flex items-start gap-3">
-                      <Check size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-700">{feature}</span>
+                      <div className="mt-0.5 w-5 h-5 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                        <Check size={12} className="text-green-600" />
+                      </div>
+                      <span className="text-sm text-slate-700 font-medium">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Link
                   to={plan.ctaLink}
-                  className={`btn w-full ${
-                    plan.popular ? 'btn-primary shadow-lg' : 'btn-secondary'
+                  className={`btn-enhanced w-full flex justify-center items-center ${
+                    plan.popular ? 'btn-primary-enhanced' : 'btn-secondary-enhanced'
                   }`}
                 >
                   {plan.cta}
@@ -557,24 +535,24 @@ const Landing = () => {
               </div>
             ))}
           </div>
-          <div className="mt-12 text-center">
-            <p className="text-slate-600 mb-2">All plans include:</p>
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-600">
-              <span>✓ AI Transcription</span>
-              <span>✓ Quality Scoring</span>
-              <span>✓ Compliance Monitoring</span>
-              <span>✓ Analytics Dashboard</span>
-              <span>✓ Unlimited Storage</span>
+          <div className="mt-16 text-center">
+            <p className="text-slate-500 mb-4 font-medium uppercase tracking-wide text-xs">All plans include</p>
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm font-semibold text-slate-700">
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> AI Transcription</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Quality Scoring</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Compliance Monitoring</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Analytics Dashboard</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Unlimited Storage</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-slate-50">
+      <section id="testimonials" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Loved by Call Centers Worldwide
             </h2>
             <p className="text-xl text-slate-600">
@@ -583,23 +561,23 @@ const Landing = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, idx) => (
-              <div key={idx} className="card hover:shadow-xl transition-shadow bg-white">
-                <div className="flex gap-1 mb-4">
+              <div key={idx} className="card-enhanced p-8 hover:shadow-xl transition-all duration-300 bg-white">
+                <div className="flex gap-1 mb-6">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} size={18} className="fill-yellow-400 text-yellow-400" />
+                    <Star key={i} size={18} className="fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <p className="body-text text-slate-700 mb-6 italic leading-relaxed">
+                <p className="text-slate-700 mb-8 italic leading-relaxed text-lg">
                   "{testimonial.content}"
                 </p>
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
                     {testimonial.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900">{testimonial.name}</p>
-                    <p className="text-sm text-slate-600">{testimonial.role}</p>
-                    <p className="text-xs text-slate-500">{testimonial.company}</p>
+                    <p className="font-bold text-slate-900">{testimonial.name}</p>
+                    <p className="text-sm text-slate-600 font-medium">{testimonial.role}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{testimonial.company}</p>
                   </div>
                 </div>
               </div>
@@ -609,65 +587,65 @@ const Landing = () => {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-20 bg-gradient-to-b from-white to-slate-50">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Why Call Centers Choose QualityPulse
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
               Join thousands of call centers already using AI to deliver exceptional customer experiences
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
-            <div className="flex gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 max-w-5xl mx-auto">
+            <div className="flex gap-6">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Clock size={24} className="text-blue-600" />
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm">
+                  <Clock size={28} />
                 </div>
               </div>
               <div>
-                <h3 className="heading-4 mb-2">Save 10+ Hours Per Week</h3>
-                <p className="body-text text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Save 10+ Hours Per Week</h3>
+                <p className="text-slate-600 leading-relaxed">
                   Eliminate manual call reviews. Our AI analyzes 100% of calls automatically, freeing your QA team to focus on coaching and improvement.
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp size={24} className="text-green-600" />
+                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
+                  <TrendingUp size={28} />
                 </div>
               </div>
               <div>
-                <h3 className="heading-4 mb-2">40% Quality Improvement</h3>
-                <p className="body-text text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">40% Quality Improvement</h3>
+                <p className="text-slate-600 leading-relaxed">
                   Real data from our customers shows significant improvements in call quality scores within the first 3 months of deployment.
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Shield size={24} className="text-purple-600" />
+                <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm">
+                  <Shield size={28} />
                 </div>
               </div>
               <div>
-                <h3 className="heading-4 mb-2">100% Compliance Coverage</h3>
-                <p className="body-text text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">100% Compliance Coverage</h3>
+                <p className="text-slate-600 leading-relaxed">
                   Never miss a compliance violation. Our AI monitors every call for regulatory requirements and company policies automatically.
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Globe size={24} className="text-orange-600" />
+                <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 shadow-sm">
+                  <Globe size={28} />
                 </div>
               </div>
               <div>
-                <h3 className="heading-4 mb-2">Multi-Language Support</h3>
-                <p className="body-text text-slate-600">
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Multi-Language Support</h3>
+                <p className="text-slate-600 leading-relaxed">
                   Support for 50+ languages and accents. Perfect for global teams and diverse customer bases with accurate transcription worldwide.
                 </p>
               </div>
@@ -677,10 +655,10 @@ const Landing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-slate-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">
               Frequently Asked Questions
             </h2>
             <p className="text-xl text-slate-600">
@@ -689,70 +667,76 @@ const Landing = () => {
           </div>
           <div className="space-y-4">
             {faqs.map((faq, idx) => (
-              <div key={idx} className="border border-slate-200 rounded-lg overflow-hidden">
+              <div key={idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <button
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors"
+                  className="w-full px-8 py-6 text-left flex justify-between items-center hover:bg-slate-50/50 transition-colors"
                 >
-                  <span className="font-semibold text-slate-900">{faq.question}</span>
+                  <span className="font-bold text-slate-900 text-lg">{faq.question}</span>
                   {openFaq === idx ? (
-                    <Minus size={20} className="text-blue-600 flex-shrink-0 ml-4" />
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0 ml-4">
+                      <Minus size={18} />
+                    </div>
                   ) : (
-                    <Plus size={20} className="text-slate-400 flex-shrink-0 ml-4" />
+                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 flex-shrink-0 ml-4">
+                      <Plus size={18} />
+                    </div>
                   )}
                 </button>
                 {openFaq === idx && (
-                  <div className="px-6 pb-4 text-slate-600">
+                  <div className="px-8 pb-8 pt-0 text-slate-600 leading-relaxed animate-fade-in">
                     {faq.answer}
                   </div>
                 )}
               </div>
             ))}
           </div>
-          <div className="mt-10 text-center">
+          <div className="mt-12 text-center">
             <p className="text-slate-600 mb-4">Still have questions?</p>
-            <Link to="/contact" className="text-blue-600 hover:text-blue-700 font-semibold">
-              Contact our sales team →
+            <Link to="/contact" className="text-blue-600 hover:text-blue-700 font-bold flex items-center justify-center gap-2 group">
+              Contact our sales team 
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 relative overflow-hidden">
+      <section className="py-24 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 relative overflow-hidden">
         {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+          <div className="absolute top-[-20%] right-[-10%] w-[30rem] h-[30rem] bg-purple-500 rounded-full blur-[100px]"></div>
+          <div className="absolute bottom-[-20%] left-[-10%] w-[30rem] h-[30rem] bg-blue-400 rounded-full blur-[100px]"></div>
         </div>
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-5xl font-extrabold text-white mb-6">
+          <h2 className="text-5xl font-extrabold text-white mb-8 tracking-tight">
             Ready to Transform Your Call Center Quality?
           </h2>
-          <p className="text-xl text-blue-100 mb-10 leading-relaxed">
-            Join thousands of call centers using AI to deliver exceptional customer experiences.<br />
-            Start your free trial today - no credit card required.
+          <p className="text-xl text-blue-100 mb-12 leading-relaxed max-w-2xl mx-auto">
+            Join thousands of call centers using AI to deliver exceptional customer experiences. Start your free trial today.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Link to="/signup" className="btn btn-lg bg-white text-blue-600 hover:bg-blue-50 border-white shadow-xl group">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
+            <Link to="/signup" className="btn-enhanced bg-white text-blue-600 hover:bg-blue-50 border-white shadow-xl shadow-blue-900/20 px-8 py-4 text-lg font-bold group">
               Start 14-Day Free Trial
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform ml-2 inline-block" />
             </Link>
-            <Link to="/contact" className="btn btn-lg bg-transparent text-white border-2 border-white hover:bg-white hover:text-blue-600 shadow-xl transition-all">
+            <Link to="/contact" className="btn-enhanced bg-transparent text-white border-2 border-white/30 hover:bg-white/10 hover:border-white shadow-xl px-8 py-4 text-lg font-bold backdrop-blur-sm">
               Contact Sales
             </Link>
           </div>
-          <div className="flex flex-wrap justify-center gap-8 text-blue-100 text-sm">
-            <div className="flex items-center gap-2">
-              <Check size={16} />
+          <div className="flex flex-wrap justify-center gap-8 text-blue-100 text-sm font-medium">
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+              <Check size={16} className="text-emerald-300" />
               <span>No credit card required</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Check size={16} />
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+              <Check size={16} className="text-emerald-300" />
               <span>Setup in 5 minutes</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Check size={16} />
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+              <Check size={16} className="text-emerald-300" />
               <span>Cancel anytime</span>
             </div>
           </div>
@@ -760,41 +744,57 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12">
+      <footer className="bg-slate-900 text-slate-300 py-16 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-12">
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="hover:text-white">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white">Pricing</a></li>
-                <li><Link to="/login" className="hover:text-white">Login</Link></li>
+              <div className="flex items-center gap-2 mb-6">
+                <img src="/logo.jpg" alt="QualityPulse" className="w-20 h-20 rounded-lg object-cover shadow-lg shadow-blue-900/20" />
+                <span className="text-lg font-bold text-white">QualityPulse</span>
+              </div>
+              <p className="text-sm text-slate-400 leading-relaxed mb-6">
+                AI-powered quality assurance platform for modern call centers. Elevate performance and ensure compliance.
+              </p>
+              <div className="flex gap-4">
+                {/* Social icons placeholders */}
+                <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                  <Globe size={14} />
+                </div>
+                <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
+                  <Mail size={14} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-6">Product</h4>
+              <ul className="space-y-3 text-sm">
+                <li><a href="#features" className="hover:text-blue-400 transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-blue-400 transition-colors">Pricing</a></li>
+                <li><Link to="/login" className="hover:text-blue-400 transition-colors">Login</Link></li>
+                <li><Link to="/signup" className="hover:text-blue-400 transition-colors">Sign Up</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/about" className="hover:text-white">About Us</Link></li>
-                <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
+              <h4 className="font-bold text-white mb-6">Company</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact</Link></li>
+                <li><a href="#" className="hover:text-blue-400 transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition-colors">Blog</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/privacy" className="hover:text-white">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4">Support</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="mailto:support@qualitypulse.com" className="hover:text-white">support@qualitypulse.com</a></li>
-                <li><a href="tel:+1234567890" className="hover:text-white">+1 (234) 567-890</a></li>
+              <h4 className="font-bold text-white mb-6">Support</h4>
+              <ul className="space-y-3 text-sm">
+                <li><a href="mailto:support@qualitypulse.com" className="hover:text-blue-400 transition-colors flex items-center gap-2"><Mail size={14} /> support@qualitypulse.com</a></li>
+                <li><a href="#" className="hover:text-blue-400 transition-colors">Help Center</a></li>
+                <li><Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-8 text-sm text-center">
-            <p>&copy; 2025 QualityPulse. All rights reserved.</p>
+          <div className="border-t border-slate-800 pt-8 text-sm text-center text-slate-500">
+            <p>&copy; {new Date().getFullYear()} QualityPulse. All rights reserved.</p>
           </div>
         </div>
       </footer>
