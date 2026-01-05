@@ -21,8 +21,8 @@ WORKDIR /app
 # Copy requirements first (for better caching)
 COPY requirements.txt .
 
-# Install PyTorch with CUDA support
-RUN pip3 install --no-cache-dir torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch with CUDA support (updated to match requirements.txt)
+RUN pip3 install --no-cache-dir torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
 # Install other Python packages
 RUN pip3 install --no-cache-dir -r requirements.txt

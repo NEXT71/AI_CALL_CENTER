@@ -1,28 +1,39 @@
 # Core Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-python-dotenv==1.0.0
-pydantic==2.5.0
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.12
+python-dotenv==1.0.1
+pydantic==2.10.3
 
 # GPU-Accelerated Deep Learning
-torch==2.1.0+cu121
-torchaudio==2.1.0+cu121
-transformers==4.35.2
+# For CPU-only (most compatible):
+torch==2.5.1
+torchaudio==2.5.1
+# For CUDA 11.8 (most common):
+# torch==2.5.1+cu118
+# torchaudio==2.5.1+cu118
+# For CUDA 12.1:
+# torch==2.5.1+cu121
+# torchaudio==2.5.1+cu121
+
+transformers==4.47.1
 
 # Audio Processing
 openai-whisper==20231117
-librosa==0.10.1
+librosa==0.10.2.post1
 soundfile==0.12.1
 pydub==0.25.1
 ffmpeg-python==0.2.0
 
+# NumPy compatibility fix (required for older packages)
+numpy<2.0.0
+
 # NLP
-spacy==3.7.2
-rapidfuzz==3.5.2
+spacy==3.8.3
+rapidfuzz==3.10.1
 
 # Timezone handling
-pytz==2023.3
+pytz==2024.2
 
 # Utilities
-psutil==5.9.6
+psutil==6.1.0

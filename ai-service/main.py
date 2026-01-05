@@ -119,6 +119,11 @@ app.add_middleware(
 @app.middleware("http")
 async def check_service_availability(request: Request, call_next):
     """Check if service is available based on schedule before processing requests"""
+    # TEMPORARILY DISABLED FOR TESTING - Allow 24/7 access
+    return await call_next(request)
+    
+    """
+    # ORIGINAL CODE - Uncomment to re-enable schedule restrictions
     # Allow health checks even when service is unavailable
     if request.url.path == "/health":
         return await call_next(request)
@@ -136,6 +141,7 @@ async def check_service_availability(request: Request, call_next):
 
     response = await call_next(request)
     return response
+    """
 
 # Model availability flags
 models_available = {
