@@ -66,7 +66,7 @@ const Subscription = () => {
     try {
       setLoading(true);
       const [plansResponse, subResponse] = await Promise.all([
-        apiService.getSubscriptionPlans().catch(() => ({ success: false })),
+        apiService.getPlans().catch(() => ({ success: false })),
         apiService.getCurrentSubscription().catch(() => ({ success: false })),
       ]);
       
