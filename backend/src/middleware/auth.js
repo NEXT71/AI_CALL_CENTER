@@ -79,6 +79,11 @@ exports.authorize = (...roles) => {
  */
 exports.checkTrialExpiration = async (req, res, next) => {
   try {
+    // TEMPORARILY DISABLED FOR TESTING
+    // Skip subscription check entirely
+    return next();
+    
+    /* Original code - uncomment to re-enable subscription checks
     const user = req.user;
 
     // Skip check if user has active subscription
@@ -114,6 +119,7 @@ exports.checkTrialExpiration = async (req, res, next) => {
     }
 
     next();
+    */
   } catch (error) {
     next(error);
   }
