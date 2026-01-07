@@ -47,15 +47,25 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Calculate trial period based on plan
-    const trialDays = {
-      starter: 14,
-      professional: 14,
-      enterprise: 30,
-    };
-    const selectedPlan = plan || 'starter';
-    const trialPeriod = trialDays[selectedPlan] || 14;
-    const trialEndsAt = new Date(Date.now() + trialPeriod * 24 * 60 * 60 * 1000);
+    // Calculate plan and status
+    const selectedPlan = plan || 'free';
+    let subscriptionStatus;
+    let trialEndsAt;
+
+    if (selectedPlan === 'free') {
+      subscriptionStatus = 'free';
+      trialEndsAt = null;
+    } else {
+      // Trial period for paid plans
+      const trialDays = {
+        starter: 14,
+        professional: 14,
+        enterprise: 30,
+      };
+      subscriptionStatus = 'trial';
+      const trialPeriod = trialDays[selectedPlan] || 14;
+      trialEndsAt = new Date(Date.now() + trialPeriod * 24 * 60 * 60 * 1000);
+    }
 
     // Create user
     const user = await User.create({
@@ -68,7 +78,7 @@ exports.register = async (req, res, next) => {
       phone,
       subscription: {
         plan: selectedPlan,
-        status: 'trial',
+        status: subscriptionStatus,
         trialEndsAt,
       },
     });

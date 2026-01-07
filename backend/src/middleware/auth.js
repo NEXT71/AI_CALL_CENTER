@@ -79,12 +79,12 @@ exports.authorize = (...roles) => {
  */
 exports.checkTrialExpiration = async (req, res, next) => {
   try {
-    // TEMPORARILY DISABLED FOR TESTING
-    // Skip subscription check entirely
-    return next();
-    
-    /* Original code - uncomment to re-enable subscription checks
     const user = req.user;
+
+    // Allow free tier users unlimited access with limited features
+    if (user.subscription?.status === 'free') {
+      return next();
+    }
 
     // Skip check if user has active subscription
     if (user.subscription?.status === 'active') {
@@ -97,29 +97,29 @@ exports.checkTrialExpiration = async (req, res, next) => {
       const trialEndsAt = new Date(user.subscription.trialEndsAt);
 
       if (now > trialEndsAt) {
-        // Update user status to expired
-        user.subscription.status = 'expired';
+        // Downgrade to free tier instead of blocking access
+        user.subscription.status = 'free';
+        user.subscription.plan = 'free';
         await user.save();
 
-        return res.status(402).json({
-          success: false,
-          message: 'Your trial period has expired. Please upgrade your plan to continue.',
+        return res.status(200).json({
+          success: true,
+          message: 'Your trial has ended. You have been moved to the free plan with limited features.',
           trialExpired: true,
+          downgradedToFree: true,
         });
       }
     }
 
-    // If trial is already expired
+    // If trial is already expired, move to free tier
     if (user.subscription?.status === 'expired') {
-      return res.status(402).json({
-        success: false,
-        message: 'Your trial period has expired. Please upgrade your plan to continue.',
-        trialExpired: true,
-      });
+      user.subscription.status = 'free';
+      user.subscription.plan = 'free';
+      await user.save();
+      return next();
     }
 
     next();
-    */
   } catch (error) {
     next(error);
   }

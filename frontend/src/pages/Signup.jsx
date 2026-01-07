@@ -27,13 +27,27 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const plans = {
+    free: {
+      name: 'Free',
+      price: '$0',
+      period: '/forever',
+      trialDays: 0,
+      features: [
+        '10 calls/month',
+        'Basic AI transcription',
+        'Basic quality scoring',
+        'Community support',
+        '1 team member',
+        '7-day data retention'
+      ]
+    },
     starter: {
       name: 'Starter',
-      price: '$299',
+      price: '$49',
       period: '/month',
       trialDays: 14,
       features: [
-        'Up to 500 calls/month',
+        'Up to 100 calls/month',
         'AI transcription & scoring',
         'Basic compliance rules',
         'Email support',
@@ -42,23 +56,23 @@ const Signup = () => {
     },
     professional: {
       name: 'Professional',
-      price: '$799',
+      price: '$99',
       period: '/month',
       trialDays: 14,
       features: [
-        'Up to 2,500 calls/month',
+        'Up to 500 calls/month',
         'Advanced AI analysis',
         'Custom compliance rules',
         'Priority support',
-        '15 team members',
+        '5 team members',
         'API access'
       ],
       popular: true
     },
     enterprise: {
       name: 'Enterprise',
-      price: 'Custom',
-      period: '',
+      price: '$249',
+      period: '/month',
       trialDays: 30,
       features: [
         'Unlimited calls',
@@ -66,7 +80,8 @@ const Signup = () => {
         'White-label options',
         '24/7 premium support',
         'Unlimited team members',
-        'On-premise deployment'
+        'Custom integrations',
+        'SLA guarantee'
       ]
     }
   };

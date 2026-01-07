@@ -8,6 +8,20 @@ const Subscription = () => {
   // Default plans if API fails
   const defaultPlans = [
     {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      interval: 'forever',
+      icon: Home,
+      features: [
+        '10 calls/month',
+        'Basic transcription',
+        'Community support',
+        '1 user',
+        '7-day retention',
+      ],
+    },
+    {
       id: 'starter',
       name: 'Starter',
       price: 49,

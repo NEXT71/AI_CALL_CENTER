@@ -39,8 +39,25 @@ const Landing = () => {
 
   const pricingPlans = [
     {
+      name: 'Free',
+      price: '$0',
+      period: '/forever',
+      description: 'Perfect for trying out the platform',
+      features: [
+        '10 calls/month',
+        'Basic AI transcription',
+        'Basic quality scoring',
+        'Community support',
+        '1 team member',
+        '7-day data retention'
+      ],
+      cta: 'Get Started Free',
+      ctaLink: '/signup?plan=free',
+      popular: false
+    },
+    {
       name: 'Starter',
-      price: '$299',
+      price: '$49',
       period: '/month',
       description: 'Perfect for small teams getting started',
       features: [
@@ -57,7 +74,7 @@ const Landing = () => {
     },
     {
       name: 'Professional',
-      price: '$799',
+      price: '$99',
       period: '/month',
       description: 'Best for growing organizations',
       features: [
@@ -76,8 +93,8 @@ const Landing = () => {
     },
     {
       name: 'Enterprise',
-      price: 'Custom',
-      period: '',
+      price: '$249',
+      period: '/month',
       description: 'For large-scale operations',
       features: [
         'Unlimited calls',

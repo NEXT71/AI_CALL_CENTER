@@ -17,5 +17,6 @@ router.get('/current', subscriptionController.getCurrentSubscription);
 router.post('/cancel', subscriptionController.cancelSubscription);
 router.post('/reactivate', subscriptionController.reactivateSubscription);
 router.get('/invoices', subscriptionController.getInvoices);
+router.get('/usage', subscriptionController.getUsage);
 
 module.exports = router;

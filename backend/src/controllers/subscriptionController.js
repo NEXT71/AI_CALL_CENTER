@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const stripeService = require('../services/stripeService');
 const auditService = require('../services/auditService');
+const { getUsageStats } = require('../middleware/usageLimits');
 const logger = require('../config/logger');
 const Stripe = require('stripe');
 
@@ -43,10 +44,36 @@ exports.createCheckoutSession = async (req, res, next) => {
   try {
     const { planType } = req.body;
 
-    if (!planType || !['starter', 'professional', 'enterprise'].includes(planType)) {
+    if (!planType || !['free', 'starter', 'professional', 'enterprise'].includes(planType)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid plan type',
+      });
+    }
+
+    // Handle free plan - no Stripe checkout needed
+    if (planType === 'free') {
+      const user = await User.findById(req.user._id);
+      user.subscription.plan = 'free';
+      user.subscription.status = 'free';
+      await user.save();
+
+      await auditService.createAuditLog({
+        userId: user._id,
+        userName: user.name,
+        userRole: user.role,
+        action: 'SUBSCRIPTION_DOWNGRADE',
+        resourceType: 'Subscription',
+        details: { planType: 'free' },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        status: 'success',
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Successfully switched to free plan',
+        data: { plan: 'free', status: 'free' },
       });
     }
 
@@ -476,6 +503,35 @@ exports.getInvoices = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error fetching invoices:', error);
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/subscriptions/usage
+ * @desc    Get current usage statistics for the user
+ * @access  Private
+ */
+exports.getUsage = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const plan = user.subscription?.plan || 'free';
+
+    const usageStats = await getUsageStats(user._id, plan);
+
+    if (!usageStats) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve usage statistics',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: usageStats,
+    });
+  } catch (error) {
+    logger.error('Error fetching usage stats:', error);
     next(error);
   }
 };

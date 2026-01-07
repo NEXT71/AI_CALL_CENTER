@@ -7,6 +7,25 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
 
 // Pricing plans configuration
 const PLANS = {
+  free: {
+    name: 'Free',
+    priceId: null, // No Stripe price for free tier
+    amount: 0, // $0/month
+    interval: 'month',
+    features: [
+      '10 calls/month',
+      'Basic transcription',
+      'Community support',
+      '1 user',
+      '7-day data retention',
+    ],
+    limits: {
+      callsPerMonth: 10,
+      storageGB: 1,
+      dataRetentionDays: 7,
+      teamMembers: 1,
+    },
+  },
   starter: {
     name: 'Starter',
     priceId: process.env.STRIPE_STARTER_PRICE_ID,
