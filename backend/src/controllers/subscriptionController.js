@@ -54,8 +54,19 @@ exports.createCheckoutSession = async (req, res, next) => {
     // Handle free plan - no Stripe checkout needed
     if (planType === 'free') {
       const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Clear any existing Stripe subscription data
       user.subscription.plan = 'free';
       user.subscription.status = 'free';
+      user.subscription.stripeSubscriptionId = null;
+      user.subscription.currentPeriodStart = null;
+      user.subscription.currentPeriodEnd = null;
       await user.save();
 
       await auditService.createAuditLog({
@@ -73,7 +84,11 @@ exports.createCheckoutSession = async (req, res, next) => {
       return res.status(200).json({
         success: true,
         message: 'Successfully switched to free plan',
-        data: { plan: 'free', status: 'free' },
+        data: {
+          plan: 'free',
+          status: 'free',
+          url: null, // No URL needed for free tier
+        },
       });
     }
 

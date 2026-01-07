@@ -109,9 +109,19 @@ const Subscription = () => {
       setProcessingPlan(planId);
       const response = await apiService.createCheckoutSession(planId);
       
-      if (response.success && response.data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = response.data.url;
+      if (response.success) {
+        // Free tier doesn't need Stripe checkout
+        if (planId === 'free' || !response.data.url) {
+          // Refresh subscription data and show success
+          await fetchData();
+          alert('✅ Successfully switched to free plan!');
+          return;
+        }
+        
+        // Redirect to Stripe Checkout for paid plans
+        if (response.data.url) {
+          window.location.href = response.data.url;
+        }
       } else {
         throw new Error(response.message || 'Failed to create checkout session');
       }

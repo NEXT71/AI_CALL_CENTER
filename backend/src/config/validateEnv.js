@@ -54,6 +54,9 @@ const validateEnv = () => {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       warnings.push('STRIPE_WEBHOOK_SECRET not set - webhook verification will be skipped');
     }
+    if (!process.env.FRONTEND_URL) {
+      warnings.push('FRONTEND_URL not set - Stripe redirects will fail');
+    }
   }
 
   // Validate SMTP configuration (info only)
