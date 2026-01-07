@@ -25,6 +25,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import RunPodControl from './pages/RunPodControl';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
             <Route path="sales-data" element={<RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}><ViewSales /></RoleGuard>} />
             <Route path="sales-data/add" element={<RoleGuard allowedRoles={['Admin', 'Manager', 'QA']}><AddSales /></RoleGuard>} />
             <Route path="sales-reports" element={<RoleGuard allowedRoles={['Admin', 'Manager']}><SalesReports /></RoleGuard>} />
+            <Route path="runpod" element={<RoleGuard allowedRoles={['Admin']}><RunPodControl /></RoleGuard>} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

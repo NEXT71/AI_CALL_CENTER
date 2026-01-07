@@ -169,12 +169,35 @@ export const subscriptionService = {
   },
 };
 
+export const runpodService = {
+  getRunPodStatus: async () => {
+    const response = await api.get('/runpod/status');
+    return response.data;
+  },
+
+  startRunPod: async () => {
+    const response = await api.post('/runpod/start');
+    return response.data;
+  },
+
+  stopRunPod: async () => {
+    const response = await api.post('/runpod/stop');
+    return response.data;
+  },
+
+  listRunPods: async () => {
+    const response = await api.get('/runpod/list');
+    return response.data;
+  },
+};
+
 const apiService = {
   ...authService,
   ...callService,
   ...ruleService,
   ...reportService,
   ...subscriptionService,
+  ...runpodService,
 };
 
 export default apiService;

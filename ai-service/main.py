@@ -96,6 +96,7 @@ sentiment_pipeline = None
 summarizer_pipeline = None
 ner_pipeline = None
 nlp_spacy = None
+diarization_pipeline = None
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -150,6 +151,7 @@ models_available = {
     "summarizer": False,
     "ner": False,
     "spacy": False,
+    "diarization": False,
     "gpu_enabled": CUDA_AVAILABLE
 }
 
@@ -329,6 +331,18 @@ class ComplianceCheckResponse(BaseModel):
     detected_forbidden: List[str]
     compliance_score: float
     details: Dict
+
+class DiarizeResponse(BaseModel):
+    speaker_segments: List[Dict]
+    speakers: List[str]
+    num_speakers: int
+
+class TalkTimeResponse(BaseModel):
+    speaker_talk_time: Dict[str, float]
+    agent_customer_ratio: str
+    dead_air_total: float
+    dead_air_segments: List[Dict]
+    total_duration: float
 
 
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000):
@@ -838,6 +852,197 @@ async def check_compliance(request: ComplianceCheckRequest):
         raise HTTPException(status_code=500, detail=f"Compliance check failed: {str(e)}")
 
 
+def load_diarization_model():
+    """Lazy load pyannote diarization model with GPU support"""
+    global diarization_pipeline, models_available
+    if diarization_pipeline is not None:
+        return diarization_pipeline
+
+    try:
+        from pyannote.audio import Pipeline
+        
+        # Requires HuggingFace token for pyannote models
+        hf_token = os.getenv("HUGGINGFACE_TOKEN")
+        if not hf_token:
+            logger.warning("⚠️ HUGGINGFACE_TOKEN not set - diarization will fail")
+            logger.warning("Get token from: https://huggingface.co/settings/tokens")
+            return None
+        
+        logger.info("Loading diarization model...")
+        diarization_pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=hf_token
+        )
+        
+        # Move to GPU if available
+        if CUDA_AVAILABLE:
+            diarization_pipeline.to(torch.device("cuda"))
+            logger.info("✅ Diarization model loaded on GPU")
+        else:
+            logger.info("✅ Diarization model loaded on CPU")
+        
+        models_available["diarization"] = True
+        return diarization_pipeline
+    except Exception as e:
+        logger.error(f"❌ Failed to load diarization model: {e}")
+        models_available["diarization"] = False
+        return None
+
+
+@app.post("/diarize", response_model=DiarizeResponse)
+async def diarize_audio(
+    audio: UploadFile = File(...),
+    min_speakers: int = Form(2),
+    max_speakers: int = Form(2)
+):
+    """
+    Perform speaker diarization on audio file
+    Returns speaker segments with timestamps
+    """
+    temp_audio_path = None
+    
+    try:
+        logger.info(f"🎙️ Diarization request: {audio.filename}")
+        
+        # Load diarization model
+        pipeline = load_diarization_model()
+        if pipeline is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Diarization model not available. Please set HUGGINGFACE_TOKEN environment variable."
+            )
+        
+        # Save uploaded file temporarily
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        logger.info(f"Processing diarization with {min_speakers}-{max_speakers} speakers...")
+        
+        # Run diarization
+        diarization = pipeline(
+            temp_audio_path,
+            min_speakers=min_speakers,
+            max_speakers=max_speakers
+        )
+        
+        # Convert to serializable format
+        speaker_segments = []
+        speakers = set()
+        
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers.add(speaker)
+            speaker_segments.append({
+                "speaker": speaker,
+                "start": float(turn.start),
+                "end": float(turn.end),
+                "duration": float(turn.end - turn.start)
+            })
+        
+        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        
+        return DiarizeResponse(
+            speaker_segments=speaker_segments,
+            speakers=sorted(list(speakers)),
+            num_speakers=len(speakers)
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Diarization error: {e}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    finally:
+        # Clean up temp file
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except:
+                pass
+
+
+@app.post("/calculate-talk-time", response_model=TalkTimeResponse)
+async def calculate_talk_time(
+    audio: UploadFile = File(...),
+    speaker_segments: str = Form(...)  # JSON string of speaker segments
+):
+    """
+    Calculate talk-time metrics from diarization results
+    Returns agent/customer talk time, ratio, and dead air detection
+    """
+    import json
+    
+    try:
+        logger.info(f"📊 Talk-time calculation request: {audio.filename}")
+        
+        # Parse speaker segments
+        segments = json.loads(speaker_segments)
+        
+        # Get audio duration
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        from pydub import AudioSegment
+        audio_file = AudioSegment.from_file(temp_audio_path)
+        total_duration = len(audio_file) / 1000.0  # Convert to seconds
+        
+        # Calculate talk time per speaker
+        speaker_talk_time = {}
+        for segment in segments:
+            speaker = segment["speaker"]
+            duration = segment["duration"]
+            speaker_talk_time[speaker] = speaker_talk_time.get(speaker, 0) + duration
+        
+        # Calculate dead air (gaps between segments)
+        sorted_segments = sorted(segments, key=lambda x: x["start"])
+        dead_air_segments = []
+        dead_air_total = 0
+        
+        for i in range(len(sorted_segments) - 1):
+            current_end = sorted_segments[i]["end"]
+            next_start = sorted_segments[i + 1]["start"]
+            gap = next_start - current_end
+            
+            if gap > 2.0:  # Dead air threshold: 2 seconds
+                dead_air_segments.append({
+                    "start": current_end,
+                    "end": next_start,
+                    "duration": gap
+                })
+                dead_air_total += gap
+        
+        # Calculate agent/customer ratio (assume SPEAKER_00 is agent, SPEAKER_01 is customer)
+        speakers_list = sorted(speaker_talk_time.keys())
+        if len(speakers_list) >= 2:
+            agent_time = speaker_talk_time.get(speakers_list[0], 0)
+            customer_time = speaker_talk_time.get(speakers_list[1], 0)
+            
+            if customer_time > 0:
+                ratio = agent_time / customer_time
+                ratio_str = f"{ratio:.2f}:1"
+            else:
+                ratio_str = "N/A"
+        else:
+            ratio_str = "N/A"
+        
+        logger.info(f"✅ Talk-time calculated: {len(speakers_list)} speakers, {dead_air_total:.1f}s dead air")
+        
+        # Clean up temp file
+        if os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+        
+        return TalkTimeResponse(
+            speaker_talk_time=speaker_talk_time,
+            agent_customer_ratio=ratio_str,
+            dead_air_total=dead_air_total,
+            dead_air_segments=dead_air_segments,
+            total_duration=total_duration
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Talk-time calculation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -859,7 +1064,9 @@ async def root():
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance"
+            "compliance": "/check-compliance",
+            "diarize": "/diarize",
+            "talk_time": "/calculate-talk-time"
         }
     }
 

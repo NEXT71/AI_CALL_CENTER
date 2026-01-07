@@ -8,6 +8,7 @@ const config = require('../config/config');
 const aiService = require('../services/aiService');
 const scoringService = require('../services/scoringService');
 const auditService = require('../services/auditService');
+const runpodService = require('../services/runpodService');
 const logger = require('../config/logger');
 
 // Ensure upload directory exists
@@ -291,6 +292,28 @@ async function processCallAsync(callId) {
     // Update status
     call.status = 'processing';
     await call.save();
+
+    // IMPORTANT: Ensure RunPod GPU is running before processing
+    try {
+      if (runpodService.isConfigured()) {
+        logger.info('Checking RunPod status before AI processing', { callId: call.callId });
+        const podReady = await runpodService.ensurePodRunning();
+        if (podReady) {
+          logger.info('RunPod is ready for processing', { callId: call.callId });
+        } else {
+          logger.warn('RunPod not available, proceeding anyway', { callId: call.callId });
+        }
+      } else {
+        logger.info('RunPod not configured, proceeding with AI service', { callId: call.callId });
+      }
+    } catch (podError) {
+      logger.error('Failed to start RunPod, proceeding anyway', { 
+        callId: call.callId, 
+        error: podError.message 
+      });
+      // Continue with processing even if pod start fails
+      // The AI service might be running elsewhere
+    }
 
     // Step 1: Transcribe audio (FREE Whisper)
     logger.info('Transcribing audio with Whisper', { callId: call.callId });
