@@ -31,7 +31,8 @@ const callSchema = new mongoose.Schema(
     },
     duration: {
       type: Number, // seconds
-      required: true,
+      required: false,
+      default: 0,
     },
     callDate: {
       type: Date,
