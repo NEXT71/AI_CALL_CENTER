@@ -488,25 +488,6 @@ const UploadCall = () => {
         </div>
 
         {/* Upload Progress */}
-                    <Tag size={16} />
-                  </div>
-                  <input
-                    type="text"
-                    className="input-enhanced w-full pl-10"
-                    value={formData.productSold}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      productSold: e.target.value 
-                    })}
-                    placeholder="Premium Package"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Upload Progress */}
         {uploading && (
           <div className="card-enhanced p-6 bg-blue-50 border-blue-200">
             <div className="flex items-center justify-between mb-3">
