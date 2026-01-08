@@ -2,21 +2,31 @@ const runpodService = require('../services/runpodService');
 const auditService = require('../services/auditService');
 const logger = require('../config/logger');
 
+console.log('🚀 DEBUG: runpodController.js - Module loading');
+console.log('🔍 DEBUG: runpodService.isConfigured:', typeof runpodService.isConfigured);
+
 /**
  * @route   GET /api/v1/runpod/status
  * @desc    Get RunPod status
  * @access  Private (Admin only)
  */
 exports.getStatus = async (req, res, next) => {
+  console.log('🎯 DEBUG: getStatus controller called');
+  console.log('🔍 DEBUG: User:', req.user?.email, 'Role:', req.user?.role);
+  
   try {
+    console.log('🔍 DEBUG: Checking RunPod configuration...');
     if (!runpodService.isConfigured()) {
+      console.log('⚠️ DEBUG: RunPod not configured');
       return res.status(400).json({
         success: false,
         message: 'RunPod not configured. Please set RUNPOD_API_KEY and RUNPOD_POD_ID in environment variables.',
       });
     }
 
+    console.log('🔍 DEBUG: Fetching pod status...');
     const podStatus = await runpodService.getPodStatus();
+    console.log('✅ DEBUG: Pod status retrieved:', podStatus?.id);
 
     res.status(200).json({
       success: true,
