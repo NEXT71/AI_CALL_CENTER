@@ -1,10 +1,10 @@
-// Load environment variables - handle missing .env file gracefully
+﻿// Load environment variables - handle missing .env file gracefully
 try {
   require('dotenv').config();
-  console.log('🔍 DEBUG: server.js loaded, dotenv configured');
+  console.log('ðŸ” DEBUG: server.js loaded, dotenv configured');
 } catch (error) {
-  console.log('⚠️ DEBUG: dotenv failed to load:', error.message);
-  console.log('🔍 DEBUG: server.js loaded without dotenv');
+  console.log('âš ï¸ DEBUG: dotenv failed to load:', error.message);
+  console.log('ðŸ” DEBUG: server.js loaded without dotenv');
 }
 
 const express = require('express');
@@ -16,59 +16,59 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
 const connectDB = require('./config/database');
-console.log('✅ DEBUG: connectDB imported');
+console.log('âœ… DEBUG: connectDB imported');
 const errorHandler = require('./middleware/errorHandler');
-console.log('✅ DEBUG: errorHandler imported');
+console.log('âœ… DEBUG: errorHandler imported');
 const config = require('./config/config');
-console.log('✅ DEBUG: config imported');
+console.log('âœ… DEBUG: config imported');
 const { apiLimiter } = require('./middleware/rateLimiter');
-console.log('✅ DEBUG: rateLimiter imported');
+console.log('âœ… DEBUG: rateLimiter imported');
 const logger = require('./config/logger');
-console.log('✅ DEBUG: Logger imported and initialized');
+console.log('âœ… DEBUG: Logger imported and initialized');
 const validateEnv = require('./config/validateEnv');
-console.log('✅ DEBUG: validateEnv imported successfully');
+console.log('âœ… DEBUG: validateEnv imported successfully');
 
 // Import routes
-console.log('🔍 DEBUG: Importing routes...');
+console.log('ðŸ” DEBUG: Importing routes...');
 const authRoutes = require('./routes/authRoutes');
-console.log('✅ DEBUG: authRoutes imported');
+console.log('âœ… DEBUG: authRoutes imported');
 const callRoutes = require('./routes/callRoutes');
-console.log('✅ DEBUG: callRoutes imported');
+console.log('âœ… DEBUG: callRoutes imported');
 const ruleRoutes = require('./routes/ruleRoutes');
-console.log('✅ DEBUG: ruleRoutes imported');
+console.log('âœ… DEBUG: ruleRoutes imported');
 const reportRoutes = require('./routes/reportRoutes');
-console.log('✅ DEBUG: reportRoutes imported');
+console.log('âœ… DEBUG: reportRoutes imported');
 const salesRoutes = require('./routes/salesRoutes');
-console.log('✅ DEBUG: salesRoutes imported');
+console.log('âœ… DEBUG: salesRoutes imported');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 const auditLogRoutes = require('./routes/auditLogRoutes');
-console.log('✅ DEBUG: auditLogRoutes imported');
-console.log('🔍 DEBUG: About to import subscriptionRoutes...');
+console.log('âœ… DEBUG: auditLogRoutes imported');
+console.log('ðŸ” DEBUG: About to import subscriptionRoutes...');
 // const subscriptionRoutes = require('./routes/subscriptionRoutes');
-// console.log('✅ DEBUG: subscriptionRoutes imported');
+// console.log('âœ… DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
-console.log('✅ DEBUG: webhookRoutes imported');
+console.log('âœ… DEBUG: webhookRoutes imported');
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
 
-console.log('🔍 DEBUG: Starting environment validation...');
+console.log('ðŸ” DEBUG: Starting environment validation...');
 
 // Validate environment variables before starting
 try {
-  console.log('🔍 DEBUG: About to validate environment variables...');
+  console.log('ðŸ” DEBUG: About to validate environment variables...');
   validateEnv();
-  console.log('✅ DEBUG: Environment validation passed');
+  console.log('âœ… DEBUG: Environment validation passed');
   logger.info('Environment validation passed');
 } catch (error) {
-  console.log('❌ DEBUG: Environment validation failed:', error.message);
+  console.log('âŒ DEBUG: Environment validation failed:', error.message);
   logger.error('Environment validation failed', { error: error.message });
   console.error('ENV VALIDATION ERROR:', error.message);
   process.exit(1);
 }
 
 // Initialize express app
-console.log('🔍 DEBUG: Initializing Express app...');
+console.log('ðŸ” DEBUG: Initializing Express app...');
 const app = express();
 
 // Trust proxy - required for Render and other reverse proxy deployments
@@ -76,7 +76,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Connect to MongoDB
-console.log('🔍 DEBUG: About to connect to MongoDB...');
+console.log('ðŸ” DEBUG: About to connect to MongoDB...');
 connectDB();
 
 // Security Middleware
@@ -245,10 +245,10 @@ app.use(errorHandler);
 
 // Start server
 const PORT = config.port;
-console.log('🔍 DEBUG: About to start server on port:', PORT);
+console.log('ðŸ” DEBUG: About to start server on port:', PORT);
 
 const server = app.listen(PORT, () => {
-  console.log('✅ DEBUG: Server started successfully on port:', PORT);
+  console.log('âœ… DEBUG: Server started successfully on port:', PORT);
   logger.info('Server started successfully', { 
     environment: config.nodeEnv,
     port: PORT,
