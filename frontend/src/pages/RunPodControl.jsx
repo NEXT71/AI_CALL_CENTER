@@ -178,7 +178,7 @@ const RunPodControl = () => {
                 <span className="text-xs font-medium">Uptime</span>
               </div>
               <p className="text-sm font-semibold text-slate-900">
-                {formatUptime(podStatus?.uptimeInSeconds)}
+                {formatUptime(podStatus?.uptimeSeconds)}
               </p>
             </div>
 
