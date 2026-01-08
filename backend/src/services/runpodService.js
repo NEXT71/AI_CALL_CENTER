@@ -53,16 +53,18 @@ exports.getPodStatus = async (podId = RUNPOD_POD_ID) => {
       pod(input: { podId: $podId }) {
         id
         name
-        runtime
+        runtime {
+          uptimeInSeconds
+        }
         imageName
         machineId
         machine {
           gpuDisplayName
-          gpuCount
+          cpuCount
         }
         desiredStatus
         costPerHr
-        uptimeInSeconds
+        uptimeSeconds
         memoryInGb
         vcpuCount
         volumeInGb
