@@ -357,13 +357,20 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000):
         
         logger.info(f"📦 Chunking audio file: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
+        
+        # Convert to mono to avoid channel mismatch issues
+        if audio.channels > 1:
+            audio = audio.set_channels(1)
+            logger.info(f"✅ Converted to mono audio")
+        
         duration_ms = len(audio)
         
         chunks = []
         for i in range(0, duration_ms, chunk_length_ms):
             chunk = audio[i:i + chunk_length_ms]
             chunk_path = f"{audio_path}_chunk_{i//chunk_length_ms}.wav"
-            chunk.export(chunk_path, format="wav")
+            # Export as mono WAV with consistent sample rate
+            chunk.export(chunk_path, format="wav", parameters=["-ac", "1", "-ar", "16000"])
             chunks.append({
                 "path": chunk_path,
                 "start_time": i / 1000,
