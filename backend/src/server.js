@@ -1,7 +1,7 @@
 // Load environment variables - handle missing .env file gracefully
 try {
   require('dotenv').config();
-  console.log('🔍 DEBUG: server.js loaded, dotenv configured');
+  console.log('🔍 DEBUG: server.js loaded, dotenv configured - v1.0.2');
 } catch (error) {
   console.log('⚠️ DEBUG: dotenv failed to load:', error.message);
   console.log('🔍 DEBUG: server.js loaded without dotenv');
@@ -48,6 +48,12 @@ console.log('🔍 DEBUG: About to import subscriptionRoutes...');
 // console.log('✅ DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
 console.log('✅ DEBUG: webhookRoutes imported');
+// RunPod GPU Control Routes
+console.log('🚀 DEBUG: Attempting to import runpodRoutes...');
+const runpodRoutes = require('./routes/runpodRoutes');
+console.log('✅ DEBUG: runpodRoutes imported successfully');
+console.log('🔍 DEBUG: runpodRoutes type:', typeof runpodRoutes);
+console.log('🔍 DEBUG: runpodRoutes.stack:', runpodRoutes.stack ? 'has routes' : 'NO ROUTES');
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
@@ -151,11 +157,12 @@ app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'AI Call Center QA Backend API',
-    version: '1.0.0',
+    version: '1.0.1',
     status: 'running',
     endpoints: {
       health: '/health',
       api: '/api/v1',
+      runpod: '/api/v1/runpod',
       docs: 'https://github.com/your-repo/docs'
     },
     timestamp: new Date().toISOString()
@@ -223,6 +230,21 @@ app.use(`${API_VERSION}/sales`, salesRoutes);
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
 // app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes); // Temporarily disabled - import failing
 
+// RunPod GPU Control API
+console.log('🚀 DEBUG: Registering RunPod routes at path:', `${API_VERSION}/runpod`);
+app.use(`${API_VERSION}/runpod`, runpodRoutes);
+console.log('✅ DEBUG: RunPod routes registered successfully at', `${API_VERSION}/runpod`);
+// List all registered routes
+if (runpodRoutes.stack) {
+  console.log('📋 DEBUG: RunPod routes:');
+  runpodRoutes.stack.forEach(layer => {
+    if (layer.route) {
+      const methods = Object.keys(layer.route.methods).join(', ').toUpperCase();
+      console.log(`   ${methods} ${API_VERSION}/runpod${layer.route.path}`);
+    }
+  });
+}
+
 // Legacy routes (deprecated - redirect to v1)
 app.use('/api/auth', (req, res) => res.redirect(308, `${API_VERSION}/auth${req.url}`));
 app.use('/api/calls', (req, res) => res.redirect(308, `${API_VERSION}/calls${req.url}`));
@@ -232,8 +254,21 @@ app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
 // app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled
 
+// Debug: Log all incoming requests
+app.use((req, res, next) => {
+  if (req.path.includes('/runpod')) {
+    console.log('🔍 DEBUG: Incoming request to RunPod route:');
+    console.log('   Method:', req.method);
+    console.log('   Path:', req.path);
+    console.log('   Original URL:', req.originalUrl);
+    console.log('   Headers:', JSON.stringify(req.headers, null, 2));
+  }
+  next();
+});
+
 // 404 Handler
 app.use('*', (req, res) => {
+  console.log('❌ DEBUG: 404 - Route not found:', req.originalUrl);
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
@@ -298,4 +333,3 @@ process.on('uncaughtException', (err) => {
 });
 
 module.exports = app;
- 
