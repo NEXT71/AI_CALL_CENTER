@@ -230,7 +230,7 @@ exports.uploadCall = [
         customerId,
         customerName,
         campaign,
-        duration: parseInt(duration),
+        duration: duration ? parseInt(duration) : 0,
         callDate: new Date(callDate),
         audioFilePath: req.file.path,
         audioFileName: req.file.filename,
