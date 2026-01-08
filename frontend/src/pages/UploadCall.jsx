@@ -14,36 +14,66 @@ const UploadCall = () => {
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
-    agentId: '',
     agentName: '',
-    customerId: '',
-    customerName: '',
     campaign: '',
-    duration: '',
     callDate: new Date().toISOString().slice(0, 16),
     isSale: false,
     saleAmount: '',
-    productSold: '',
   });
   const [audioFile, setAudioFile] = useState(null);
-  const [campaigns, setCampaigns] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
+  // Predefined campaigns
+  const CAMPAIGNS = ['ACA', 'Medicare', 'Final Expense'];
 
-  const fetchCampaigns = async () => {
-    try {
-      const response = await ruleService.getCampaigns();
-      setCampaigns(response.data);
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
+  // Agent names list
+  const [agents, setAgents] = useState([
+    'John Smith',
+    'Sarah Johnson',
+    'Michael Brown',
+    'Emily Davis',
+    'Robert Wilson',
+    'Jessica Martinez',
+    'David Anderson',
+    'Lisa Taylor'
+  ]);
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const [newAgentName, setNewAgentName] = useState('');
+
+  const handleAddAgent = () => {
+    if (newAgentName.trim() && !agents.includes(newAgentName.trim())) {
+      setAgents([...agents, newAgentName.trim()]);
+      setFormData({ ...formData, agentName: newAgentName.trim() });
+      setNewAgentName('');
+      setShowAddAgent(false);
+      // Save to localStorage for persistence
+      localStorage.setItem('agentNames', JSON.stringify([...agents, newAgentName.trim()]));
     }
   };
+
+  const handleRemoveAgent = (agentToRemove) => {
+    const updatedAgents = agents.filter(a => a !== agentToRemove);
+    setAgents(updatedAgents);
+    localStorage.setItem('agentNames', JSON.stringify(updatedAgents));
+    if (formData.agentName === agentToRemove) {
+      setFormData({ ...formData, agentName: '' });
+    }
+  };
+
+  // Load saved agents from localStorage
+  useEffect(() => {
+    const savedAgents = localStorage.getItem('agentNames');
+    if (savedAgents) {
+      try {
+        setAgents(JSON.parse(savedAgents));
+      } catch (e) {
+        console.error('Error loading saved agents:', e);
+      }
+    }
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -126,6 +156,16 @@ const UploadCall = () => {
       return;
     }
 
+    if (!formData.agentName) {
+      setError('Please select an agent');
+      return;
+    }
+
+    if (!formData.campaign) {
+      setError('Please select a campaign');
+      return;
+    }
+
     // Validate sale data
     if (formData.isSale && (!formData.saleAmount || parseFloat(formData.saleAmount) <= 0)) {
       setError('Sale amount is required for sale calls');
@@ -137,11 +177,11 @@ const UploadCall = () => {
 
       // Sanitize text inputs before sending
       const sanitizedData = {
-        ...formData,
         agentName: DOMPurify.sanitize(formData.agentName, { ALLOWED_TAGS: [] }),
-        customerName: DOMPurify.sanitize(formData.customerName, { ALLOWED_TAGS: [] }),
         campaign: DOMPurify.sanitize(formData.campaign, { ALLOWED_TAGS: [] }),
-        productSold: DOMPurify.sanitize(formData.productSold, { ALLOWED_TAGS: [] }),
+        callDate: formData.callDate,
+        isSale: formData.isSale,
+        saleAmount: formData.saleAmount,
       };
 
       const data = new FormData();
@@ -282,206 +322,172 @@ const UploadCall = () => {
 
         {/* Call Information Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Agent Information */}
+          {/* Agent & Campaign */}
           <div className="card-enhanced p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
                 <User size={20} />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Agent Information</h2>
+              <h2 className="text-lg font-bold text-slate-900">Agent & Campaign</h2>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Agent ID <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="input-enhanced w-full"
-                  value={formData.agentId}
-                  onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
-                  placeholder="EMP001"
-                />
-              </div>
-
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Agent Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  className="input-enhanced w-full"
-                  value={formData.agentName}
-                  onChange={(e) => setFormData({ ...formData, agentName: e.target.value })}
-                  placeholder="John Doe"
-                />
-              </div>
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <select
+                    required
+                    className="input-enhanced w-full"
+                    value={formData.agentName}
+                    onChange={(e) => {
+                      if (e.target.value === '__add_new__') {
+                        setShowAddAgent(true);
+                      } else {
+                        setFormData({ ...formData, agentName: e.target.value });
+                      }
+                    }}
+                  >
+                    <option value="">Select Agent...</option>
+                    {agents.map(agent => (
+                      <option key={agent} value={agent}>{agent}</option>
+                    ))}
+                    <option value="__add_new__">+ Add New Agent</option>
+                  </select>
 
-          {/* Customer Information */}
-          <div className="card-enhanced p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                <User size={20} />
+                  {/* Quick agent management */}
+                  {formData.agentName && formData.agentName !== '__add_new__' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Remove ${formData.agentName} from the list?`)) {
+                          handleRemoveAgent(formData.agentName);
+                        }
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700"
+                    >
+                      Remove this agent from list
+                    </button>
+                  )}
+
+                  {/* Add new agent inline */}
+                  {showAddAgent && (
+                    <div className="flex gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <input
+                        type="text"
+                        placeholder="Enter agent name..."
+                        className="input-enhanced flex-1 text-sm"
+                        value={newAgentName}
+                        onChange={(e) => setNewAgentName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddAgent()}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddAgent}
+                        className="btn-enhanced bg-blue-600 text-white px-3 py-1 text-sm"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddAgent(false);
+                          setNewAgentName('');
+                        }}
+                        className="btn-enhanced bg-slate-200 text-slate-700 px-3 py-1 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Customer Information</h2>
-            </div>
-            <div className="space-y-4">
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Customer ID
+                  Campaign <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  className="input-enhanced w-full"
-                  value={formData.customerId}
-                  onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                  placeholder="CUST001"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Customer Name
-                </label>
-                <input
-                  type="text"
-                  className="input-enhanced w-full"
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                  placeholder="Jane Smith"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Call Details */}
-        <div className="card-enhanced p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
-              <Hash size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">Call Details</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Campaign <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
                 <select
                   required
-                  className="input-enhanced w-full appearance-none bg-white"
+                  className="input-enhanced w-full"
                   value={formData.campaign}
                   onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
                 >
-                  <option value="">Select Campaign</option>
-                  {campaigns.map(campaign => (
+                  <option value="">Select Campaign...</option>
+                  {CAMPAIGNS.map(campaign => (
                     <option key={campaign} value={campaign}>{campaign}</option>
                   ))}
-                  <option value="Other">Other</option>
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <ArrowRight size={16} className="rotate-90" />
-                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Call Date & Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  className="input-enhanced w-full"
+                  value={formData.callDate}
+                  onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
+                />
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Duration (seconds) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                className="input-enhanced w-full"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                placeholder="180"
-              />
+          {/* Sale Information */}
+          <div className="card-enhanced p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                <DollarSign size={20} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">Sale Information</h2>
             </div>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isSale"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  checked={formData.isSale}
+                  onChange={(e) => setFormData({ ...formData, isSale: e.target.checked })}
+                />
+                <label htmlFor="isSale" className="ml-2 text-sm font-semibold text-slate-700">
+                  This call resulted in a sale
+                </label>
+              </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">
-                Call Date & Time <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="datetime-local"
-                required
-                className="input-enhanced w-full"
-                value={formData.callDate}
-                onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
-              />
+              {formData.isSale && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Sale Amount <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required={formData.isSale}
+                      className="input-enhanced w-full pl-8"
+                      value={formData.saleAmount}
+                      onChange={(e) => setFormData({ ...formData, saleAmount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!formData.isSale && (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-sm">Check the box above if this call resulted in a sale</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Sale Information */}
-        <div className="card-enhanced p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-              <DollarSign size={20} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900">Sale Information</h2>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 transition-colors hover:bg-blue-100/50">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 border-gray-300"
-                checked={formData.isSale}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  isSale: e.target.checked,
-                  saleAmount: e.target.checked ? formData.saleAmount : '',
-                  productSold: e.target.checked ? formData.productSold : '',
-                })}
-              />
-              <span className="ml-3 font-bold text-slate-900">
-                This call resulted in a sale
-              </span>
-            </label>
-            <p className="text-sm text-slate-600 mt-2 ml-8">
-              Check this box if the call successfully resulted in a sale transaction
-            </p>
-          </div>
-
-          {formData.isSale && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Sale Amount ($) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</div>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    className="input-enhanced w-full pl-8"
-                    value={formData.saleAmount}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      saleAmount: e.target.value 
-                    })}
-                    placeholder="299.99"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Product/Service Sold
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        {/* Upload Progress */}
                     <Tag size={16} />
                   </div>
                   <input
