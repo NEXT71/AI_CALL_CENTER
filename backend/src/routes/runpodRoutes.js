@@ -39,6 +39,22 @@ router.get('/list', (req, res, next) => {
   runpodController.listPods(req, res, next);
 });
 
+// Service management routes
+router.post('/service/start', (req, res, next) => {
+  console.log('📍 DEBUG: POST /service/start route hit');
+  runpodController.startService(req, res, next);
+});
+
+router.post('/service/stop', (req, res, next) => {
+  console.log('📍 DEBUG: POST /service/stop route hit');
+  runpodController.stopService(req, res, next);
+});
+
+router.get('/service/status', (req, res, next) => {
+  console.log('📍 DEBUG: GET /service/status route hit');
+  runpodController.getServiceStatus(req, res, next);
+});
+
 console.log('✅ DEBUG: runpodRoutes.js - All routes registered');
 
 module.exports = router;

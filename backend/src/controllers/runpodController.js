@@ -218,3 +218,121 @@ exports.listPods = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * Start AI service on pod
+ */
+exports.startService = async (req, res) => {
+  try {
+    console.log('🎯 DEBUG: startService controller called');
+    console.log('🔍 DEBUG: User:', req.user.email, 'Role:', req.user.role);
+
+    if (!runpodService.isConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'RunPod not configured',
+      });
+    }
+
+    const result = await runpodService.startService();
+
+    // Log action
+    await auditService.createAuditLog({
+      userId: req.user._id,
+      userName: req.user.name,
+      userRole: req.user.role,
+      action: 'RUNPOD_SERVICE_START',
+      resourceType: 'RunPod',
+      details: { result },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'success',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error starting AI service:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to start AI service',
+    });
+  }
+};
+
+/**
+ * Stop AI service on pod
+ */
+exports.stopService = async (req, res) => {
+  try {
+    console.log('🎯 DEBUG: stopService controller called');
+    console.log('🔍 DEBUG: User:', req.user.email, 'Role:', req.user.role);
+
+    if (!runpodService.isConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'RunPod not configured',
+      });
+    }
+
+    const result = await runpodService.stopService();
+
+    // Log action
+    await auditService.createAuditLog({
+      userId: req.user._id,
+      userName: req.user.name,
+      userRole: req.user.role,
+      action: 'RUNPOD_SERVICE_STOP',
+      resourceType: 'RunPod',
+      details: { result },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'success',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error stopping AI service:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to stop AI service',
+    });
+  }
+};
+
+/**
+ * Get AI service status
+ */
+exports.getServiceStatus = async (req, res) => {
+  try {
+    console.log('🎯 DEBUG: getServiceStatus controller called');
+    console.log('🔍 DEBUG: User:', req.user.email, 'Role:', req.user.role);
+
+    if (!runpodService.isConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'RunPod not configured',
+      });
+    }
+
+    const result = await runpodService.getServiceStatus();
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error getting service status:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get service status',
+    });
+  }
+};

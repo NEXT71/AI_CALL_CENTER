@@ -189,6 +189,22 @@ export const runpodService = {
     const response = await api.get('/runpod/list');
     return response.data;
   },
+
+  // Service management
+  getServiceStatus: async () => {
+    const response = await api.get('/runpod/service/status');
+    return response.data;
+  },
+
+  startService: async () => {
+    const response = await api.post('/runpod/service/start');
+    return response.data;
+  },
+
+  stopService: async () => {
+    const response = await api.post('/runpod/service/stop');
+    return response.data;
+  },
 };
 
 const apiService = {

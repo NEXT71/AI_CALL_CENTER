@@ -1,44 +1,50 @@
 import { useState, useEffect } from 'react';
-import { Power, PowerOff, RefreshCw, Loader2, Server, DollarSign, Clock, Cpu, HardDrive, Activity } from 'lucide-react';
+import { Power, PowerOff, RefreshCw, Loader2, Server, DollarSign, Clock, Cpu, HardDrive, Activity, PlayCircle, StopCircle } from 'lucide-react';
 import apiService from '../services/apiService';
 
 const RunPodControl = () => {
   const [podStatus, setPodStatus] = useState(null);
+  const [serviceStatus, setServiceStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchPodStatus();
+    fetchStatuses();
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchPodStatus, 30000);
+    const interval = setInterval(fetchStatuses, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchPodStatus = async () => {
+  const fetchStatuses = async () => {
     try {
       setError(null);
-      const response = await apiService.getRunPodStatus();
-      if (response.success) {
-        setPodStatus(response.data);
+      const [podResponse, serviceResponse] = await Promise.all([
+        apiService.getRunPodStatus().catch(() => null),
+        apiService.getServiceStatus().catch(() => null)
+      ]);
+      if (podResponse?.success) {
+        setPodStatus(podResponse.data);
+      }
+      if (serviceResponse?.success) {
+        setServiceStatus(serviceResponse.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch pod status');
+      setError(err.response?.data?.message || 'Failed to fetch status');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStart = async () => {
-    if (!confirm('Start the GPU pod? This will begin incurring costs.')) return;
+  const handleStartPod = async () => {
+    if (!confirm('Start the GPU pod? This will begin incurring costs (~$0.27/hr).')) return;
     
     try {
       setActionLoading(true);
       const response = await apiService.startRunPod();
       if (response.success) {
         alert('✅ ' + response.message);
-        // Wait 2 seconds then refresh status
-        setTimeout(fetchPodStatus, 2000);
+        setTimeout(fetchStatuses, 2000);
       }
     } catch (err) {
       alert('❌ ' + (err.response?.data?.message || 'Failed to start pod'));
@@ -47,18 +53,52 @@ const RunPodControl = () => {
     }
   };
 
-  const handleStop = async () => {
-    if (!confirm('Stop the GPU pod? Active transcriptions may fail.')) return;
+  const handleStopPod = async () => {
+    if (!confirm('Stop the GPU pod? The AI service will stop and active transcriptions may fail.')) return;
     
     try {
       setActionLoading(true);
       const response = await apiService.stopRunPod();
       if (response.success) {
         alert('✅ ' + response.message);
-        setTimeout(fetchPodStatus, 2000);
+        setTimeout(fetchStatuses, 2000);
       }
     } catch (err) {
       alert('❌ ' + (err.response?.data?.message || 'Failed to stop pod'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleStartService = async () => {
+    if (!confirm('Start the AI service? Make sure the pod is running first.')) return;
+    
+    try {
+      setActionLoading(true);
+      const response = await apiService.startService();
+      if (response.success) {
+        alert('✅ ' + response.message);
+        setTimeout(fetchStatuses, 2000);
+      }
+    } catch (err) {
+      alert('❌ ' + (err.response?.data?.message || 'Failed to start service'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleStopService = async () => {
+    if (!confirm('Stop the AI service? Active transcriptions will fail.')) return;
+    
+    try {
+      setActionLoading(true);
+      const response = await apiService.stopService();
+      if (response.success) {
+        alert('✅ ' + response.message);
+        setTimeout(fetchStatuses, 2000);
+      }
+    } catch (err) {
+      alert('❌ ' + (err.response?.data?.message || 'Failed to stop service'));
     } finally {
       setActionLoading(false);
     }
@@ -129,7 +169,7 @@ const RunPodControl = () => {
             </div>
           </div>
           <button
-            onClick={fetchPodStatus}
+            onClick={fetchStatuses}
             disabled={loading}
             className="btn-enhanced flex items-center gap-2 text-slate-600 hover:text-slate-900"
           >
@@ -138,15 +178,15 @@ const RunPodControl = () => {
           </button>
         </div>
 
-        {/* Status Card */}
+        {/* Pod Status Card */}
         <div className="card-enhanced bg-white rounded-xl shadow-sm p-6 border border-slate-200">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Activity className="w-5 h-5 text-slate-600" />
-              <h2 className="text-lg font-semibold text-slate-900">{podStatus?.name || 'GPU Pod'}</h2>
+              <Server className="w-5 h-5 text-slate-600" />
+              <h2 className="text-lg font-semibold text-slate-900">GPU Pod Status</h2>
             </div>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(podStatus?.status)}`}>
-              {podStatus?.status || 'Unknown'}
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(podStatus?.desiredStatus)}`}>
+              {podStatus?.desiredStatus || 'Unknown'}
             </span>
           </div>
 
@@ -214,9 +254,9 @@ const RunPodControl = () => {
 
           {/* Control Buttons */}
           <div className="flex gap-3">
-            {podStatus?.status?.toLowerCase() === 'running' ? (
+            {podStatus?.desiredStatus?.toLowerCase() === 'running' ? (
               <button
-                onClick={handleStop}
+                onClick={handleStopPod}
                 disabled={actionLoading}
                 className="btn-enhanced flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
               >
@@ -231,7 +271,7 @@ const RunPodControl = () => {
               </button>
             ) : (
               <button
-                onClick={handleStart}
+                onClick={handleStartPod}
                 disabled={actionLoading}
                 className="btn-enhanced flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
               >
@@ -248,12 +288,103 @@ const RunPodControl = () => {
           </div>
         </div>
 
+        {/* AI Service Status Card */}
+        <div className="card-enhanced bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-slate-600" />
+              <h2 className="text-lg font-semibold text-slate-900">AI Service Status</h2>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              serviceStatus?.running ? 'text-green-600 bg-green-50' : 'text-slate-600 bg-slate-50'
+            }`}>
+              {serviceStatus?.running ? 'Running' : 'Stopped'}
+            </span>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div className="bg-slate-50 rounded-lg p-4">
+              <div className="text-sm text-slate-600">
+                {serviceStatus?.running ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span className="font-semibold">Service is running</span>
+                    </div>
+                    {serviceStatus?.pid && (
+                      <div className="text-xs">Process ID: {serviceStatus.pid}</div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-block w-2 h-2 bg-slate-400 rounded-full"></span>
+                      <span className="font-semibold">Service is stopped</span>
+                    </div>
+                    <div className="text-xs">Start the service to process transcriptions</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Service Control Buttons */}
+          <div className="flex gap-3">
+            {serviceStatus?.running ? (
+              <button
+                onClick={handleStopService}
+                disabled={actionLoading || podStatus?.desiredStatus?.toLowerCase() !== 'running'}
+                className="btn-enhanced flex-1 bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <StopCircle className="w-5 h-5" />
+                    Stop Service
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleStartService}
+                disabled={actionLoading || podStatus?.desiredStatus?.toLowerCase() !== 'running'}
+                className="btn-enhanced flex-1 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <PlayCircle className="w-5 h-5" />
+                    Start Service
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {podStatus?.desiredStatus?.toLowerCase() !== 'running' && (
+            <p className="text-xs text-amber-600 mt-2 text-center">
+              ⚠️ Pod must be running to control the service
+            </p>
+          )}
+        </div>
+
         {/* Info Card */}
         <div className="card-enhanced bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-900">
-            <span className="font-semibold">💡 Cost Optimization:</span> Stop the pod when not processing calls to save costs. 
-            Starting takes 1-2 minutes. You'll only be charged for running time.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-blue-900">
+              <span className="font-semibold">🎯 How it works:</span>
+            </p>
+            <ol className="text-xs text-blue-800 space-y-1 ml-4 list-decimal">
+              <li><strong>Start Pod:</strong> Powers on the GPU instance (~1-2 min)</li>
+              <li><strong>Start Service:</strong> Launches the AI transcription service via SSH</li>
+              <li><strong>Stop Service:</strong> Stops the transcription service (pod keeps running)</li>
+              <li><strong>Stop Pod:</strong> Powers off the GPU (stops billing)</li>
+            </ol>
+            <p className="text-xs text-blue-900 mt-2">
+              <span className="font-semibold">💡 Tip:</span> Keep the pod running if processing multiple calls. Only stop when idle for extended periods.
+            </p>
+          </div>
         </div>
       </div>
     </div>

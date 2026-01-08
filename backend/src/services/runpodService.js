@@ -1,4 +1,7 @@
 const axios = require('axios');
+const { Client } = require('ssh2');
+const fs = require('fs').promises;
+const path = require('path');
 const logger = require('../config/logger');
 
 // RunPod API configuration
@@ -38,6 +41,61 @@ const makeRunPodRequest = async (query, variables = {}) => {
     logger.error('RunPod API request failed:', error.response?.data || error.message);
     throw error;
   }
+};
+
+/**
+ * Execute SSH command on pod
+ */
+const executeSSHCommand = async (host, port, privateKeyPath, command) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const privateKey = await fs.readFile(privateKeyPath, 'utf8');
+      const conn = new Client();
+      
+      conn.on('ready', () => {
+        logger.info('SSH connection established');
+        conn.exec(command, (err, stream) => {
+          if (err) {
+            conn.end();
+            return reject(err);
+          }
+          
+          let stdout = '';
+          let stderr = '';
+          
+          stream.on('close', (code, signal) => {
+            conn.end();
+            if (code === 0) {
+              resolve({ stdout, stderr, code });
+            } else {
+              reject(new Error(`Command failed with code ${code}: ${stderr}`));
+            }
+          });
+          
+          stream.on('data', (data) => {
+            stdout += data.toString();
+          });
+          
+          stream.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+        });
+      });
+      
+      conn.on('error', (err) => {
+        reject(err);
+      });
+      
+      conn.connect({
+        host,
+        port: port || 22,
+        username: 'root',
+        privateKey,
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 };
 
 /**
@@ -279,5 +337,133 @@ exports.ensurePodRunning = async () => {
   } catch (error) {
     logger.error('Failed to ensure pod is running:', error);
     throw new Error(`Failed to start GPU pod: ${error.message}`);
+  }
+};
+
+/**
+ * Start AI service on the pod via SSH
+ */
+exports.startService = async (podId = RUNPOD_POD_ID) => {
+  try {
+    const pod = await exports.getPodStatus(podId);
+    
+    if (!pod.runtime || !pod.runtime.ports) {
+      throw new Error('Pod is not running or has no ports configured');
+    }
+    
+    // Find SSH port (usually 22)
+    const sshPort = pod.runtime.ports.find(p => p.privatePort === 22);
+    if (!sshPort) {
+      throw new Error('SSH port not found on pod');
+    }
+    
+    const host = sshPort.ip;
+    const port = sshPort.publicPort;
+    const privateKeyPath = path.join(__dirname, '../../ai-service/aiservice');
+    
+    logger.info('Starting AI service on pod:', { host, port });
+    
+    // Check if service is already running
+    const checkCmd = 'pgrep -f "python.*main.py" || echo "not_running"';
+    const checkResult = await executeSSHCommand(host, port, privateKeyPath, checkCmd);
+    
+    if (!checkResult.stdout.includes('not_running')) {
+      logger.info('AI service already running');
+      return { status: 'already_running', message: 'Service is already running' };
+    }
+    
+    // Start the service in background
+    const startCmd = 'cd /AI_CALL_CENTER/ai-service && nohup python main.py > /tmp/ai-service.log 2>&1 & echo $!';
+    const result = await executeSSHCommand(host, port, privateKeyPath, startCmd);
+    
+    const pid = result.stdout.trim();
+    logger.info('AI service started with PID:', pid);
+    
+    // Wait a moment and verify it's running
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const verifyResult = await executeSSHCommand(host, port, privateKeyPath, `ps -p ${pid}`);
+    
+    if (verifyResult.stdout.includes(pid)) {
+      return { status: 'started', pid, message: 'Service started successfully' };
+    } else {
+      throw new Error('Service started but process not found');
+    }
+  } catch (error) {
+    logger.error('Failed to start service:', error);
+    throw error;
+  }
+};
+
+/**
+ * Stop AI service on the pod via SSH
+ */
+exports.stopService = async (podId = RUNPOD_POD_ID) => {
+  try {
+    const pod = await exports.getPodStatus(podId);
+    
+    if (!pod.runtime || !pod.runtime.ports) {
+      throw new Error('Pod is not running or has no ports configured');
+    }
+    
+    const sshPort = pod.runtime.ports.find(p => p.privatePort === 22);
+    if (!sshPort) {
+      throw new Error('SSH port not found on pod');
+    }
+    
+    const host = sshPort.ip;
+    const port = sshPort.publicPort;
+    const privateKeyPath = path.join(__dirname, '../../ai-service/aiservice');
+    
+    logger.info('Stopping AI service on pod:', { host, port });
+    
+    // Kill the Python process
+    const stopCmd = 'pkill -f "python.*main.py" && echo "stopped" || echo "not_running"';
+    const result = await executeSSHCommand(host, port, privateKeyPath, stopCmd);
+    
+    if (result.stdout.includes('stopped')) {
+      logger.info('AI service stopped successfully');
+      return { status: 'stopped', message: 'Service stopped successfully' };
+    } else {
+      return { status: 'not_running', message: 'Service was not running' };
+    }
+  } catch (error) {
+    logger.error('Failed to stop service:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get AI service status on the pod
+ */
+exports.getServiceStatus = async (podId = RUNPOD_POD_ID) => {
+  try {
+    const pod = await exports.getPodStatus(podId);
+    
+    if (!pod.runtime || !pod.runtime.ports) {
+      return { status: 'pod_not_running', running: false };
+    }
+    
+    const sshPort = pod.runtime.ports.find(p => p.privatePort === 22);
+    if (!sshPort) {
+      throw new Error('SSH port not found on pod');
+    }
+    
+    const host = sshPort.ip;
+    const port = sshPort.publicPort;
+    const privateKeyPath = path.join(__dirname, '../../ai-service/aiservice');
+    
+    // Check if service is running
+    const checkCmd = 'pgrep -f "python.*main.py" || echo "not_running"';
+    const result = await executeSSHCommand(host, port, privateKeyPath, checkCmd);
+    
+    if (result.stdout.includes('not_running')) {
+      return { status: 'stopped', running: false };
+    } else {
+      const pid = result.stdout.trim();
+      return { status: 'running', running: true, pid };
+    }
+  } catch (error) {
+    logger.error('Failed to get service status:', error);
+    return { status: 'error', running: false, error: error.message };
   }
 };
