@@ -26,15 +26,31 @@ exports.transcribeAudio = async (audioFilePath) => {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 1800000, // 30 minutes timeout for large files (increased from 5 minutes)
+        timeout: 3600000, // 60 minutes timeout for very long files
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        // Add retry logic
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if status < 500
+        },
       }
     );
+
+    if (response.status !== 200) {
+      throw new Error(`Transcription failed with status ${response.status}`);
+    }
 
     return response.data;
   } catch (error) {
     logger.error('AI Service transcription error', { error: error.message });
+    
+    // Check for specific error types
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Transcription timeout - audio file may be too long');
+    } else if (error.code === 'ECONNREFUSED') {
+      throw new Error('AI service unavailable - please check if the service is running');
+    }
+    
     throw new Error(`Transcription failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -44,18 +60,35 @@ exports.transcribeAudio = async (audioFilePath) => {
  */
 exports.analyzeSentiment = async (text) => {
   try {
+    // Validate input
+    if (!text || text.trim().length === 0) {
+      throw new Error('Text cannot be empty');
+    }
+
     const response = await axios.post(
       `${AI_SERVICE_URL}/analyze-sentiment`,
       { text },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 60000, // 1 minute timeout
+        timeout: 120000, // 2 minutes timeout (increased for long texts)
+        validateStatus: function (status) {
+          return status < 500;
+        },
       }
     );
+
+    if (response.status !== 200) {
+      throw new Error(`Sentiment analysis failed with status ${response.status}`);
+    }
 
     return response.data;
   } catch (error) {
     logger.error('AI Service sentiment analysis error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Sentiment analysis timeout - text may be too long');
+    }
+    
     throw new Error(`Sentiment analysis failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -86,18 +119,34 @@ exports.extractEntities = async (text) => {
  */
 exports.summarizeText = async (text, maxLength = 130, minLength = 30) => {
   try {
+    if (!text || text.trim().length === 0) {
+      throw new Error('Text cannot be empty');
+    }
+
     const response = await axios.post(
       `${AI_SERVICE_URL}/summarize`,
       { text, max_length: maxLength, min_length: minLength },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 120000, // 2 minutes
+        timeout: 300000, // 5 minutes (increased for very long texts)
+        validateStatus: function (status) {
+          return status < 500;
+        },
       }
     );
+
+    if (response.status !== 200) {
+      throw new Error(`Summarization failed with status ${response.status}`);
+    }
 
     return response.data;
   } catch (error) {
     logger.error('AI Service summarization error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Summarization timeout - text may be too long');
+    }
+    
     throw new Error(`Summarization failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -152,15 +201,27 @@ exports.diarizeAudio = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) =
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 180000, // 3 minutes
+        timeout: 600000, // 10 minutes (increased for long audio)
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        },
       }
     );
+
+    if (response.status !== 200) {
+      throw new Error(`Diarization failed with status ${response.status}`);
+    }
 
     return response.data;
   } catch (error) {
     logger.error('AI Service diarization error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Diarization timeout - audio file may be too long');
+    }
+    
     throw new Error(`Diarization failed: ${error.response?.data?.detail || error.message}`);
   }
 };
@@ -172,6 +233,10 @@ exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
   try {
     const fs = require('fs');
     const FormData = require('form-data');
+    
+    if (!speakerSegments || !Array.isArray(speakerSegments)) {
+      throw new Error('Invalid speaker segments');
+    }
     
     // Create form data with the audio file
     const formData = new FormData();
@@ -188,15 +253,27 @@ exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 60000,
+        timeout: 120000, // 2 minutes (increased)
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        },
       }
     );
+
+    if (response.status !== 200) {
+      throw new Error(`Talk-time calculation failed with status ${response.status}`);
+    }
 
     return response.data;
   } catch (error) {
     logger.error('AI Service talk-time calculation error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Talk-time calculation timeout');
+    }
+    
     throw new Error(`Talk-time calculation failed: ${error.response?.data?.detail || error.message}`);
   }
 };

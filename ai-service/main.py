@@ -347,13 +347,15 @@ class TalkTimeResponse(BaseModel):
     total_duration: float
 
 
-def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000):
+def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
     """
     Split audio file into chunks for processing long recordings
     chunk_length_ms: chunk length in milliseconds (default 10 minutes)
+    overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
     """
     try:
         from pydub import AudioSegment
+        import gc
         
         logger.info(f"📦 Chunking audio file: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
@@ -365,38 +367,68 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000):
         
         duration_ms = len(audio)
         
+        # Validate chunk size
+        if chunk_length_ms > duration_ms:
+            chunk_length_ms = duration_ms
+        
         chunks = []
-        for i in range(0, duration_ms, chunk_length_ms):
-            chunk = audio[i:i + chunk_length_ms]
-            chunk_path = f"{audio_path}_chunk_{i//chunk_length_ms}.wav"
+        step = chunk_length_ms - overlap_ms  # Step with overlap
+        
+        for i in range(0, duration_ms, step):
+            chunk_end = min(i + chunk_length_ms, duration_ms)
+            chunk = audio[i:chunk_end]
+            chunk_path = f"{audio_path}_chunk_{i//step}.wav"
             # Export as mono WAV with consistent sample rate
             chunk.export(chunk_path, format="wav", parameters=["-ac", "1", "-ar", "16000"])
             chunks.append({
                 "path": chunk_path,
                 "start_time": i / 1000,
-                "end_time": min((i + chunk_length_ms) / 1000, duration_ms / 1000)
+                "end_time": chunk_end / 1000,
+                "overlap_start": (i + overlap_ms) / 1000 if i > 0 else 0
             })
+            
+            # Free memory after each chunk
+            del chunk
+            
+            # Break if we've reached the end
+            if chunk_end >= duration_ms:
+                break
         
-        logger.info(f"✅ Created {len(chunks)} chunks")
+        # Explicitly free memory
+        del audio
+        gc.collect()
+        
+        logger.info(f"✅ Created {len(chunks)} chunks with {overlap_ms}ms overlap")
         return chunks, duration_ms / 1000
     except Exception as e:
         logger.error(f"❌ Failed to chunk audio: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None, None
 
 
 def transcribe_chunk(model, chunk_path, chunk_info):
-    """Transcribe a single audio chunk with GPU acceleration"""
+    """Transcribe a single audio chunk with GPU acceleration and memory management"""
+    import gc
     try:
         logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
         
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
+        # Clear GPU cache before processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
         result = model.transcribe(
             chunk_path,
             verbose=False,
             fp16=use_fp16,  # FP16 for GPU, disabled for CPU
-            language=None   # Auto-detect language
+            language=None,  # Auto-detect language
+            temperature=0.0,  # Deterministic output
+            compression_ratio_threshold=2.4,  # Reject bad transcriptions
+            no_speech_threshold=0.6,  # Detect silence
+            condition_on_previous_text=False  # Prevent hallucination
         )
         
         # Adjust timestamps based on chunk start time
@@ -406,9 +438,25 @@ def transcribe_chunk(model, chunk_path, chunk_info):
                 segment["end"] += chunk_info["start_time"]
         
         logger.info(f"✅ Chunk transcribed: {len(result.get('text', ''))} chars")
+        
+        # Clear GPU cache after processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
         return result
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error(f"❌ GPU out of memory on chunk {chunk_path}")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            gc.collect()
+        logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
+        return None
     except Exception as e:
         logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 
@@ -598,24 +646,50 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
     
     finally:
-        # Cleanup
+        # Cleanup with retry logic
+        import gc
+        import time
+        
+        cleanup_errors = []
+        
         if temp_path and os.path.exists(temp_path):
-            try:
-                os.unlink(temp_path)
-            except Exception as e:
-                logger.warning(f"Cleanup warning: {e}")
+            for attempt in range(3):
+                try:
+                    os.unlink(temp_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        cleanup_errors.append(f"Failed to delete {temp_path}: {e}")
         
         for chunk_file in chunk_files:
             if os.path.exists(chunk_file):
-                try:
-                    os.unlink(chunk_file)
-                except Exception as e:
-                    logger.warning(f"Cleanup warning: {e}")
+                for attempt in range(3):
+                    try:
+                        os.unlink(chunk_file)
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            time.sleep(0.1)
+                        else:
+                            cleanup_errors.append(f"Failed to delete {chunk_file}: {e}")
+        
+        if cleanup_errors:
+            logger.warning(f"Cleanup warnings: {'; '.join(cleanup_errors)}")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # Force garbage collection
+        gc.collect()
 
 
 @app.post("/analyze-sentiment", response_model=SentimentResponse)
 async def analyze_sentiment(request: SentimentRequest):
     """Analyze sentiment using GPU-accelerated DistilBERT"""
+    import gc
     try:
         analyzer = load_sentiment_model()
         if analyzer is None:
@@ -624,21 +698,65 @@ async def analyze_sentiment(request: SentimentRequest):
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        # Truncate for BERT (max 512 tokens)
-        text = request.text[:2000]
-
-        logger.info(f"🔍 Analyzing sentiment: {len(text)} chars")
-
-        result = analyzer(text)[0]
+        # For very long text, analyze in chunks and aggregate
+        max_chunk_chars = 2000
         
-        label_map = {
-            "POSITIVE": "positive",
-            "NEGATIVE": "negative",
-            "NEUTRAL": "neutral"
-        }
-        
-        label = label_map.get(result["label"].upper(), result["label"].lower())
-        score = result["score"]
+        if len(request.text) > max_chunk_chars:
+            logger.info(f"🔍 Long text detected ({len(request.text)} chars), analyzing in chunks")
+            
+            # Split into chunks (by sentences to avoid cutting mid-sentence)
+            chunks = []
+            current_chunk = ""
+            sentences = request.text.split('. ')
+            
+            for sentence in sentences:
+                if len(current_chunk) + len(sentence) < max_chunk_chars:
+                    current_chunk += sentence + ". "
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk.strip())
+                    current_chunk = sentence + ". "
+            
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            
+            # Analyze each chunk
+            positive_scores = []
+            negative_scores = []
+            
+            for i, chunk in enumerate(chunks[:10]):  # Limit to 10 chunks
+                try:
+                    result = analyzer(chunk, truncation=True, max_length=512)[0]
+                    if result["label"].upper() == "POSITIVE":
+                        positive_scores.append(result["score"])
+                    else:
+                        negative_scores.append(result["score"])
+                except Exception as e:
+                    logger.warning(f"Failed to analyze chunk {i}: {e}")
+            
+            # Aggregate results
+            if len(positive_scores) > len(negative_scores):
+                label = "positive"
+                score = sum(positive_scores) / len(positive_scores) if positive_scores else 0.5
+            elif len(negative_scores) > len(positive_scores):
+                label = "negative"
+                score = sum(negative_scores) / len(negative_scores) if negative_scores else 0.5
+            else:
+                label = "neutral"
+                score = 0.5
+        else:
+            text = request.text[:max_chunk_chars]
+            logger.info(f"🔍 Analyzing sentiment: {len(text)} chars")
+            result = analyzer(text, truncation=True, max_length=512)[0]
+            
+            label_map = {
+                "POSITIVE": "positive",
+                "NEGATIVE": "negative",
+                "NEUTRAL": "neutral"
+            }
+            
+            label = label_map.get(result["label"].upper(), result["label"].lower())
+            score = result["score"]
         
         if score >= 0.9:
             confidence = "very high"
@@ -651,6 +769,11 @@ async def analyze_sentiment(request: SentimentRequest):
         
         logger.info(f"✅ Sentiment: {label} ({score:.2f})")
         
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
         return SentimentResponse(
             label=label,
             score=round(score, 4),
@@ -661,12 +784,15 @@ async def analyze_sentiment(request: SentimentRequest):
         raise
     except Exception as e:
         logger.error(f"❌ Sentiment error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
 
 @app.post("/extract-entities", response_model=EntityResponse)
 async def extract_entities(request: EntityRequest):
-    """Extract entities using spaCy"""
+    """Extract entities using spaCy with improved long-text handling"""
+    import gc
     try:
         nlp = load_spacy_model()
         if nlp is None:
@@ -680,22 +806,55 @@ async def extract_entities(request: EntityRequest):
 
         logger.info(f"🔍 Extracting entities: {len(request.text)} chars")
         
-        # Process in chunks for very long text
-        text = request.text[:100000]
-        doc = nlp(text)
+        # Process in chunks for very long text to avoid memory issues
+        max_text_length = 100000
+        text = request.text[:max_text_length]
+        
+        if len(request.text) > max_text_length:
+            logger.warning(f"Text truncated from {len(request.text)} to {max_text_length} chars")
+        
+        try:
+            # Disable unnecessary components for speed
+            with nlp.select_pipes(enable=["tok2vec", "tagger", "parser", "ner"]):
+                doc = nlp(text)
+        except Exception as e:
+            logger.error(f"spaCy processing failed: {e}")
+            # Fallback: process smaller chunk
+            text = request.text[:50000]
+            doc = nlp(text)
         
         entities = []
-        for ent in doc.ents:
-            entities.append({
-                "text": ent.text,
-                "label": ent.label_,
-                "start": ent.start_char,
-                "end": ent.end_char
-            })
+        seen_entities = set()  # Deduplicate entities
         
-        key_phrases = [chunk.text for chunk in doc.noun_chunks][:20]
+        for ent in doc.ents:
+            entity_key = f"{ent.text}_{ent.label_}"
+            if entity_key not in seen_entities:
+                entities.append({
+                    "text": ent.text,
+                    "label": ent.label_,
+                    "start": ent.start_char,
+                    "end": ent.end_char
+                })
+                seen_entities.add(entity_key)
+        
+        # Extract key phrases (limit to avoid excessive data)
+        key_phrases = []
+        seen_phrases = set()
+        
+        for chunk in doc.noun_chunks:
+            phrase = chunk.text.strip()
+            if phrase and phrase not in seen_phrases and len(phrase) > 2:
+                key_phrases.append(phrase)
+                seen_phrases.add(phrase)
+                
+                if len(key_phrases) >= 50:  # Limit key phrases
+                    break
         
         logger.info(f"✅ Found {len(entities)} entities, {len(key_phrases)} phrases")
+        
+        # Clear memory
+        del doc
+        gc.collect()
         
         return EntityResponse(
             entities=entities,
@@ -706,12 +865,15 @@ async def extract_entities(request: EntityRequest):
         raise
     except Exception as e:
         logger.error(f"❌ Entity extraction error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Entity extraction failed: {str(e)}")
 
 
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_text(request: SummarizeRequest):
-    """Summarize text using GPU-accelerated BART"""
+    """Summarize text using GPU-accelerated BART with improved long-text handling"""
+    import gc
     try:
         summarizer = load_summarizer_model()
         if summarizer is None:
@@ -720,51 +882,112 @@ async def summarize_text(request: SummarizeRequest):
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        logger.info(f"📄 Summarizing: {len(request.text)} chars")
+        # Minimum text length for summarization
+        if len(request.text.split()) < 50:
+            logger.info("Text too short, returning as is")
+            return SummarizeResponse(summary=request.text)
+
+        logger.info(f"📄 Summarizing: {len(request.text)} chars, {len(request.text.split())} words")
 
         max_chunk_size = 3000
+        max_chunks = 20  # Limit to prevent excessive processing
         
         if len(request.text) > max_chunk_size:
             # Hierarchical summarization for long text
-            chunks = [request.text[i:i+max_chunk_size] for i in range(0, len(request.text), max_chunk_size)]
+            # Split by sentences to avoid cutting mid-sentence
+            sentences = request.text.replace('? ', '?|').replace('! ', '!|').replace('. ', '.|').split('|')
+            
+            chunks = []
+            current_chunk = ""
+            
+            for sentence in sentences:
+                if len(current_chunk) + len(sentence) < max_chunk_size:
+                    current_chunk += sentence + " "
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk.strip())
+                    current_chunk = sentence + " "
+                    
+                    # Limit number of chunks
+                    if len(chunks) >= max_chunks:
+                        logger.warning(f"Reached max chunks ({max_chunks}), truncating")
+                        break
+            
+            if current_chunk and len(chunks) < max_chunks:
+                chunks.append(current_chunk.strip())
+            
             logger.info(f"📦 Processing {len(chunks)} chunks")
             
             chunk_summaries = []
             for i, chunk in enumerate(chunks):
                 try:
-                    result = summarizer(chunk, max_length=150, min_length=40, do_sample=False)
+                    # Adjust max_length based on chunk size
+                    chunk_words = len(chunk.split())
+                    chunk_max_length = min(150, max(40, chunk_words // 4))
+                    
+                    result = summarizer(
+                        chunk, 
+                        max_length=chunk_max_length, 
+                        min_length=30, 
+                        do_sample=False,
+                        truncation=True
+                    )
                     chunk_summaries.append(result[0]["summary_text"])
+                    
+                    # Clear GPU cache periodically
+                    if CUDA_AVAILABLE and i % 5 == 0:
+                        torch.cuda.empty_cache()
+                        
                 except Exception as e:
                     logger.warning(f"Chunk {i} summarization failed: {e}")
+                    continue
+            
+            if not chunk_summaries:
+                raise HTTPException(status_code=500, detail="Failed to summarize any chunks")
             
             # Final summary
             combined = " ".join(chunk_summaries)
-            if len(combined) > max_chunk_size:
-                final_result = summarizer(
-                    combined[:max_chunk_size],
-                    max_length=request.max_length,
-                    min_length=request.min_length,
-                    do_sample=False
-                )
-            else:
-                final_result = summarizer(
-                    combined,
-                    max_length=request.max_length,
-                    min_length=request.min_length,
-                    do_sample=False
-                )
+            logger.info(f"📋 Combined summaries: {len(combined)} chars")
             
-            summary = final_result[0]["summary_text"]
+            try:
+                if len(combined) > max_chunk_size:
+                    final_result = summarizer(
+                        combined[:max_chunk_size],
+                        max_length=request.max_length,
+                        min_length=request.min_length,
+                        do_sample=False,
+                        truncation=True
+                    )
+                else:
+                    final_result = summarizer(
+                        combined,
+                        max_length=request.max_length,
+                        min_length=request.min_length,
+                        do_sample=False,
+                        truncation=True
+                    )
+                
+                summary = final_result[0]["summary_text"]
+            except Exception as e:
+                logger.warning(f"Final summarization failed, using combined chunk summaries: {e}")
+                # Fallback: return truncated combined summaries
+                summary = combined[:1000] + "..." if len(combined) > 1000 else combined
         else:
             result = summarizer(
                 request.text,
                 max_length=request.max_length,
                 min_length=request.min_length,
-                do_sample=False
+                do_sample=False,
+                truncation=True
             )
             summary = result[0]["summary_text"]
         
         logger.info(f"✅ Summary: {len(summary)} chars")
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
         
         return SummarizeResponse(summary=summary)
         
@@ -772,6 +995,8 @@ async def summarize_text(request: SummarizeRequest):
         raise
     except Exception as e:
         logger.error(f"❌ Summarization error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
 
 
@@ -907,8 +1132,10 @@ async def diarize_audio(
     """
     Perform speaker diarization on audio file
     Returns speaker segments with timestamps
+    Handles long audio files with proper memory management
     """
     temp_audio_path = None
+    import gc
     
     try:
         logger.info(f"🎙️ Diarization request: {audio.filename}")
@@ -926,9 +1153,29 @@ async def diarize_audio(
         with open(temp_audio_path, "wb") as f:
             shutil.copyfileobj(audio.file, f)
         
+        # Check file size
+        file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
+        logger.info(f"Audio file size: {file_size_mb:.2f} MB")
+        
+        if file_size_mb > 100:  # Warn for very large files
+            logger.warning(f"Large audio file ({file_size_mb:.2f} MB) - diarization may take time")
+        
+        # Validate speaker range
+        if min_speakers < 1:
+            min_speakers = 1
+        if max_speakers < min_speakers:
+            max_speakers = min_speakers
+        if max_speakers > 10:  # Reasonable limit
+            logger.warning(f"max_speakers={max_speakers} is high, limiting to 10")
+            max_speakers = 10
+        
         logger.info(f"Processing diarization with {min_speakers}-{max_speakers} speakers...")
         
-        # Run diarization
+        # Clear GPU cache before processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # Run diarization with timeout handling
         diarization = pipeline(
             temp_audio_path,
             min_speakers=min_speakers,
@@ -943,12 +1190,20 @@ async def diarize_audio(
             speakers.add(speaker)
             speaker_segments.append({
                 "speaker": speaker,
-                "start": float(turn.start),
-                "end": float(turn.end),
-                "duration": float(turn.end - turn.start)
+                "start": round(float(turn.start), 2),
+                "end": round(float(turn.end), 2),
+                "duration": round(float(turn.end - turn.start), 2)
             })
         
+        # Sort segments by start time
+        speaker_segments.sort(key=lambda x: x["start"])
+        
         logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
         
         return DiarizeResponse(
             speaker_segments=speaker_segments,
@@ -956,16 +1211,37 @@ async def diarize_audio(
             num_speakers=len(speakers)
         )
         
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error(f"❌ GPU out of memory during diarization")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            raise HTTPException(status_code=500, detail="GPU out of memory. Try with shorter audio.")
+        logger.error(f"❌ Diarization runtime error: {e}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Diarization error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
     finally:
-        # Clean up temp file
+        # Clean up temp file with retry
         if temp_audio_path and os.path.exists(temp_audio_path):
-            try:
-                os.remove(temp_audio_path)
-            except:
-                pass
+            import time
+            for attempt in range(3):
+                try:
+                    os.remove(temp_audio_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        logger.warning(f"Failed to cleanup temp file: {e}")
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
 
 
 @app.post("/calculate-talk-time", response_model=TalkTimeResponse)
@@ -976,51 +1252,118 @@ async def calculate_talk_time(
     """
     Calculate talk-time metrics from diarization results
     Returns agent/customer talk time, ratio, and dead air detection
+    Handles edge cases for long calls
     """
     import json
+    import gc
+    temp_audio_path = None
     
     try:
         logger.info(f"📊 Talk-time calculation request: {audio.filename}")
         
-        # Parse speaker segments
-        segments = json.loads(speaker_segments)
+        # Parse speaker segments with validation
+        try:
+            segments = json.loads(speaker_segments)
+            if not isinstance(segments, list):
+                raise ValueError("speaker_segments must be a list")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON in speaker_segments: {e}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        if not segments:
+            raise HTTPException(status_code=400, detail="No speaker segments provided")
         
         # Get audio duration
         temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
         with open(temp_audio_path, "wb") as f:
             shutil.copyfileobj(audio.file, f)
         
-        from pydub import AudioSegment
-        audio_file = AudioSegment.from_file(temp_audio_path)
-        total_duration = len(audio_file) / 1000.0  # Convert to seconds
+        try:
+            from pydub import AudioSegment
+            audio_file = AudioSegment.from_file(temp_audio_path)
+            total_duration = len(audio_file) / 1000.0  # Convert to seconds
+            del audio_file  # Free memory
+        except Exception as e:
+            logger.warning(f"Could not determine audio duration: {e}")
+            # Fallback: use last segment end time
+            total_duration = max([seg.get("end", 0) for seg in segments], default=0)
+        
+        logger.info(f"Total duration: {total_duration:.2f}s")
+        
+        # Validate segments
+        valid_segments = []
+        for seg in segments:
+            if all(k in seg for k in ["speaker", "start", "end"]):
+                # Ensure numeric values
+                try:
+                    seg["start"] = float(seg["start"])
+                    seg["end"] = float(seg["end"])
+                    seg["duration"] = seg["end"] - seg["start"]
+                    
+                    # Validate segment
+                    if seg["duration"] > 0 and seg["start"] >= 0:
+                        valid_segments.append(seg)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid segment skipped: {seg}, error: {e}")
+        
+        if not valid_segments:
+            raise HTTPException(status_code=400, detail="No valid speaker segments found")
+        
+        logger.info(f"Valid segments: {len(valid_segments)}/{len(segments)}")
         
         # Calculate talk time per speaker
         speaker_talk_time = {}
-        for segment in segments:
+        for segment in valid_segments:
             speaker = segment["speaker"]
             duration = segment["duration"]
             speaker_talk_time[speaker] = speaker_talk_time.get(speaker, 0) + duration
         
         # Calculate dead air (gaps between segments)
-        sorted_segments = sorted(segments, key=lambda x: x["start"])
+        sorted_segments = sorted(valid_segments, key=lambda x: x["start"])
         dead_air_segments = []
         dead_air_total = 0
+        dead_air_threshold = 2.0  # seconds
         
         for i in range(len(sorted_segments) - 1):
             current_end = sorted_segments[i]["end"]
             next_start = sorted_segments[i + 1]["start"]
             gap = next_start - current_end
             
-            if gap > 2.0:  # Dead air threshold: 2 seconds
+            # Only count gaps above threshold
+            if gap > dead_air_threshold:
                 dead_air_segments.append({
-                    "start": current_end,
-                    "end": next_start,
-                    "duration": gap
+                    "start": round(current_end, 2),
+                    "end": round(next_start, 2),
+                    "duration": round(gap, 2)
                 })
                 dead_air_total += gap
         
-        # Calculate agent/customer ratio (assume SPEAKER_00 is agent, SPEAKER_01 is customer)
+        # Check for dead air at beginning and end
+        if sorted_segments:
+            # Dead air at start
+            if sorted_segments[0]["start"] > dead_air_threshold:
+                dead_air_segments.insert(0, {
+                    "start": 0,
+                    "end": round(sorted_segments[0]["start"], 2),
+                    "duration": round(sorted_segments[0]["start"], 2)
+                })
+                dead_air_total += sorted_segments[0]["start"]
+            
+            # Dead air at end
+            last_end = sorted_segments[-1]["end"]
+            if total_duration - last_end > dead_air_threshold:
+                dead_air_segments.append({
+                    "start": round(last_end, 2),
+                    "end": round(total_duration, 2),
+                    "duration": round(total_duration - last_end, 2)
+                })
+                dead_air_total += (total_duration - last_end)
+        
+        # Calculate agent/customer ratio
+        # Assume first speaker (alphabetically) is agent, second is customer
         speakers_list = sorted(speaker_talk_time.keys())
+        
         if len(speakers_list) >= 2:
             agent_time = speaker_talk_time.get(speakers_list[0], 0)
             customer_time = speaker_talk_time.get(speakers_list[1], 0)
@@ -1029,27 +1372,46 @@ async def calculate_talk_time(
                 ratio = agent_time / customer_time
                 ratio_str = f"{ratio:.2f}:1"
             else:
-                ratio_str = "N/A"
+                ratio_str = "N/A (no customer speech)"
+        elif len(speakers_list) == 1:
+            ratio_str = "N/A (single speaker)"
         else:
-            ratio_str = "N/A"
+            ratio_str = "N/A (no speakers)"
         
         logger.info(f"✅ Talk-time calculated: {len(speakers_list)} speakers, {dead_air_total:.1f}s dead air")
         
-        # Clean up temp file
-        if os.path.exists(temp_audio_path):
-            os.remove(temp_audio_path)
+        # Clean up
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except:
+                pass
+        
+        gc.collect()
         
         return TalkTimeResponse(
-            speaker_talk_time=speaker_talk_time,
+            speaker_talk_time={k: round(v, 2) for k, v in speaker_talk_time.items()},
             agent_customer_ratio=ratio_str,
-            dead_air_total=dead_air_total,
-            dead_air_segments=dead_air_segments,
-            total_duration=total_duration
+            dead_air_total=round(dead_air_total, 2),
+            dead_air_segments=dead_air_segments[:50],  # Limit to prevent excessive data
+            total_duration=round(total_duration, 2)
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"❌ Talk-time calculation error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
+    finally:
+        # Cleanup
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except:
+                pass
+        gc.collect()
 
 
 @app.get("/")

@@ -5,6 +5,42 @@ const aiService = require('../services/aiService');
 const scoringService = require('../services/scoringService');
 const fs = require('fs');
 
+/**
+ * Retry wrapper for AI service calls
+ * @param {Function} fn - The function to retry
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {number} delay - Delay between retries in ms
+ * @returns {Promise} - Result of the function
+ */
+async function retryWithBackoff(fn, maxRetries = 2, delay = 5000) {
+  let lastError;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      // Don't retry on certain errors
+      if (error.message.includes('unavailable') || 
+          error.message.includes('not found') ||
+          error.message.includes('Invalid')) {
+        throw error;
+      }
+      
+      if (attempt < maxRetries) {
+        const waitTime = delay * Math.pow(2, attempt);
+        logger.warn(`Retry attempt ${attempt + 1}/${maxRetries} after ${waitTime}ms`, {
+          error: error.message,
+        });
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 // Create processing queue
 const callQueue = new Queue('call-processing', {
   redis: {
@@ -23,14 +59,15 @@ const callQueue = new Queue('call-processing', {
   settings: {
     maxStalledCount: 3,
     stalledInterval: 30000,
-    lockDuration: 300000, // 5 minutes
+    lockDuration: 3600000, // 60 minutes for long audio processing
   },
   defaultJobOptions: {
-    attempts: 3,
+    attempts: 2, // Reduced to 2 attempts (initial + 1 retry)
     backoff: {
       type: 'exponential',
-      delay: 5000,
+      delay: 10000, // 10 seconds initial delay
     },
+    timeout: 3600000, // 60 minutes timeout for entire job
     removeOnComplete: 100,
     removeOnFail: false,
   },
@@ -123,28 +160,69 @@ async function processCall(job) {
     // Report progress
     await job.progress(10);
 
-    // Step 1: Transcription
-    const transcription = await aiService.transcribeAudio(audioPath);
+    // Step 1: Transcription (with retry)
+    const transcription = await retryWithBackoff(
+      () => aiService.transcribeAudio(audioPath),
+      2,  // 2 retries
+      10000  // 10 second delay
+    );
+    
+    if (!transcription || !transcription.text) {
+      throw new Error('Transcription returned empty result');
+    }
+    
+    logger.info('Transcription completed', {
+      callId,
+      textLength: transcription.text.length,
+      wordCount: transcription.text.split(/\s+/).length,
+    });
+    
     await job.progress(25);
 
     // Step 2: Speaker diarization
     let diarizationData = {};
     try {
       diarizationData = await aiService.diarizeAudio(audioPath);
-      if (diarizationData.speakers && diarizationData.segments) {
-        const talkTimeData = await aiService.calculateTalkTime(diarizationData.segments);
-        diarizationData = { ...diarizationData, ...talkTimeData };
+      if (diarizationData.speakers && diarizationData.speaker_segments) {
+        // Calculate talk-time metrics
+        try {
+          const talkTimeData = await aiService.calculateTalkTime(audioPath, diarizationData.speaker_segments);
+          diarizationData = { ...diarizationData, ...talkTimeData };
+        } catch (talkTimeError) {
+          logger.warn('Talk-time calculation failed, continuing without it', {
+            callId,
+            error: talkTimeError.message,
+          });
+        }
       }
     } catch (error) {
       logger.warn('Diarization failed, continuing without it', {
         callId,
         error: error.message,
       });
+      // Set default values for graceful degradation
+      diarizationData = {
+        speakers: [],
+        speaker_segments: [],
+        agentTalkTime: 0,
+        customerTalkTime: 0,
+        talkTimeRatio: 'N/A',
+        deadAirTotal: 0,
+        deadAirSegments: [],
+      };
     }
     await job.progress(40);
 
     // Step 3: Sentiment analysis
-    const sentiment = await aiService.analyzeSentiment(transcription.text);
+    let sentiment = { sentiment: 'neutral', score: 0.5 };
+    try {
+      sentiment = await aiService.analyzeSentiment(transcription.text);
+    } catch (error) {
+      logger.warn('Sentiment analysis failed, using default', {
+        callId,
+        error: error.message,
+      });
+    }
     await job.progress(55);
 
     // Step 4: Entity extraction
@@ -153,18 +231,26 @@ async function processCall(job) {
       const entityData = await aiService.extractEntities(transcription.text);
       entities = entityData.entities || [];
     } catch (error) {
-      logger.warn('Entity extraction failed', { callId, error: error.message });
+      logger.warn('Entity extraction failed, continuing without entities', { 
+        callId, 
+        error: error.message 
+      });
     }
     await job.progress(65);
 
     // Step 5: Summarization (if text is long enough)
     let summary = '';
-    if (transcription.text.length > 200) {
+    if (transcription.text && transcription.text.length > 200) {
       try {
         const summaryData = await aiService.summarizeText(transcription.text);
         summary = summaryData.summary || '';
       } catch (error) {
-        logger.warn('Summarization failed', { callId, error: error.message });
+        logger.warn('Summarization failed, continuing without summary', { 
+          callId, 
+          error: error.message 
+        });
+        // Fallback: use first 500 characters as summary
+        summary = transcription.text.substring(0, 500) + '...';
       }
     }
     await job.progress(75);
@@ -184,9 +270,9 @@ async function processCall(job) {
       duration: callData.duration,
       hasGreeting: complianceResult.hasGreeting,
       hasProperClosing: complianceResult.hasProperClosing,
-      agentTalkTime: diarizationData.agentTalkTime,
-      customerTalkTime: diarizationData.customerTalkTime,
-      deadAirTotal: diarizationData.deadAirTotal,
+      agentTalkTime: diarizationData.agentTalkTime || 0,
+      customerTalkTime: diarizationData.customerTalkTime || 0,
+      deadAirTotal: diarizationData.deadAirTotal || 0,
     });
     await job.progress(95);
 
@@ -195,20 +281,20 @@ async function processCall(job) {
       callId,
       {
         transcription: transcription.text,
-        speakerSegments: diarizationData.segments || [],
+        speakerSegments: diarizationData.speaker_segments || [],
         speakers: diarizationData.speakers || [],
         agentTalkTime: diarizationData.agentTalkTime || 0,
         customerTalkTime: diarizationData.customerTalkTime || 0,
-        talkTimeRatio: diarizationData.talkTimeRatio || '',
-        deadAirTotal: diarizationData.deadAirTotal || 0,
-        deadAirSegments: diarizationData.deadAirSegments || [],
-        agentSentiment: diarizationData.agentSentiment || sentiment.sentiment,
+        talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio || '',
+        deadAirTotal: diarizationData.dead_air_total || diarizationData.deadAirTotal || 0,
+        deadAirSegments: diarizationData.dead_air_segments || diarizationData.deadAirSegments || [],
+        agentSentiment: diarizationData.agentSentiment || sentiment.label || sentiment.sentiment || 'neutral',
         customerSentiment: diarizationData.customerSentiment || '',
-        sentiment: sentiment.sentiment,
-        sentimentScore: sentiment.score,
+        sentiment: sentiment.label || sentiment.sentiment || 'neutral',
+        sentimentScore: sentiment.score || 0.5,
         entities,
         summary,
-        wordCount: transcription.text.split(/\s+/).length,
+        wordCount: transcription.text ? transcription.text.split(/\s+/).length : 0,
         complianceScore: complianceResult.score,
         missingMandatoryPhrases: complianceResult.missingMandatory,
         detectedForbiddenPhrases: complianceResult.detectedForbidden,
