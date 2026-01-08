@@ -201,7 +201,9 @@ def load_sentiment_model():
         sentiment_pipeline = pipeline(
             "sentiment-analysis", 
             model=model_name, 
-            device=DEVICE_ID  # 0 for GPU, -1 for CPU
+            device=DEVICE_ID,  # 0 for GPU, -1 for CPU
+            truncation=True,
+            max_length=512
         )
         
         models_available["sentiment"] = True
