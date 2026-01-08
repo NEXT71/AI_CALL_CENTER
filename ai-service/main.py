@@ -360,10 +360,15 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         logger.info(f"📦 Chunking audio file: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
         
-        # Convert to mono to avoid channel mismatch issues
+        # Convert to mono and set sample rate BEFORE chunking
         if audio.channels > 1:
             audio = audio.set_channels(1)
-            logger.info(f"✅ Converted to mono audio")
+            logger.info(f"✅ Converted to mono audio ({audio.channels} channel)")
+        
+        # Set consistent sample rate
+        if audio.frame_rate != 16000:
+            audio = audio.set_frame_rate(16000)
+            logger.info(f"✅ Set sample rate to 16000 Hz")
         
         duration_ms = len(audio)
         
@@ -377,9 +382,14 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         for i in range(0, duration_ms, step):
             chunk_end = min(i + chunk_length_ms, duration_ms)
             chunk = audio[i:chunk_end]
+            
+            # Ensure chunk is mono (double-check)
+            if chunk.channels > 1:
+                chunk = chunk.set_channels(1)
+            
             chunk_path = f"{audio_path}_chunk_{i//step}.wav"
-            # Export as mono WAV with consistent sample rate
-            chunk.export(chunk_path, format="wav", parameters=["-ac", "1", "-ar", "16000"])
+            # Export as WAV - already mono and 16kHz from parent audio
+            chunk.export(chunk_path, format="wav")
             chunks.append({
                 "path": chunk_path,
                 "start_time": i / 1000,
