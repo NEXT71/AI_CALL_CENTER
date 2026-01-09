@@ -49,6 +49,10 @@ pip install torch==2.4.1 torchaudio==2.4.1 --index-url https://download.pytorch.
 
 ### 5. Install Python Dependencies
 ```bash
+# IMPORTANT: Install NumPy 1.x for diarization compatibility
+pip install "numpy<2.0"
+
+# Install other dependencies
 pip install fastapi==0.115.0 uvicorn==0.32.0 python-multipart==0.0.12 python-dotenv==1.0.1 pydantic==2.10.3 transformers==4.47.1 openai-whisper librosa==0.10.2.post1 soundfile==0.12.1 pydub==0.25.1 ffmpeg-python==0.2.0 spacy==3.8.3 rapidfuzz==3.10.1 pyannote.audio==3.1.1 pytz==2024.2 psutil==6.1.0
 ```
 
@@ -57,7 +61,13 @@ pip install fastapi==0.115.0 uvicorn==0.32.0 python-multipart==0.0.12 python-dot
 python -m spacy download en_core_web_sm
 ```
 
-### 7. Start the AI Service
+### 7. Verify .env File is Loaded
+```bash
+# Check .env file exists and has correct content
+cat .env | grep HUGGINGFACE_TOKEN
+```
+
+### 8. Start the AI Service
 ```bash
 python main.py
 ```
@@ -65,6 +75,25 @@ python main.py
 ---
 
 ## Troubleshooting
+
+### If diarization fails with NumPy error:
+```bash
+# Downgrade NumPy to 1.x
+pip install "numpy<2.0" --force-reinstall
+
+# Restart service
+pkill -f main.py
+python main.py
+```
+
+### If HuggingFace token not loading:
+```bash
+# Verify .env file location (must be in /AI_CALL_CENTER/ai-service)
+pwd
+cat .env | grep HUGGINGFACE_TOKEN
+
+# If .env is missing, recreate it from step 2
+```
 
 ### If you get "No space left on device" error:
 ```bash
