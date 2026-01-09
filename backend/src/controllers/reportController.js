@@ -43,11 +43,16 @@ exports.getCallReport = async (req, res, next) => {
         callDate: call.callDate,
         duration: call.duration,
         campaign: call.campaign,
-        agent: {
+        agent: call.agentId ? {
           id: call.agentId._id,
           name: call.agentId.name,
           email: call.agentId.email,
           department: call.agentId.department,
+        } : {
+          id: null,
+          name: call.agentName || 'Unknown',
+          email: null,
+          department: null,
         },
         customer: {
           id: call.customerId,
