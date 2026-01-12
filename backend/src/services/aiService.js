@@ -5,30 +5,6 @@ const config = require('../config/config');
 const AI_SERVICE_URL = config.aiService.url;
 
 /**
- * Check if AI service is healthy and ready
- */
-exports.checkHealth = async () => {
-  try {
-    const response = await axios.get(`${AI_SERVICE_URL}/health`, {
-      timeout: 10000, // 10 second timeout
-    });
-    
-    if (response.status === 200 && response.data.status === 'healthy') {
-      return { healthy: true, data: response.data };
-    }
-    
-    return { healthy: false, reason: 'Service not healthy', data: response.data };
-  } catch (error) {
-    logger.warn('AI service health check failed', { 
-      error: error.message,
-      code: error.code,
-      url: `${AI_SERVICE_URL}/health`
-    });
-    return { healthy: false, reason: error.message, code: error.code };
-  }
-};
-
-/**
  * Transcribe audio file using FREE Whisper model (local)
  */
 exports.transcribeAudio = async (audioFilePath) => {
@@ -61,33 +37,18 @@ exports.transcribeAudio = async (audioFilePath) => {
     );
 
     if (response.status !== 200) {
-      const errorMsg = `Transcription failed with status ${response.status}`;
-      if (response.status === 405) {
-        logger.error(errorMsg, {
-          status: response.status,
-          url: `${AI_SERVICE_URL}/transcribe`,
-          hint: 'Pod may not be fully ready or URL is incorrect'
-        });
-      }
-      throw new Error(errorMsg);
+      throw new Error(`Transcription failed with status ${response.status}`);
     }
 
     return response.data;
   } catch (error) {
-    logger.error('AI Service transcription error', { 
-      error: error.message,
-      code: error.code,
-      status: error.response?.status,
-      url: `${AI_SERVICE_URL}/transcribe`
-    });
+    logger.error('AI Service transcription error', { error: error.message });
     
     // Check for specific error types
     if (error.code === 'ECONNABORTED') {
       throw new Error('Transcription timeout - audio file may be too long');
     } else if (error.code === 'ECONNREFUSED') {
       throw new Error('AI service unavailable - please check if the service is running');
-    } else if (error.response?.status === 405) {
-      throw new Error('AI service endpoint not ready - Pod may still be starting up. Please wait a few minutes and try again.');
     }
     
     throw new Error(`Transcription failed: ${error.response?.data?.detail || error.message}`);

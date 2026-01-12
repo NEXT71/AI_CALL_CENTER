@@ -278,10 +278,8 @@ exports.waitForPodReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 10) 
       }
 
       logger.info(`Waiting for pod to be ready... (${attempts + 1}/${maxAttempts})`, {
-        podId: exports.podId,
         status: pod.desiredStatus,
-        runtime: pod.runtime ? 'Available' : 'Not ready',
-        machineId: pod.machineId,
+        runtime: pod.runtime,
       });
 
       // Wait before checking again
@@ -295,47 +293,6 @@ exports.waitForPodReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 10) 
   }
 
   throw new Error(`Pod did not become ready within ${maxWaitMinutes} minutes`);
-};
-
-/**
- * Wait for AI service inside pod to be healthy and ready to accept requests
- * @param {number} maxWaitMinutes - Maximum time to wait in minutes
- * @param {number} checkIntervalSeconds - How often to check health
- */
-exports.waitForServiceReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 15) => {
-  // Lazy load aiService to avoid circular dependency issues
-  const aiService = require('./aiService');
-  const maxAttempts = (maxWaitMinutes * 60) / checkIntervalSeconds;
-  let attempts = 0;
-
-  logger.info('Waiting for AI service to be healthy and ready...');
-
-  while (attempts < maxAttempts) {
-    try {
-      const healthCheck = await aiService.checkHealth();
-      
-      if (healthCheck.healthy) {
-        logger.info('AI service is healthy and ready', {
-          models: healthCheck.data?.models_loaded,
-          gpu: healthCheck.data?.gpu_info
-        });
-        return true;
-      }
-
-      logger.info(`AI service not ready yet... (${attempts + 1}/${maxAttempts})`, {
-        reason: healthCheck.reason
-      });
-
-      await new Promise(resolve => setTimeout(resolve, checkIntervalSeconds * 1000));
-      attempts++;
-    } catch (error) {
-      logger.warn(`Health check attempt ${attempts + 1}/${maxAttempts} failed:`, error.message);
-      attempts++;
-      await new Promise(resolve => setTimeout(resolve, checkIntervalSeconds * 1000));
-    }
-  }
-
-  throw new Error(`AI service did not become healthy within ${maxWaitMinutes} minutes`);
 };
 
 /**
@@ -364,11 +321,7 @@ exports.ensurePodRunning = async () => {
       
       // Wait for pod to be ready
       logger.info('Waiting for pod to be ready...');
-      await exports.waitForPodReady(10, 10); // Wait up to 10 minutes (RunPod can be slow)
-      
-      // Wait for AI service inside pod to be healthy
-      logger.info('Pod is running, now waiting for AI service to be ready...');
-      await exports.waitForServiceReady(5, 15); // Wait up to 5 minutes for service
+      await exports.waitForPodReady(10, 10); // Wait up to 10 minutes
       
       return true;
     }
@@ -377,11 +330,6 @@ exports.ensurePodRunning = async () => {
     if (pod.desiredStatus === 'RUNNING' && !pod.runtime) {
       logger.info('Pod is starting, waiting...');
       await exports.waitForPodReady(10, 10);
-      
-      // Also wait for service to be ready
-      logger.info('Pod is running, now waiting for AI service to be ready...');
-      await exports.waitForServiceReady(5, 15);
-      
       return true;
     }
 
