@@ -515,27 +515,6 @@ async def health_check():
     return health_info
 
 
-@app.get("/transcribe")
-async def transcribe_get_info():
-    """
-    GET requests are not allowed for transcription.
-    This endpoint only accepts POST requests with multipart/form-data containing an audio file.
-    """
-    return JSONResponse(
-        status_code=405,
-        content={
-            "error": "Method Not Allowed",
-            "message": "The /transcribe endpoint only accepts POST requests with audio file upload",
-            "usage": {
-                "method": "POST",
-                "content_type": "multipart/form-data",
-                "required_field": "audio (file)",
-                "example": "curl -X POST -F 'audio=@yourfile.mp3' http://your-service/transcribe"
-            }
-        }
-    )
-
-
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(audio: UploadFile = File(...)):
     """
