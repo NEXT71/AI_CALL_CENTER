@@ -346,7 +346,7 @@ class TalkTimeResponse(BaseModel):
     dead_air_segments: List[Dict]
     total_duration: float
 
-tail -50 logs.txtclass TranscribeWithSpeakersResponse(BaseModel):
+class TranscribeWithSpeakersResponse(BaseModel):
     text: str
     speaker_labeled_text: str
     timestamps: Optional[List[Dict]] = []
