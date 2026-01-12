@@ -346,7 +346,7 @@ class TalkTimeResponse(BaseModel):
     dead_air_segments: List[Dict]
     total_duration: float
 
-class TranscribeWithSpeakersResponse(BaseModel):
+tail -50 logs.txtclass TranscribeWithSpeakersResponse(BaseModel):
     text: str
     speaker_labeled_text: str
     timestamps: Optional[List[Dict]] = []
@@ -525,8 +525,8 @@ async def health_check():
     return health_info
 
 
-# @app.post("/transcribe", response_model=TranscribeResponse)
-# async def transcribe_audio(audio: UploadFile = File(...)):
+@app.post("/transcribe", response_model=TranscribeResponse)
+async def transcribe_audio(audio: UploadFile = File(...)):
     """
     Transcribe audio file using Whisper on GPU
     Handles 30+ minute recordings with automatic chunking
@@ -1142,9 +1142,10 @@ def load_diarization_model():
         models_available["diarization"] = False
         return None
 
-
-# @app.post("/diarize", response_model=DiarizeResponse)
-# async def diarize_audio(
+"""
+# DEPRECATED - Old separate diarize endpoint - use /transcribe-with-speakers instead
+@app.post("/diarize", response_model=DiarizeResponse)
+async def diarize_audio(
     audio: UploadFile = File(...),
     min_speakers: int = Form(2),
     max_speakers: int = Form(2)
@@ -1262,7 +1263,7 @@ def load_diarization_model():
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
         gc.collect()
-
+"""
 
 @app.post("/transcribe-with-speakers", response_model=TranscribeWithSpeakersResponse)
 async def transcribe_with_speakers(
@@ -1471,9 +1472,10 @@ async def transcribe_with_speakers(
             torch.cuda.empty_cache()
         gc.collect()
 
-
-# @app.post("/calculate-talk-time", response_model=TalkTimeResponse)
-# async def calculate_talk_time(
+"""
+# DEPRECATED - Old separate talk-time endpoint - use /transcribe-with-speakers instead
+@app.post("/calculate-talk-time", response_model=TalkTimeResponse)
+async def calculate_talk_time(
     audio: UploadFile = File(...),
     speaker_segments: str = Form(...)  # JSON string of speaker segments
 ):
@@ -1640,7 +1642,7 @@ async def transcribe_with_speakers(
             except:
                 pass
         gc.collect()
-
+"""
 
 @app.get("/")
 async def root():
@@ -1660,10 +1662,13 @@ async def root():
         "endpoints": {
             "health": "/health",
             "transcribe_with_speakers": "/transcribe-with-speakers",
+            "transcribe": "/transcribe",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance"
+            "compliance": "/check-compliance",
+            "diarize": "/diarize",
+            "talk_time": "/calculate-talk-time"
         }
     }
 
