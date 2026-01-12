@@ -525,7 +525,185 @@ async def health_check():
     return health_info
 
 
+@app.post("/transcribe", response_model=TranscribeResponse)
+async def transcribe_audio(audio: UploadFile = File(...)):
+    """
+    Transcribe audio file using Whisper on GPU
+    Handles 30+ minute recordings with automatic chunking
+    """
+    temp_path = None
+    chunk_files = []
+    
+    try:
+        # Save uploaded file
+        temp_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(audio.file, buffer)
+        
+        # Load Whisper model
+        model = load_whisper_model()
+        if model is None:
+            raise HTTPException(status_code=503, detail="Whisper model failed to load")
 
+        file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
+        logger.info(f"🎙️ Processing audio: {audio.filename} ({file_size_mb:.2f} MB)")
+        
+        # Get audio duration
+        import librosa
+        duration = librosa.get_duration(path=temp_path)
+        logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+        
+        # Process based on duration
+        if duration > 600:  # 10+ minutes
+            logger.info(f"📦 Long audio detected - using chunked processing")
+            
+            # Split into chunks
+            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=600000)
+            if not chunks:
+                raise HTTPException(status_code=500, detail="Failed to chunk audio")
+            
+            chunk_files = [chunk["path"] for chunk in chunks]
+            logger.info(f"✅ Split into {len(chunks)} chunks (10 min each)")
+            
+            # Process chunks in parallel
+            import time
+            start_time = time.time()
+            
+            loop = asyncio.get_event_loop()
+            chunk_results = await asyncio.gather(*[
+                loop.run_in_executor(executor, transcribe_chunk, model, chunk["path"], chunk)
+                for chunk in chunks
+            ])
+            
+            processing_time = time.time() - start_time
+            logger.info(f"⚡ Parallel processing completed in {processing_time:.1f}s")
+            
+            # Merge results
+            merged_text = []
+            merged_segments = []
+            detected_language = None
+            
+            for result in chunk_results:
+                if result:
+                    merged_text.append(result.get("text", "").strip())
+                    if "segments" in result:
+                        merged_segments.extend(result["segments"])
+                    if not detected_language and "language" in result:
+                        detected_language = result["language"]
+            
+            full_text = " ".join(merged_text)
+            
+            # Format timestamps
+            timestamps = []
+            for segment in merged_segments:
+                timestamps.append({
+                    "start": round(segment["start"], 2),
+                    "end": round(segment["end"], 2),
+                    "text": segment["text"].strip()
+                })
+            
+            word_count = len(full_text.split()) if full_text else 0
+            
+            logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
+            logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
+            
+            return TranscribeResponse(
+                text=full_text,
+                timestamps=timestamps,
+                language=detected_language,
+                duration=total_duration,
+                word_count=word_count
+            )
+        
+        else:
+            # Short audio - process directly
+            logger.info("🎯 Processing directly (no chunking needed)")
+            
+            import time
+            start_time = time.time()
+            
+            use_fp16 = CUDA_AVAILABLE
+            result = model.transcribe(
+                temp_path,
+                verbose=False,
+                fp16=use_fp16,
+                language=None
+            )
+            
+            processing_time = time.time() - start_time
+            logger.info(f"⚡ Transcription completed in {processing_time:.1f}s")
+            logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
+            
+            text = result.get("text", "").strip()
+            language = result.get("language")
+            word_count = len(text.split()) if text else 0
+            
+            timestamps = []
+            if "segments" in result:
+                for segment in result["segments"]:
+                    timestamps.append({
+                        "start": round(segment["start"], 2),
+                        "end": round(segment["end"], 2),
+                        "text": segment["text"].strip()
+                    })
+            
+            logger.info(f"✅ Complete: {word_count} words, {len(timestamps)} segments")
+            
+            return TranscribeResponse(
+                text=text,
+                timestamps=timestamps,
+                language=language,
+                duration=duration,
+                word_count=word_count
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Transcription error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    
+    finally:
+        # Cleanup with retry logic
+        import gc
+        import time
+        
+        cleanup_errors = []
+        
+        if temp_path and os.path.exists(temp_path):
+            for attempt in range(3):
+                try:
+                    os.unlink(temp_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        cleanup_errors.append(f"Failed to delete {temp_path}: {e}")
+        
+        for chunk_file in chunk_files:
+            if os.path.exists(chunk_file):
+                for attempt in range(3):
+                    try:
+                        os.unlink(chunk_file)
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            time.sleep(0.1)
+                        else:
+                            cleanup_errors.append(f"Failed to delete {chunk_file}: {e}")
+        
+        if cleanup_errors:
+            logger.warning(f"Cleanup warnings: {'; '.join(cleanup_errors)}")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # Force garbage collection
+        gc.collect()
 
 
 @app.post("/analyze-sentiment", response_model=SentimentResponse)
@@ -965,6 +1143,126 @@ def load_diarization_model():
         return None
 
 
+@app.post("/diarize", response_model=DiarizeResponse)
+async def diarize_audio(
+    audio: UploadFile = File(...),
+    min_speakers: int = Form(2),
+    max_speakers: int = Form(2)
+):
+    """
+    Perform speaker diarization on audio file
+    Returns speaker segments with timestamps
+    Handles long audio files with proper memory management
+    """
+    temp_audio_path = None
+    import gc
+    
+    try:
+        logger.info(f"🎙️ Diarization request: {audio.filename}")
+        
+        # Load diarization model
+        pipeline = load_diarization_model()
+        if pipeline is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Diarization model not available. Please set HUGGINGFACE_TOKEN environment variable."
+            )
+        
+        # Save uploaded file temporarily
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        # Check file size
+        file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
+        logger.info(f"Audio file size: {file_size_mb:.2f} MB")
+        
+        if file_size_mb > 100:  # Warn for very large files
+            logger.warning(f"Large audio file ({file_size_mb:.2f} MB) - diarization may take time")
+        
+        # Validate speaker range
+        if min_speakers < 1:
+            min_speakers = 1
+        if max_speakers < min_speakers:
+            max_speakers = min_speakers
+        if max_speakers > 10:  # Reasonable limit
+            logger.warning(f"max_speakers={max_speakers} is high, limiting to 10")
+            max_speakers = 10
+        
+        logger.info(f"Processing diarization with {min_speakers}-{max_speakers} speakers...")
+        
+        # Clear GPU cache before processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # Run diarization with timeout handling
+        diarization = pipeline(
+            temp_audio_path,
+            min_speakers=min_speakers,
+            max_speakers=max_speakers
+        )
+        
+        # Convert to serializable format
+        speaker_segments = []
+        speakers = set()
+        
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers.add(speaker)
+            speaker_segments.append({
+                "speaker": speaker,
+                "start": round(float(turn.start), 2),
+                "end": round(float(turn.end), 2),
+                "duration": round(float(turn.end - turn.start), 2)
+            })
+        
+        # Sort segments by start time
+        speaker_segments.sort(key=lambda x: x["start"])
+        
+        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        return DiarizeResponse(
+            speaker_segments=speaker_segments,
+            speakers=sorted(list(speakers)),
+            num_speakers=len(speakers)
+        )
+        
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error(f"❌ GPU out of memory during diarization")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            raise HTTPException(status_code=500, detail="GPU out of memory. Try with shorter audio.")
+        logger.error(f"❌ Diarization runtime error: {e}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    except Exception as e:
+        logger.error(f"❌ Diarization error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    finally:
+        # Clean up temp file with retry
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            import time
+            for attempt in range(3):
+                try:
+                    os.remove(temp_audio_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        logger.warning(f"Failed to cleanup temp file: {e}")
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+
 
 @app.post("/transcribe-with-speakers", response_model=TranscribeWithSpeakersResponse)
 async def transcribe_with_speakers(
@@ -1174,6 +1472,176 @@ async def transcribe_with_speakers(
         gc.collect()
 
 
+@app.post("/calculate-talk-time", response_model=TalkTimeResponse)
+async def calculate_talk_time(
+    audio: UploadFile = File(...),
+    speaker_segments: str = Form(...)  # JSON string of speaker segments
+):
+    """
+    Calculate talk-time metrics from diarization results
+    Returns agent/customer talk time, ratio, and dead air detection
+    Handles edge cases for long calls
+    """
+    import json
+    import gc
+    temp_audio_path = None
+    
+    try:
+        logger.info(f"📊 Talk-time calculation request: {audio.filename}")
+        
+        # Parse speaker segments with validation
+        try:
+            segments = json.loads(speaker_segments)
+            if not isinstance(segments, list):
+                raise ValueError("speaker_segments must be a list")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON in speaker_segments: {e}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        if not segments:
+            raise HTTPException(status_code=400, detail="No speaker segments provided")
+        
+        # Get audio duration
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        try:
+            from pydub import AudioSegment
+            audio_file = AudioSegment.from_file(temp_audio_path)
+            total_duration = len(audio_file) / 1000.0  # Convert to seconds
+            del audio_file  # Free memory
+        except Exception as e:
+            logger.warning(f"Could not determine audio duration: {e}")
+            # Fallback: use last segment end time
+            total_duration = max([seg.get("end", 0) for seg in segments], default=0)
+        
+        logger.info(f"Total duration: {total_duration:.2f}s")
+        
+        # Validate segments
+        valid_segments = []
+        for seg in segments:
+            if all(k in seg for k in ["speaker", "start", "end"]):
+                # Ensure numeric values
+                try:
+                    seg["start"] = float(seg["start"])
+                    seg["end"] = float(seg["end"])
+                    seg["duration"] = seg["end"] - seg["start"]
+                    
+                    # Validate segment
+                    if seg["duration"] > 0 and seg["start"] >= 0:
+                        valid_segments.append(seg)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid segment skipped: {seg}, error: {e}")
+        
+        if not valid_segments:
+            raise HTTPException(status_code=400, detail="No valid speaker segments found")
+        
+        logger.info(f"Valid segments: {len(valid_segments)}/{len(segments)}")
+        
+        # Calculate talk time per speaker
+        speaker_talk_time = {}
+        for segment in valid_segments:
+            speaker = segment["speaker"]
+            duration = segment["duration"]
+            speaker_talk_time[speaker] = speaker_talk_time.get(speaker, 0) + duration
+        
+        # Calculate dead air (gaps between segments)
+        sorted_segments = sorted(valid_segments, key=lambda x: x["start"])
+        dead_air_segments = []
+        dead_air_total = 0
+        dead_air_threshold = 2.0  # seconds
+        
+        for i in range(len(sorted_segments) - 1):
+            current_end = sorted_segments[i]["end"]
+            next_start = sorted_segments[i + 1]["start"]
+            gap = next_start - current_end
+            
+            # Only count gaps above threshold
+            if gap > dead_air_threshold:
+                dead_air_segments.append({
+                    "start": round(current_end, 2),
+                    "end": round(next_start, 2),
+                    "duration": round(gap, 2)
+                })
+                dead_air_total += gap
+        
+        # Check for dead air at beginning and end
+        if sorted_segments:
+            # Dead air at start
+            if sorted_segments[0]["start"] > dead_air_threshold:
+                dead_air_segments.insert(0, {
+                    "start": 0,
+                    "end": round(sorted_segments[0]["start"], 2),
+                    "duration": round(sorted_segments[0]["start"], 2)
+                })
+                dead_air_total += sorted_segments[0]["start"]
+            
+            # Dead air at end
+            last_end = sorted_segments[-1]["end"]
+            if total_duration - last_end > dead_air_threshold:
+                dead_air_segments.append({
+                    "start": round(last_end, 2),
+                    "end": round(total_duration, 2),
+                    "duration": round(total_duration - last_end, 2)
+                })
+                dead_air_total += (total_duration - last_end)
+        
+        # Calculate agent/customer ratio
+        # Assume first speaker (alphabetically) is agent, second is customer
+        speakers_list = sorted(speaker_talk_time.keys())
+        
+        if len(speakers_list) >= 2:
+            agent_time = speaker_talk_time.get(speakers_list[0], 0)
+            customer_time = speaker_talk_time.get(speakers_list[1], 0)
+            
+            if customer_time > 0:
+                ratio = agent_time / customer_time
+                ratio_str = f"{ratio:.2f}:1"
+            else:
+                ratio_str = "N/A (no customer speech)"
+        elif len(speakers_list) == 1:
+            ratio_str = "N/A (single speaker)"
+        else:
+            ratio_str = "N/A (no speakers)"
+        
+        logger.info(f"✅ Talk-time calculated: {len(speakers_list)} speakers, {dead_air_total:.1f}s dead air")
+        
+        # Clean up
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except:
+                pass
+        
+        gc.collect()
+        
+        return TalkTimeResponse(
+            speaker_talk_time={k: round(v, 2) for k, v in speaker_talk_time.items()},
+            agent_customer_ratio=ratio_str,
+            dead_air_total=round(dead_air_total, 2),
+            dead_air_segments=dead_air_segments[:50],  # Limit to prevent excessive data
+            total_duration=round(total_duration, 2)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Talk-time calculation error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Talk-time calculation failed: {str(e)}")
+    finally:
+        # Cleanup
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+            except:
+                pass
+        gc.collect()
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -1191,11 +1659,14 @@ async def root():
         ],
         "endpoints": {
             "health": "/health",
+            "transcribe": "/transcribe",
             "transcribe_with_speakers": "/transcribe-with-speakers",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance"
+            "compliance": "/check-compliance",
+            "diarize": "/diarize",
+            "talk_time": "/calculate-talk-time"
         }
     }
 

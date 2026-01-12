@@ -5,6 +5,57 @@ const config = require('../config/config');
 const AI_SERVICE_URL = config.aiService.url;
 
 /**
+ * Transcribe audio file using FREE Whisper model (local)
+ */
+exports.transcribeAudio = async (audioFilePath) => {
+  try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg', // Adjust based on file type
+    });
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/transcribe`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 3600000, // 60 minutes timeout for very long files
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        // Add retry logic
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if status < 500
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Transcription failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service transcription error', { error: error.message });
+    
+    // Check for specific error types
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Transcription timeout - audio file may be too long');
+    } else if (error.code === 'ECONNREFUSED') {
+      throw new Error('AI service unavailable - please check if the service is running');
+    }
+    
+    throw new Error(`Transcription failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
  * Analyze sentiment using FREE DistilBERT model
  */
 exports.analyzeSentiment = async (text) => {
@@ -123,6 +174,107 @@ exports.checkCompliance = async (transcript, mandatoryPhrases, forbiddenPhrases,
   } catch (error) {
     logger.error('AI Service compliance check error', { error: error.message });
     throw new Error(`Compliance check failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
+ * Speaker diarization using FREE pyannote.audio
+ */
+exports.diarizeAudio = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) => {
+  try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg',
+    });
+    formData.append('min_speakers', minSpeakers.toString());
+    formData.append('max_speakers', maxSpeakers.toString());
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/diarize`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 600000, // 10 minutes (increased for long audio)
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Diarization failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service diarization error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Diarization timeout - audio file may be too long');
+    }
+    
+    throw new Error(`Diarization failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
+ * Calculate talk-time metrics
+ */
+exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
+  try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    if (!speakerSegments || !Array.isArray(speakerSegments)) {
+      throw new Error('Invalid speaker segments');
+    }
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg',
+    });
+    formData.append('speaker_segments', JSON.stringify(speakerSegments));
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/calculate-talk-time`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 120000, // 2 minutes (increased)
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Talk-time calculation failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service talk-time calculation error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Talk-time calculation timeout');
+    }
+    
+    throw new Error(`Talk-time calculation failed: ${error.response?.data?.detail || error.message}`);
   }
 };
 
