@@ -346,7 +346,7 @@ class TalkTimeResponse(BaseModel):
     dead_air_segments: List[Dict]
     total_duration: float
 
-class TranscribeWithSpeakersResponse(BaseModel):
+tail -50 logs.txtclass TranscribeWithSpeakersResponse(BaseModel):
     text: str
     speaker_labeled_text: str
     timestamps: Optional[List[Dict]] = []
@@ -1660,6 +1660,7 @@ async def root():
         "endpoints": {
             "health": "/health",
             "transcribe": "/transcribe",
+            "transcribe_with_speakers": "/transcribe-with-speakers",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
