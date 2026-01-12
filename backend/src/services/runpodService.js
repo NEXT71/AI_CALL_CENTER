@@ -303,7 +303,6 @@ exports.waitForPodReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 10) 
  * @param {number} checkIntervalSeconds - How often to check health
  */
 exports.waitForServiceReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 15) => {
-  // Lazy load aiService to avoid circular dependency issues
   const aiService = require('./aiService');
   const maxAttempts = (maxWaitMinutes * 60) / checkIntervalSeconds;
   let attempts = 0;
