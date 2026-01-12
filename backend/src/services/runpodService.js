@@ -321,7 +321,7 @@ exports.ensurePodRunning = async () => {
       
       // Wait for pod to be ready
       logger.info('Waiting for pod to be ready...');
-      await exports.waitForPodReady(5, 10); // Wait up to 5 minutes
+      await exports.waitForPodReady(2, 10); // Wait up to 2 minutes
       
       return true;
     }
@@ -329,7 +329,7 @@ exports.ensurePodRunning = async () => {
     // If starting, wait for it
     if (pod.desiredStatus === 'RUNNING' && !pod.runtime) {
       logger.info('Pod is starting, waiting...');
-      await exports.waitForPodReady(5, 10);
+      await exports.waitForPodReady(2, 10);
       return true;
     }
 
