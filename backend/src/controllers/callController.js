@@ -10,7 +10,6 @@ const scoringService = require('../services/scoringService');
 const auditService = require('../services/auditService');
 const runpodService = require('../services/runpodService');
 const logger = require('../config/logger');
-const { queueCallProcessing } = require('../queues/callProcessingQueue');
 
 // Ensure upload directory exists
 if (!fs.existsSync(config.upload.dir)) {
@@ -246,20 +245,13 @@ exports.uploadCall = [
         status: (isSale === true || isSale === 'true') ? 'queued' : 'skipped', // Skip non-sale calls
       });
 
-      // Only trigger AI processing for SALE calls using queue
+      // Only trigger AI processing for SALE calls
       if (call.isSale && call.requiresQA) {
         logger.info(`Call ${callId} is a SALE - queuing for AI processing`, {
           saleAmount: call.saleAmount,
           productSold: call.productSold,
         });
-        
-        // Use queue for background processing to avoid timeouts
-        await queueCallProcessing(call._id, call.audioFilePath, {
-          priority: 5,
-          campaign: call.campaign,
-          isSale: call.isSale,
-          productSold: call.productSold,
-        });
+        processCallAsync(call._id);
       } else {
         logger.info(`Call ${callId} is NOT a sale - skipping AI processing`);
       }
@@ -286,6 +278,141 @@ exports.uploadCall = [
     }
   },
 ];
+
+/**
+ * Process call asynchronously using FREE & open-source AI models
+ */
+async function processCallAsync(callId) {
+  try {
+    const call = await Call.findById(callId);
+    if (!call) return;
+
+    logger.info('Starting AI processing', { callId: call.callId });
+
+    // Update status
+    call.status = 'processing';
+    await call.save();
+
+    // IMPORTANT: Ensure RunPod GPU is running before processing
+    try {
+      if (runpodService.isConfigured()) {
+        logger.info('Checking RunPod status before AI processing', { callId: call.callId });
+        const podReady = await runpodService.ensurePodRunning();
+        if (podReady) {
+          logger.info('RunPod is ready for processing', { callId: call.callId });
+        } else {
+          logger.warn('RunPod not available, proceeding anyway', { callId: call.callId });
+        }
+      } else {
+        logger.info('RunPod not configured, proceeding with AI service', { callId: call.callId });
+      }
+    } catch (podError) {
+      logger.error('Failed to start RunPod, proceeding anyway', { 
+        callId: call.callId, 
+        error: podError.message 
+      });
+      // Continue with processing even if pod start fails
+      // The AI service might be running elsewhere
+    }
+
+    // Step 1: Combined Transcription + Diarization (using new combined endpoint)
+    logger.info('Transcribing audio with speaker labels', { callId: call.callId });
+    const combinedResult = await aiService.transcribeWithSpeakers(call.audioFilePath);
+    
+    // Set transcription data
+    call.transcript = combinedResult.text;
+    call.speakerLabeledTranscript = combinedResult.speaker_labeled_text || '';
+    call.transcriptTimestamps = combinedResult.timestamps || [];
+    call.wordCount = combinedResult.word_count || call.transcript.split(' ').length;
+    
+    // Set diarization data
+    call.speakerSegments = combinedResult.speaker_segments || [];
+    call.speakers = combinedResult.speakers || [];
+    
+    // Set talk-time metrics (included in combined response)
+    call.agentTalkTime = combinedResult.agent_talk_time || 0;
+    call.customerTalkTime = combinedResult.customer_talk_time || 0;
+    call.talkTimeRatio = combinedResult.agent_customer_ratio || 'N/A';
+    call.deadAirTotal = combinedResult.dead_air_total || 0;
+    call.deadAirSegments = combinedResult.dead_air_segments || [];
+    
+    await call.save();
+
+    // Step 2: Analyze sentiment (FREE DistilBERT)
+    logger.info('Analyzing sentiment', { callId: call.callId });
+    const sentimentResult = await aiService.analyzeSentiment(call.transcript);
+    call.sentiment = sentimentResult.label;
+    call.sentimentScore = sentimentResult.score;
+    
+    // Set agent/customer sentiment (placeholder - proper implementation needs segment mapping)
+    call.agentSentiment = sentimentResult.label;
+    call.customerSentiment = sentimentResult.label;
+    await call.save();
+
+    // Step 3: Extract entities (FREE spaCy) - optional
+    logger.info('Extracting entities', { callId: call.callId });
+    try {
+      const entitiesResult = await aiService.extractEntities(call.transcript);
+      call.entities = entitiesResult.entities || [];
+      call.keyPhrases = entitiesResult.key_phrases || [];
+      await call.save();
+    } catch (error) {
+      logger.warn('Entity extraction skipped', { callId: call.callId, error: error.message });
+    }
+
+    // Step 4: Generate summary (FREE BART) - optional for longer transcripts
+    try {
+      if (call.transcript.length > 500) {
+        logger.info('Generating summary', { callId: call.callId });
+        const summaryResult = await aiService.summarizeText(call.transcript);
+        call.summary = summaryResult.summary;
+        await call.save();
+      }
+    } catch (error) {
+      logger.warn('Summarization skipped', { callId: call.callId, error: error.message });
+    }
+
+    // Step 5: Check compliance (FREE rapidfuzz + regex)
+    logger.info('Checking compliance', { callId: call.callId, campaign: call.campaign });
+    const complianceResult = await scoringService.checkCompliance(
+      call.transcript,
+      call.campaign
+    );
+    call.complianceScore = complianceResult.score;
+    call.missingMandatoryPhrases = complianceResult.missingMandatory;
+    call.detectedForbiddenPhrases = complianceResult.detectedForbidden;
+    await call.save();
+
+    // Step 6: Calculate quality score (rule-based, agent-focused)
+    logger.info('Calculating quality score', { callId: call.callId });
+    const qualityResult = scoringService.calculateQualityScore({
+      transcript: call.transcript,
+      sentiment: call.agentSentiment || call.sentiment,
+      complianceScore: call.complianceScore,
+      duration: call.duration,
+      talkTimeRatio: call.talkTimeRatio,
+      deadAirTotal: call.deadAirTotal,
+    });
+    call.qualityScore = qualityResult.score;
+    call.qualityMetrics = qualityResult.metrics;
+    await call.save();
+
+    // Mark as completed
+    call.status = 'completed';
+    call.processedAt = new Date();
+    await call.save();
+
+    logger.info('Call processed successfully', { callId: call.callId, qualityScore: call.qualityScore });
+  } catch (error) {
+    logger.error('Error processing call', { callId, error: error.message, stack: error.stack });
+    
+    // Update call with error status
+    await Call.findByIdAndUpdate(callId, {
+      status: 'failed',
+      processingError: error.message,
+    });
+  }
+}
 
 /**
  * @route   GET /api/calls
