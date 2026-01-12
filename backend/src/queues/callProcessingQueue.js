@@ -333,7 +333,9 @@ async function processCall(job) {
     const updatedCall = await Call.findByIdAndUpdate(
       callId,
       {
-        transcription: transcription.text,
+        transcript: transcription.text,
+        speakerLabeledTranscript: transcription.speaker_labeled_text || '',
+        transcriptTimestamps: transcription.timestamps || [],
         speakerSegments: diarizationData.speaker_segments || [],
         speakers: diarizationData.speakers || [],
         agentTalkTime: diarizationData.agentTalkTime || 0,

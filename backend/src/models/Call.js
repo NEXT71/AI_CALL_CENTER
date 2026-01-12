@@ -54,6 +54,10 @@ const callSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    speakerLabeledTranscript: {
+      type: String,
+      default: '',
+    },
     transcriptTimestamps: {
       type: Array,
       default: [],

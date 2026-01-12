@@ -358,7 +358,7 @@ const CallDetails = () => {
           )}
 
           {/* Transcript */}
-          {call.transcript && (
+          {(call.speakerLabeledTranscript || call.transcript) && (
             <div className="card-enhanced p-6">
               <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <MessageSquare size={20} className="text-blue-600" />
@@ -366,7 +366,7 @@ const CallDetails = () => {
               </h2>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
                 <p className="text-slate-700 whitespace-pre-wrap leading-relaxed font-normal text-base">
-                  {call.transcript}
+                  {call.speakerLabeledTranscript || call.transcript}
                 </p>
               </div>
             </div>
