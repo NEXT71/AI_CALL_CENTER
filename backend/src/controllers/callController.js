@@ -299,22 +299,7 @@ async function processCallAsync(callId) {
         logger.info('Checking RunPod status before AI processing', { callId: call.callId });
         const podReady = await runpodService.ensurePodRunning();
         if (podReady) {
-          logger.info('RunPod is ready for processing', { callId: call.callId });
-          
-          // Additional health check to ensure service is responding
-          logger.info('Performing AI service health check', { callId: call.callId });
-          const healthCheck = await aiService.checkHealth();
-          if (healthCheck.healthy) {
-            logger.info('AI service is healthy and ready', { 
-              callId: call.callId,
-              models: healthCheck.data?.models_loaded 
-            });
-          } else {
-            logger.warn('AI service health check failed, but will attempt processing', {
-              callId: call.callId,
-              reason: healthCheck.reason
-            });
-          }
+          logger.info('RunPod and AI service are ready for processing', { callId: call.callId });
         } else {
           logger.warn('RunPod not available, proceeding anyway', { callId: call.callId });
         }
@@ -322,12 +307,13 @@ async function processCallAsync(callId) {
         logger.info('RunPod not configured, proceeding with AI service', { callId: call.callId });
       }
     } catch (podError) {
-      logger.error('Failed to start RunPod, proceeding anyway', { 
+      logger.error('Failed to start RunPod or verify service health', { 
         callId: call.callId, 
         error: podError.message 
       });
       // Continue with processing even if pod start fails
       // The AI service might be running elsewhere
+    }
     }
 
     // Step 1: Transcribe audio (FREE Whisper)
