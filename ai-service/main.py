@@ -346,6 +346,16 @@ class TalkTimeResponse(BaseModel):
     dead_air_segments: List[Dict]
     total_duration: float
 
+class TranscribeWithSpeakersResponse(BaseModel):
+    text: str
+    speaker_labeled_text: str
+    timestamps: Optional[List[Dict]] = []
+    speaker_segments: List[Dict]
+    speakers: List[str]
+    language: Optional[str] = None
+    duration: Optional[float] = None
+    word_count: Optional[int] = None
+
 
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
     """
@@ -1249,6 +1259,214 @@ async def diarize_audio(
                         logger.warning(f"Failed to cleanup temp file: {e}")
         
         # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+
+
+@app.post("/transcribe-with-speakers", response_model=TranscribeWithSpeakersResponse)
+async def transcribe_with_speakers(
+    audio: UploadFile = File(...),
+    min_speakers: int = Form(2),
+    max_speakers: int = Form(2)
+):
+    """
+    Combined endpoint: Transcribe audio with speaker diarization
+    Returns transcript with speaker labels (Agent/Customer)
+    """
+    temp_audio_path = None
+    import gc
+    
+    try:
+        logger.info(f"🎯 Transcribe-with-speakers request: {audio.filename}")
+        
+        # Save uploaded file
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
+        logger.info(f"Audio file size: {file_size_mb:.2f} MB")
+        
+        # Step 1: Transcribe with word-level timestamps
+        logger.info("Step 1/3: Transcribing audio with word timestamps...")
+        whisper_model = load_whisper_model()
+        if whisper_model is None:
+            raise HTTPException(status_code=503, detail="Whisper model failed to load")
+        
+        use_fp16 = CUDA_AVAILABLE
+        result = whisper_model.transcribe(
+            temp_audio_path,
+            verbose=False,
+            fp16=use_fp16,
+            language=None,
+            word_timestamps=True  # Enable word-level timestamps
+        )
+        
+        full_text = result.get("text", "").strip()
+        language = result.get("language")
+        segments = result.get("segments", [])
+        
+        # Extract word-level timestamps
+        words_with_timestamps = []
+        for segment in segments:
+            if "words" in segment:
+                for word_info in segment["words"]:
+                    words_with_timestamps.append({
+                        "word": word_info.get("word", "").strip(),
+                        "start": word_info.get("start", 0),
+                        "end": word_info.get("end", 0)
+                    })
+        
+        logger.info(f"✅ Transcription complete: {len(words_with_timestamps)} words")
+        
+        # Step 2: Speaker diarization
+        logger.info("Step 2/3: Performing speaker diarization...")
+        diarization_pipeline = load_diarization_model()
+        if diarization_pipeline is None:
+            raise HTTPException(status_code=503, detail="Diarization model not available")
+        
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        diarization = diarization_pipeline(
+            temp_audio_path,
+            min_speakers=min_speakers,
+            max_speakers=max_speakers
+        )
+        
+        # Extract speaker segments
+        speaker_segments = []
+        speakers = set()
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers.add(speaker)
+            speaker_segments.append({
+                "speaker": speaker,
+                "start": round(float(turn.start), 2),
+                "end": round(float(turn.end), 2),
+                "duration": round(float(turn.end - turn.start), 2)
+            })
+        
+        speaker_segments.sort(key=lambda x: x["start"])
+        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        
+        # Step 3: Merge transcription with speaker labels
+        logger.info("Step 3/3: Merging transcript with speaker labels...")
+        
+        def find_speaker_at_time(timestamp, speaker_segs):
+            """Find which speaker is talking at a given timestamp"""
+            for seg in speaker_segs:
+                if seg["start"] <= timestamp <= seg["end"]:
+                    return seg["speaker"]
+            # If no exact match, find closest segment
+            closest = min(speaker_segs, key=lambda x: abs(x["start"] - timestamp))
+            return closest["speaker"]
+        
+        # Map speakers to Agent/Customer
+        # Assumption: First speaker (alphabetically) is Agent, second is Customer
+        sorted_speakers = sorted(list(speakers))
+        speaker_labels = {}
+        if len(sorted_speakers) >= 2:
+            speaker_labels[sorted_speakers[0]] = "Agent"
+            speaker_labels[sorted_speakers[1]] = "Customer"
+            # Additional speakers get numbered labels
+            for i, speaker in enumerate(sorted_speakers[2:], start=3):
+                speaker_labels[speaker] = f"Speaker {i}"
+        elif len(sorted_speakers) == 1:
+            speaker_labels[sorted_speakers[0]] = "Speaker"
+        
+        # Build speaker-labeled transcript
+        labeled_segments = []
+        current_speaker = None
+        current_text = []
+        
+        for segment in segments:
+            # Use segment midpoint to determine speaker
+            midpoint = (segment["start"] + segment["end"]) / 2
+            segment_speaker = find_speaker_at_time(midpoint, speaker_segments)
+            segment_label = speaker_labels.get(segment_speaker, segment_speaker)
+            segment_text = segment["text"].strip()
+            
+            if segment_speaker != current_speaker:
+                # Speaker changed, save previous segment
+                if current_speaker and current_text:
+                    labeled_segments.append({
+                        "speaker": speaker_labels.get(current_speaker, current_speaker),
+                        "text": " ".join(current_text).strip()
+                    })
+                current_speaker = segment_speaker
+                current_text = [segment_text]
+            else:
+                # Same speaker, accumulate text
+                current_text.append(segment_text)
+        
+        # Add final segment
+        if current_speaker and current_text:
+            labeled_segments.append({
+                "speaker": speaker_labels.get(current_speaker, current_speaker),
+                "text": " ".join(current_text).strip()
+            })
+        
+        # Format as readable text
+        speaker_labeled_text = "\n\n".join([
+            f"{seg['speaker']}: {seg['text']}"
+            for seg in labeled_segments
+        ])
+        
+        logger.info(f"✅ Speaker-labeled transcript created: {len(labeled_segments)} turns")
+        
+        # Get duration
+        import librosa
+        duration = librosa.get_duration(path=temp_audio_path)
+        
+        # Format timestamps
+        timestamps = []
+        for segment in segments:
+            timestamps.append({
+                "start": round(segment["start"], 2),
+                "end": round(segment["end"], 2),
+                "text": segment["text"].strip()
+            })
+        
+        word_count = len(full_text.split()) if full_text else 0
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        return TranscribeWithSpeakersResponse(
+            text=full_text,
+            speaker_labeled_text=speaker_labeled_text,
+            timestamps=timestamps,
+            speaker_segments=speaker_segments,
+            speakers=sorted_speakers,
+            language=language,
+            duration=duration,
+            word_count=word_count
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Transcribe-with-speakers error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to transcribe with speakers: {str(e)}")
+    finally:
+        # Cleanup
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            import time
+            for attempt in range(3):
+                try:
+                    os.remove(temp_audio_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        logger.warning(f"Failed to cleanup temp file: {e}")
+        
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
         gc.collect()

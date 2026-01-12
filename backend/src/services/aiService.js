@@ -279,6 +279,58 @@ exports.calculateTalkTime = async (audioFilePath, speakerSegments) => {
 };
 
 /**
+ * Transcribe audio with speaker labels (Agent/Customer)
+ * Combined endpoint that does transcription + diarization in one call
+ */
+exports.transcribeWithSpeakers = async (audioFilePath, minSpeakers = 2, maxSpeakers = 2) => {
+  try {
+    const fs = require('fs');
+    const FormData = require('form-data');
+    
+    // Create form data with the audio file
+    const formData = new FormData();
+    formData.append('audio', fs.createReadStream(audioFilePath), {
+      filename: require('path').basename(audioFilePath),
+      contentType: 'audio/mpeg',
+    });
+    formData.append('min_speakers', minSpeakers.toString());
+    formData.append('max_speakers', maxSpeakers.toString());
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/transcribe-with-speakers`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 3600000, // 60 minutes timeout for very long files
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Transcription with speakers failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service transcribe-with-speakers error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Transcription with speakers timeout - audio file may be too long');
+    } else if (error.code === 'ECONNREFUSED') {
+      throw new Error('AI service unavailable - please check if the service is running');
+    }
+    
+    throw new Error(`Transcription with speakers failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
  * Health check for AI service
  */
 exports.healthCheck = async () => {
