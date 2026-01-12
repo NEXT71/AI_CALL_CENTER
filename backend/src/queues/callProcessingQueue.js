@@ -161,108 +161,44 @@ async function processCall(job) {
     await job.progress(10);
 
     // Step 1: Combined Transcription + Diarization (with retry)
-    let transcription;
-    let diarizationData = {};
+    const combined = await retryWithBackoff(
+      () => aiService.transcribeWithSpeakers(audioPath),
+      2,  // 2 retries
+      10000  // 10 second delay
+    );
     
-    try {
-      // Try the new combined endpoint first (more efficient)
-      const combined = await retryWithBackoff(
-        () => aiService.transcribeWithSpeakers(audioPath),
-        2,  // 2 retries
-        10000  // 10 second delay
-      );
-      
-      if (!combined || !combined.text) {
-        throw new Error('Combined transcription returned empty result');
-      }
-      
-      // Extract transcription data
-      transcription = {
-        text: combined.text,
-        timestamps: combined.timestamps,
-        language: combined.language,
-        duration: combined.duration,
-        word_count: combined.word_count,
-        speaker_labeled_text: combined.speaker_labeled_text, // New! Text with Agent:/Customer: labels
-      };
-      
-      // Extract diarization data
-      diarizationData = {
-        speakers: combined.speakers,
-        speaker_segments: combined.speaker_segments,
-        num_speakers: combined.speakers.length,
-      };
-      
-      // Calculate talk-time metrics if we have speaker segments
-      if (diarizationData.speaker_segments && diarizationData.speaker_segments.length > 0) {
-        try {
-          const talkTimeData = await aiService.calculateTalkTime(audioPath, diarizationData.speaker_segments);
-          diarizationData = { ...diarizationData, ...talkTimeData };
-        } catch (talkTimeError) {
-          logger.warn('Talk-time calculation failed, continuing without it', {
-            callId,
-            error: talkTimeError.message,
-          });
-        }
-      }
-      
-      logger.info('Combined transcription+diarization completed', {
-        callId,
-        textLength: transcription.text.length,
-        wordCount: transcription.word_count,
-        speakers: diarizationData.speakers,
-      });
-      
-    } catch (combinedError) {
-      // Fallback to separate calls if combined endpoint fails
-      logger.warn('Combined endpoint failed, falling back to separate transcription', {
-        callId,
-        error: combinedError.message,
-      });
-      
-      transcription = await retryWithBackoff(
-        () => aiService.transcribeAudio(audioPath),
-        2,
-        10000
-      );
-      
-      if (!transcription || !transcription.text) {
-        throw new Error('Transcription returned empty result');
-      }
-      
-      logger.info('Transcription completed (fallback)', {
-        callId,
-        textLength: transcription.text.length,
-        wordCount: transcription.text.split(/\s+/).length,
-      });
-      
-      // Try diarization separately
-      try {
-        diarizationData = await aiService.diarizeAudio(audioPath);
-        if (diarizationData.speakers && diarizationData.speaker_segments) {
-          try {
-            const talkTimeData = await aiService.calculateTalkTime(audioPath, diarizationData.speaker_segments);
-            diarizationData = { ...diarizationData, ...talkTimeData };
-          } catch (talkTimeError) {
-            logger.warn('Talk-time calculation failed', { callId, error: talkTimeError.message });
-          }
-        }
-      } catch (diarizationError) {
-        logger.warn('Diarization failed, continuing without it', {
-          callId,
-          error: diarizationError.message,
-        });
-        diarizationData = {
-          speakers: [],
-          speaker_segments: [],
-          agentTalkTime: 0,
-          customerTalkTime: 0,
-          talkTimeRatio: 'N/A',
-          deadAirTotal: 0,
-          deadAirSegments: [],
-        };
-      }
+    if (!combined || !combined.text) {
+      throw new Error('Combined transcription returned empty result');
     }
+    
+    // Extract transcription data
+    const transcription = {
+      text: combined.text,
+      timestamps: combined.timestamps,
+      language: combined.language,
+      duration: combined.duration,
+      word_count: combined.word_count,
+      speaker_labeled_text: combined.speaker_labeled_text, // Text with Agent:/Customer: labels
+    };
+    
+    // Extract diarization data (includes talk-time metrics from combined endpoint)
+    const diarizationData = {
+      speakers: combined.speakers || [],
+      speaker_segments: combined.speaker_segments || [],
+      num_speakers: (combined.speakers || []).length,
+      agentTalkTime: combined.agent_talk_time || 0,
+      customerTalkTime: combined.customer_talk_time || 0,
+      agent_customer_ratio: combined.agent_customer_ratio || 'N/A',
+      dead_air_total: combined.dead_air_total || 0,
+      dead_air_segments: combined.dead_air_segments || [],
+    };
+    
+    logger.info('Combined transcription+diarization completed', {
+      callId,
+      textLength: transcription.text.length,
+      wordCount: transcription.word_count,
+      speakers: diarizationData.speakers,
+    });
     
     await job.progress(40);
 
