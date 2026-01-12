@@ -1147,12 +1147,15 @@ async def transcribe_with_speakers(
             torch.cuda.empty_cache()
         gc.collect()
         
+        # Extract just speaker names for response
+        speaker_names = [speaker for speaker, _ in sorted_by_time]
+        
         return TranscribeWithSpeakersResponse(
             text=full_text,
             speaker_labeled_text=speaker_labeled_text,
             timestamps=timestamps,
             speaker_segments=speaker_segments,
-            speakers=sorted_speakers,
+            speakers=speaker_names,
             language=language,
             duration=duration,
             word_count=word_count
