@@ -525,8 +525,8 @@ async def health_check():
     return health_info
 
 
-@app.post("/transcribe", response_model=TranscribeResponse)
-async def transcribe_audio(audio: UploadFile = File(...)):
+# @app.post("/transcribe", response_model=TranscribeResponse)
+# async def transcribe_audio(audio: UploadFile = File(...)):
     """
     Transcribe audio file using Whisper on GPU
     Handles 30+ minute recordings with automatic chunking
@@ -1143,8 +1143,8 @@ def load_diarization_model():
         return None
 
 
-@app.post("/diarize", response_model=DiarizeResponse)
-async def diarize_audio(
+# @app.post("/diarize", response_model=DiarizeResponse)
+# async def diarize_audio(
     audio: UploadFile = File(...),
     min_speakers: int = Form(2),
     max_speakers: int = Form(2)
@@ -1472,8 +1472,8 @@ async def transcribe_with_speakers(
         gc.collect()
 
 
-@app.post("/calculate-talk-time", response_model=TalkTimeResponse)
-async def calculate_talk_time(
+# @app.post("/calculate-talk-time", response_model=TalkTimeResponse)
+# async def calculate_talk_time(
     audio: UploadFile = File(...),
     speaker_segments: str = Form(...)  # JSON string of speaker segments
 ):
@@ -1659,14 +1659,11 @@ async def root():
         ],
         "endpoints": {
             "health": "/health",
-            "transcribe": "/transcribe",
             "transcribe_with_speakers": "/transcribe-with-speakers",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance",
-            "diarize": "/diarize",
-            "talk_time": "/calculate-talk-time"
+            "compliance": "/check-compliance"
         }
     }
 
