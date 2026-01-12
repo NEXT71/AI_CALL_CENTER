@@ -1064,28 +1064,18 @@ async def transcribe_with_speakers(
             closest = min(speaker_segs, key=lambda x: abs(x["start"] - timestamp))
             return closest["speaker"]
         
-        # Map speakers to Agent/Customer based on talk time
-        # Heuristic: Speaker with more talk time is typically the Agent
-        speaker_talk_time = {}
-        for seg in speaker_segments:
-            speaker = seg["speaker"]
-            duration = seg["duration"]
-            speaker_talk_time[speaker] = speaker_talk_time.get(speaker, 0) + duration
-        
-        # Sort speakers by talk time (descending)
-        sorted_by_time = sorted(speaker_talk_time.items(), key=lambda x: x[1], reverse=True)
-        
+        # Map speakers to Agent/Customer
+        # Assumption: First speaker (alphabetically) is Agent, second is Customer
+        sorted_speakers = sorted(list(speakers))
         speaker_labels = {}
-        if len(sorted_by_time) >= 2:
-            speaker_labels[sorted_by_time[0][0]] = "Agent"      # Most talkative = Agent
-            speaker_labels[sorted_by_time[1][0]] = "Customer"   # Second = Customer
+        if len(sorted_speakers) >= 2:
+            speaker_labels[sorted_speakers[0]] = "Agent"
+            speaker_labels[sorted_speakers[1]] = "Customer"
             # Additional speakers get numbered labels
-            for i, (speaker, _) in enumerate(sorted_by_time[2:], start=3):
+            for i, speaker in enumerate(sorted_speakers[2:], start=3):
                 speaker_labels[speaker] = f"Speaker {i}"
-        elif len(sorted_by_time) == 1:
-            speaker_labels[sorted_by_time[0][0]] = "Speaker"
-        
-        logger.info(f"Speaker assignment: {speaker_labels} (based on talk time: {speaker_talk_time})")
+        elif len(sorted_speakers) == 1:
+            speaker_labels[sorted_speakers[0]] = "Speaker"
         
         # Build speaker-labeled transcript
         labeled_segments = []
