@@ -315,30 +315,40 @@ async function processCallAsync(callId) {
       // The AI service might be running elsewhere
     }
 
-    // Step 1: Combined Transcription + Diarization (using new combined endpoint)
-    logger.info('Transcribing audio with speaker labels', { callId: call.callId });
-    const combinedResult = await aiService.transcribeWithSpeakers(call.audioFilePath);
-    
-    // Set transcription data
-    call.transcript = combinedResult.text;
-    call.speakerLabeledTranscript = combinedResult.speaker_labeled_text || '';
-    call.transcriptTimestamps = combinedResult.timestamps || [];
-    call.wordCount = combinedResult.word_count || call.transcript.split(' ').length;
-    
-    // Set diarization data
-    call.speakerSegments = combinedResult.speaker_segments || [];
-    call.speakers = combinedResult.speakers || [];
-    
-    // Set talk-time metrics (included in combined response)
-    call.agentTalkTime = combinedResult.agent_talk_time || 0;
-    call.customerTalkTime = combinedResult.customer_talk_time || 0;
-    call.talkTimeRatio = combinedResult.agent_customer_ratio || 'N/A';
-    call.deadAirTotal = combinedResult.dead_air_total || 0;
-    call.deadAirSegments = combinedResult.dead_air_segments || [];
-    
+    // Step 1: Transcribe audio (FREE Whisper)
+    logger.info('Transcribing audio with Whisper', { callId: call.callId });
+    const transcriptionResult = await aiService.transcribeAudio(call.audioFilePath);
+    call.transcript = transcriptionResult.text;
+    call.transcriptTimestamps = transcriptionResult.timestamps || [];
+    call.wordCount = transcriptionResult.word_count || call.transcript.split(' ').length;
     await call.save();
 
-    // Step 2: Analyze sentiment (FREE DistilBERT)
+    // Step 2: Speaker Diarization (FREE pyannote.audio) - CRITICAL
+    logger.info('Processing speaker diarization', { callId: call.callId });
+    try {
+      const diarizeResult = await aiService.diarizeAudio(call.audioFilePath);
+      call.speakerSegments = diarizeResult.speaker_segments;
+      call.speakers = diarizeResult.speakers;
+      await call.save();
+
+      // Step 2b: Calculate talk-time metrics
+      logger.info('Calculating talk-time metrics', { callId: call.callId });
+      const talkTimeResult = await aiService.calculateTalkTime(
+        call.audioFilePath,
+        diarizeResult.speaker_segments
+      );
+      
+      call.agentTalkTime = talkTimeResult.speaker_talk_time.SPEAKER_00 || 0;
+      call.customerTalkTime = talkTimeResult.speaker_talk_time.SPEAKER_01 || 0;
+      call.talkTimeRatio = talkTimeResult.agent_customer_ratio || 'N/A';
+      call.deadAirTotal = talkTimeResult.dead_air_total || 0;
+      call.deadAirSegments = talkTimeResult.dead_air_segments || [];
+      await call.save();
+    } catch (error) {
+      logger.warn('Diarization skipped', { callId: call.callId, error: error.message });
+    }
+
+    // Step 3: Analyze sentiment (FREE DistilBERT)
     logger.info('Analyzing sentiment', { callId: call.callId });
     const sentimentResult = await aiService.analyzeSentiment(call.transcript);
     call.sentiment = sentimentResult.label;
@@ -349,7 +359,7 @@ async function processCallAsync(callId) {
     call.customerSentiment = sentimentResult.label;
     await call.save();
 
-    // Step 3: Extract entities (FREE spaCy) - optional
+    // Step 4: Extract entities (FREE spaCy) - optional
     logger.info('Extracting entities', { callId: call.callId });
     try {
       const entitiesResult = await aiService.extractEntities(call.transcript);
@@ -360,7 +370,7 @@ async function processCallAsync(callId) {
       logger.warn('Entity extraction skipped', { callId: call.callId, error: error.message });
     }
 
-    // Step 4: Generate summary (FREE BART) - optional for longer transcripts
+    // Step 5: Generate summary (FREE BART) - optional for longer transcripts
     try {
       if (call.transcript.length > 500) {
         logger.info('Generating summary', { callId: call.callId });
@@ -372,7 +382,7 @@ async function processCallAsync(callId) {
       logger.warn('Summarization skipped', { callId: call.callId, error: error.message });
     }
 
-    // Step 5: Check compliance (FREE rapidfuzz + regex)
+    // Step 6: Check compliance (FREE rapidfuzz + regex)
     logger.info('Checking compliance', { callId: call.callId, campaign: call.campaign });
     const complianceResult = await scoringService.checkCompliance(
       call.transcript,
@@ -383,7 +393,7 @@ async function processCallAsync(callId) {
     call.detectedForbiddenPhrases = complianceResult.detectedForbidden;
     await call.save();
 
-    // Step 6: Calculate quality score (rule-based, agent-focused)
+    // Step 7: Calculate quality score (rule-based, agent-focused)
     logger.info('Calculating quality score', { callId: call.callId });
     const qualityResult = scoringService.calculateQualityScore({
       transcript: call.transcript,
