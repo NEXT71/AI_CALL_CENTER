@@ -1142,6 +1142,128 @@ def load_diarization_model():
         models_available["diarization"] = False
         return None
 
+"""
+# DEPRECATED - Old separate diarize endpoint - use /transcribe-with-speakers instead
+@app.post("/diarize", response_model=DiarizeResponse)
+async def diarize_audio(
+    audio: UploadFile = File(...),
+    min_speakers: int = Form(2),
+    max_speakers: int = Form(2)
+):
+    """
+    Perform speaker diarization on audio file
+    Returns speaker segments with timestamps
+    Handles long audio files with proper memory management
+    """
+    temp_audio_path = None
+    import gc
+    
+    try:
+        logger.info(f"🎙️ Diarization request: {audio.filename}")
+        
+        # Load diarization model
+        pipeline = load_diarization_model()
+        if pipeline is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Diarization model not available. Please set HUGGINGFACE_TOKEN environment variable."
+            )
+        
+        # Save uploaded file temporarily
+        temp_audio_path = f"/tmp/{uuid.uuid4()}_{audio.filename}"
+        with open(temp_audio_path, "wb") as f:
+            shutil.copyfileobj(audio.file, f)
+        
+        # Check file size
+        file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
+        logger.info(f"Audio file size: {file_size_mb:.2f} MB")
+        
+        if file_size_mb > 100:  # Warn for very large files
+            logger.warning(f"Large audio file ({file_size_mb:.2f} MB) - diarization may take time")
+        
+        # Validate speaker range
+        if min_speakers < 1:
+            min_speakers = 1
+        if max_speakers < min_speakers:
+            max_speakers = min_speakers
+        if max_speakers > 10:  # Reasonable limit
+            logger.warning(f"max_speakers={max_speakers} is high, limiting to 10")
+            max_speakers = 10
+        
+        logger.info(f"Processing diarization with {min_speakers}-{max_speakers} speakers...")
+        
+        # Clear GPU cache before processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # Run diarization with timeout handling
+        diarization = pipeline(
+            temp_audio_path,
+            min_speakers=min_speakers,
+            max_speakers=max_speakers
+        )
+        
+        # Convert to serializable format
+        speaker_segments = []
+        speakers = set()
+        
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers.add(speaker)
+            speaker_segments.append({
+                "speaker": speaker,
+                "start": round(float(turn.start), 2),
+                "end": round(float(turn.end), 2),
+                "duration": round(float(turn.end - turn.start), 2)
+            })
+        
+        # Sort segments by start time
+        speaker_segments.sort(key=lambda x: x["start"])
+        
+        logger.info(f"✅ Diarization complete: {len(speakers)} speakers, {len(speaker_segments)} segments")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        return DiarizeResponse(
+            speaker_segments=speaker_segments,
+            speakers=sorted(list(speakers)),
+            num_speakers=len(speakers)
+        )
+        
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error(f"❌ GPU out of memory during diarization")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            raise HTTPException(status_code=500, detail="GPU out of memory. Try with shorter audio.")
+        logger.error(f"❌ Diarization runtime error: {e}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    except Exception as e:
+        logger.error(f"❌ Diarization error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Diarization failed: {str(e)}")
+    finally:
+        # Clean up temp file with retry
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            import time
+            for attempt in range(3):
+                try:
+                    os.remove(temp_audio_path)
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.1)
+                    else:
+                        logger.warning(f"Failed to cleanup temp file: {e}")
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+"""
 
 @app.post("/transcribe-with-speakers", response_model=TranscribeWithSpeakersResponse)
 async def transcribe_with_speakers(
@@ -1540,10 +1662,13 @@ async def root():
         "endpoints": {
             "health": "/health",
             "transcribe_with_speakers": "/transcribe-with-speakers",
+            "transcribe": "/transcribe",
             "sentiment": "/analyze-sentiment",
             "entities": "/extract-entities",
             "summarize": "/summarize",
-            "compliance": "/check-compliance"
+            "compliance": "/check-compliance",
+            "diarize": "/diarize",
+            "talk_time": "/calculate-talk-time"
         }
     }
 
