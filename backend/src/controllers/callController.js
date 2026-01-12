@@ -300,6 +300,21 @@ async function processCallAsync(callId) {
         const podReady = await runpodService.ensurePodRunning();
         if (podReady) {
           logger.info('RunPod is ready for processing', { callId: call.callId });
+          
+          // Additional health check to ensure service is responding
+          logger.info('Performing AI service health check', { callId: call.callId });
+          const healthCheck = await aiService.checkHealth();
+          if (healthCheck.healthy) {
+            logger.info('AI service is healthy and ready', { 
+              callId: call.callId,
+              models: healthCheck.data?.models_loaded 
+            });
+          } else {
+            logger.warn('AI service health check failed, but will attempt processing', {
+              callId: call.callId,
+              reason: healthCheck.reason
+            });
+          }
         } else {
           logger.warn('RunPod not available, proceeding anyway', { callId: call.callId });
         }

@@ -278,8 +278,10 @@ exports.waitForPodReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 10) 
       }
 
       logger.info(`Waiting for pod to be ready... (${attempts + 1}/${maxAttempts})`, {
+        podId: exports.podId,
         status: pod.desiredStatus,
-        runtime: pod.runtime,
+        runtime: pod.runtime ? 'Available' : 'Not ready',
+        machineId: pod.machineId,
       });
 
       // Wait before checking again
@@ -321,7 +323,7 @@ exports.ensurePodRunning = async () => {
       
       // Wait for pod to be ready
       logger.info('Waiting for pod to be ready...');
-      await exports.waitForPodReady(5, 10); // Wait up to 5 minutes
+      await exports.waitForPodReady(10, 10); // Wait up to 10 minutes (RunPod can be slow)
       
       return true;
     }
