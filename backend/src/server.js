@@ -32,8 +32,17 @@ console.log('✅ DEBUG: validateEnv imported successfully');
 console.log('🔍 DEBUG: Importing routes...');
 const authRoutes = require('./routes/authRoutes');
 console.log('✅ DEBUG: authRoutes imported');
-const callRoutes = require('./routes/callRoutes');
-console.log('✅ DEBUG: callRoutes imported');
+
+try {
+  console.log('🔍 DEBUG: About to import callRoutes...');
+  var callRoutes = require('./routes/callRoutes');
+  console.log('✅ DEBUG: callRoutes imported');
+} catch (err) {
+  console.error('❌ FATAL ERROR importing callRoutes:', err);
+  console.error('Stack:', err.stack);
+  process.exit(1);
+}
+
 const ruleRoutes = require('./routes/ruleRoutes');
 console.log('✅ DEBUG: ruleRoutes imported');
 const reportRoutes = require('./routes/reportRoutes');
