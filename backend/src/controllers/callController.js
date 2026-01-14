@@ -252,8 +252,8 @@ exports.uploadCall = [
           productSold: call.productSold,
         });
         // Use Bull queue for AI processing (includes AI quality scoring)
-        const { queueCallProcessing } = require('../queues/callProcessingQueue');
-        await queueCallProcessing(call._id, call.audioFilePath, {
+        const callQueue = require('../queues/callProcessingQueue');
+        await callQueue.queueCallProcessing(call._id, call.audioFilePath, {
           priority: 5,
           isSale: true,
           saleAmount: call.saleAmount,
