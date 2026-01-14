@@ -309,6 +309,92 @@ const CallDetails = () => {
               </div>
             </div>
           )}
+
+          {/* AI Quality Analysis - NEW 6-Factor Scoring */}
+          {call.qualityMetrics?.aiFactors && (
+            <div className="card-enhanced p-6 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
+              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <Award size={20} className="text-purple-600" />
+                AI Quality Analysis
+              </h2>
+              
+              {/* Customer Tone */}
+              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-slate-700">Customer Tone</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    call.qualityMetrics.aiDetails?.customer_tone === 'positive' ? 'bg-green-100 text-green-700' :
+                    call.qualityMetrics.aiDetails?.customer_tone === 'neutral' ? 'bg-blue-100 text-blue-700' :
+                    call.qualityMetrics.aiDetails?.customer_tone === 'frustrated' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {call.qualityMetrics.aiDetails?.customer_tone || 'Unknown'}
+                  </span>
+                </div>
+                <div className="text-sm text-slate-600">
+                  Score: <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.customer_tone_score || 0}/25</span>
+                </div>
+              </div>
+
+              {/* Agent Professionalism */}
+              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-slate-700">Agent Professionalism</span>
+                  <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.agent_professionalism_score || 0}/25</span>
+                </div>
+                {call.qualityMetrics.aiFlags?.agent_too_casual && (
+                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                    ⚠️ Agent used casual language
+                  </div>
+                )}
+              </div>
+
+              {/* Customer Communication */}
+              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-slate-700">Customer Communication</span>
+                  <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.customer_communication_score || 0}/20</span>
+                </div>
+                <div className="text-xs text-slate-600">
+                  Style: {call.qualityMetrics.aiDetails?.customer_style || 'N/A'}
+                </div>
+              </div>
+
+              {/* Language */}
+              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-700">Language</span>
+                  <div className="text-right">
+                    <div className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.language_score || 0}/10</div>
+                    <div className="text-xs text-slate-600">{call.qualityMetrics.aiDetails?.detected_language || 'Unknown'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Critical Flags */}
+              {(call.qualityMetrics.aiFlags?.is_dnc_customer || 
+                call.qualityMetrics.aiFlags?.has_abusive_language ||
+                call.qualityMetrics.aiFlags?.customer_frustrated) && (
+                <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="font-bold text-red-700 mb-2 flex items-center gap-2">
+                    <AlertTriangle size={18} />
+                    Critical Issues Detected
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {call.qualityMetrics.aiFlags.is_dnc_customer && (
+                      <div className="text-red-600 font-medium">🚫 Do Not Call (DNC) Request</div>
+                    )}
+                    {call.qualityMetrics.aiFlags.has_abusive_language && (
+                      <div className="text-red-600 font-medium">⚠️ Abusive Language Detected</div>
+                    )}
+                    {call.qualityMetrics.aiFlags.customer_frustrated && (
+                      <div className="text-amber-600 font-medium">😤 Customer Frustrated</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Column - Transcript & Analysis */}

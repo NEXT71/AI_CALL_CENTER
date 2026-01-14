@@ -154,11 +154,36 @@ const callSchema = new mongoose.Schema(
       default: 0,
     },
     qualityMetrics: {
+      // Traditional metrics (kept for backward compatibility)
       hasGreeting: { type: Boolean, default: false },
       hasProperClosing: { type: Boolean, default: false },
       complianceLinesSpoken: { type: Boolean, default: false },
       agentInterruptionCount: { type: Number, default: 0 },
       avgSpeechRate: { type: Number },
+      
+      // AI-based quality factors (6 factors from AI analysis)
+      aiFactors: {
+        customer_tone_score: Number,
+        language_score: Number,
+        agent_professionalism_score: Number,
+        customer_communication_score: Number,
+        abusive_language_penalty: Number,
+        dnc_penalty: Number,
+      },
+      aiDetails: {
+        customer_tone: String,
+        detected_language: String,
+        agent_casual_phrases: [String],
+        customer_style: String,
+        abusive_words_found: [String],
+        dnc_phrases_found: [String],
+      },
+      aiFlags: {
+        has_abusive_language: Boolean,
+        is_dnc_customer: Boolean,
+        agent_too_casual: Boolean,
+        customer_frustrated: Boolean,
+      },
     },
     // Sale Status - ONLY process calls that resulted in a sale
     isSale: {

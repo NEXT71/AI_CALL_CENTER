@@ -1106,6 +1106,192 @@ async def check_compliance(request: ComplianceCheckRequest):
         raise HTTPException(status_code=500, detail=f"Compliance check failed: {str(e)}")
 
 
+class QualityScoreRequest(BaseModel):
+    transcript: str
+    speaker_labeled_transcript: Optional[str] = None
+    detected_language: str = "english"
+
+
+class QualityScoreResponse(BaseModel):
+    overall_score: float
+    factors: Dict[str, float]
+    details: Dict[str, any]
+    flags: Dict[str, bool]
+
+
+@app.post("/calculate-quality-score", response_model=QualityScoreResponse)
+async def calculate_quality_score(request: QualityScoreRequest):
+    """
+    Calculate AI-based quality score using 6 business factors:
+    1. Customer tone (25 pts) - sentiment analysis on customer speech
+    2. Language selection (10 pts) - English=10, Spanish/French/German=8, other=5
+    3. Agent professionalism (25 pts) - detects casual phrases
+    4. Customer communication (20 pts) - polite/neutral/assertive/aggressive
+    5. Abusive language (-30 pts max) - profanity detection
+    6. DNC detection (-20 pts) - "do not call", "stop calling", etc.
+    """
+    try:
+        logger.info("🔍 Starting AI quality scoring")
+        
+        transcript_lower = request.transcript.lower()
+        
+        # Initialize scores
+        factors = {
+            "customer_tone_score": 0.0,
+            "language_score": 0.0,
+            "agent_professionalism_score": 0.0,
+            "customer_communication_score": 0.0,
+            "abusive_language_penalty": 0.0,
+            "dnc_penalty": 0.0
+        }
+        
+        details = {
+            "customer_tone": "neutral",
+            "detected_language": request.detected_language.lower(),
+            "agent_casual_phrases": [],
+            "customer_style": "neutral",
+            "abusive_words_found": [],
+            "dnc_phrases_found": []
+        }
+        
+        flags = {
+            "has_abusive_language": False,
+            "is_dnc_customer": False,
+            "agent_too_casual": False,
+            "customer_frustrated": False
+        }
+        
+        # Factor 1: Customer Tone (25 points) - Sentiment analysis
+        if request.speaker_labeled_transcript:
+            # Extract customer lines only (assuming speaker 1 is agent, speaker 2 is customer)
+            customer_lines = [line for line in request.speaker_labeled_transcript.split('\n') 
+                            if line.strip().startswith('[Speaker 2]')]
+            customer_text = ' '.join([line.split(']', 1)[1].strip() if ']' in line else '' 
+                                     for line in customer_lines])
+            
+            if customer_text and len(customer_text) > 10:
+                try:
+                    # Use sentiment analyzer
+                    sentiment_result = sentiment_analyzer(customer_text[:512])[0]
+                    sentiment_label = sentiment_result['label']
+                    
+                    if sentiment_label == 'POSITIVE':
+                        factors["customer_tone_score"] = 25.0
+                        details["customer_tone"] = "positive"
+                    elif sentiment_label == 'NEGATIVE':
+                        factors["customer_tone_score"] = 10.0
+                        details["customer_tone"] = "frustrated"
+                        flags["customer_frustrated"] = True
+                    else:
+                        factors["customer_tone_score"] = 18.0
+                        details["customer_tone"] = "neutral"
+                except Exception as e:
+                    logger.warning(f"Sentiment analysis failed: {e}")
+                    factors["customer_tone_score"] = 18.0
+        else:
+            # Fallback to whole transcript sentiment
+            factors["customer_tone_score"] = 18.0
+        
+        # Factor 2: Language Selection (10 points)
+        language_scores = {
+            "english": 10.0,
+            "spanish": 8.0,
+            "french": 8.0,
+            "german": 8.0
+        }
+        factors["language_score"] = language_scores.get(details["detected_language"], 5.0)
+        
+        # Factor 3: Agent Professionalism (25 points) - Detect casual language
+        casual_phrases = [
+            "yeah", "yep", "nope", "gonna", "wanna", "gotta", "kinda", "sorta",
+            "umm", "uh", "like i said", "you know", "basically", "actually"
+        ]
+        
+        found_casual = []
+        for phrase in casual_phrases:
+            if phrase in transcript_lower:
+                found_casual.append(phrase)
+        
+        details["agent_casual_phrases"] = found_casual
+        
+        # Deduct 2 points per casual phrase (max 15 points penalty)
+        penalty = min(len(found_casual) * 2, 15)
+        factors["agent_professionalism_score"] = 25.0 - penalty
+        
+        if len(found_casual) >= 3:
+            flags["agent_too_casual"] = True
+        
+        # Factor 4: Customer Communication Style (20 points)
+        polite_words = ["please", "thank you", "thanks", "appreciate", "grateful"]
+        aggressive_words = ["ridiculous", "unacceptable", "terrible", "awful", "horrible", "disgusting"]
+        
+        polite_count = sum(1 for word in polite_words if word in transcript_lower)
+        aggressive_count = sum(1 for word in aggressive_words if word in transcript_lower)
+        
+        if aggressive_count >= 2:
+            factors["customer_communication_score"] = 8.0
+            details["customer_style"] = "aggressive"
+        elif aggressive_count == 1:
+            factors["customer_communication_score"] = 12.0
+            details["customer_style"] = "assertive"
+        elif polite_count >= 2:
+            factors["customer_communication_score"] = 20.0
+            details["customer_style"] = "polite"
+        else:
+            factors["customer_communication_score"] = 16.0
+            details["customer_style"] = "neutral"
+        
+        # Factor 5: Abusive Language Detection (-30 pts max)
+        abusive_words = [
+            "fuck", "shit", "damn", "hell", "ass", "bitch", "bastard", "crap",
+            "stupid", "idiot", "moron", "dumb", "screw you"
+        ]
+        
+        found_abusive = []
+        for word in abusive_words:
+            if word in transcript_lower:
+                found_abusive.append(word)
+        
+        if found_abusive:
+            details["abusive_words_found"] = found_abusive
+            flags["has_abusive_language"] = True
+            # -10 points per abusive word, max -30
+            factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
+        
+        # Factor 6: DNC Detection (-20 pts)
+        dnc_phrases = [
+            "do not call", "don't call", "stop calling", "remove me from", "take me off",
+            "not interested", "never call again", "no more calls"
+        ]
+        
+        found_dnc = []
+        for phrase in dnc_phrases:
+            if phrase in transcript_lower:
+                found_dnc.append(phrase)
+        
+        if found_dnc:
+            details["dnc_phrases_found"] = found_dnc
+            flags["is_dnc_customer"] = True
+            factors["dnc_penalty"] = -20.0
+        
+        # Calculate overall score (0-100 scale)
+        overall_score = sum(factors.values())
+        overall_score = max(0, min(100, overall_score))  # Clamp to 0-100
+        
+        logger.info(f"✅ AI Quality Score: {overall_score:.1f}/100")
+        
+        return QualityScoreResponse(
+            overall_score=round(overall_score, 2),
+            factors=factors,
+            details=details,
+            flags=flags
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Quality scoring error: {e}")
+        raise HTTPException(status_code=500, detail=f"Quality scoring failed: {str(e)}")
+
+
 def load_diarization_model():
     """Lazy load pyannote diarization model with GPU support"""
     global diarization_pipeline, models_available

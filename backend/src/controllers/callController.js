@@ -393,19 +393,47 @@ async function processCallAsync(callId) {
     call.detectedForbiddenPhrases = complianceResult.detectedForbidden;
     await call.save();
 
-    // Step 7: Calculate quality score (rule-based, agent-focused)
-    logger.info('Calculating quality score', { callId: call.callId });
-    const qualityResult = scoringService.calculateQualityScore({
-      transcript: call.transcript,
-      sentiment: call.agentSentiment || call.sentiment,
-      complianceScore: call.complianceScore,
-      duration: call.duration,
-      talkTimeRatio: call.talkTimeRatio,
-      deadAirTotal: call.deadAirTotal,
-    });
-    call.qualityScore = qualityResult.score;
-    call.qualityMetrics = qualityResult.metrics;
-    await call.save();
+    // Step 7: AI-based quality score with 6 factors
+    logger.info('Calculating AI quality score', { callId: call.callId });
+    try {
+      const aiQualityScore = await aiService.calculateQualityScore(
+        call.transcript,
+        call.speakerLabeledTranscript || null,
+        transcriptionResult.language || 'english'
+      );
+      
+      call.qualityScore = aiQualityScore.overall_score;
+      call.qualityMetrics = {
+        aiFactors: aiQualityScore.factors,
+        aiDetails: aiQualityScore.details,
+        aiFlags: aiQualityScore.flags,
+      };
+      await call.save();
+      
+      logger.info('AI quality scoring completed', {
+        callId: call.callId,
+        score: aiQualityScore.overall_score,
+        factors: aiQualityScore.factors,
+      });
+    } catch (error) {
+      logger.warn('AI quality scoring failed, using traditional scoring', {
+        callId: call.callId,
+        error: error.message,
+      });
+      
+      // Fallback to traditional scoring
+      const qualityResult = scoringService.calculateQualityScore({
+        transcript: call.transcript,
+        sentiment: call.agentSentiment || call.sentiment,
+        complianceScore: call.complianceScore,
+        duration: call.duration,
+        talkTimeRatio: call.talkTimeRatio,
+        deadAirTotal: call.deadAirTotal,
+      });
+      call.qualityScore = qualityResult.score;
+      call.qualityMetrics = qualityResult.metrics;
+      await call.save();
+    }
 
     // Mark as completed
     call.status = 'completed';
