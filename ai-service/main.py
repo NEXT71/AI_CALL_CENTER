@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 import warnings
 import logging
@@ -1112,10 +1112,19 @@ class QualityScoreRequest(BaseModel):
     detected_language: str = "english"
 
 
+class QualityDetails(BaseModel):
+    customer_tone: str
+    detected_language: str
+    agent_casual_phrases: List[str]
+    customer_style: str
+    abusive_words_found: List[str]
+    dnc_phrases_found: List[str]
+
+
 class QualityScoreResponse(BaseModel):
     overall_score: float
     factors: Dict[str, float]
-    details: Dict[str, any]
+    details: QualityDetails
     flags: Dict[str, bool]
 
 
@@ -1283,7 +1292,7 @@ async def calculate_quality_score(request: QualityScoreRequest):
         return QualityScoreResponse(
             overall_score=round(overall_score, 2),
             factors=factors,
-            details=details,
+            details=QualityDetails(**details),
             flags=flags
         )
         
