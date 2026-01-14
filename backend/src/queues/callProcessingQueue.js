@@ -572,3 +572,4 @@ module.exports.queueCallProcessing = exports.queueCallProcessing;
 module.exports.getQueueStats = exports.getQueueStats;
 module.exports.getJobStatus = exports.getJobStatus;
 module.exports.cleanQueue = exports.cleanQueue;
+module.exports.processCall = processCall; // Export processCall for direct use when Redis unavailable

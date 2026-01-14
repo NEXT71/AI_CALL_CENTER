@@ -247,16 +247,30 @@ exports.uploadCall = [
 
       // Only trigger AI processing for SALE calls
       if (call.isSale && call.requiresQA) {
-        logger.info(`Call ${callId} is a SALE - queuing for AI processing`, {
+        logger.info(`Call ${callId} is a SALE - starting AI processing`, {
           saleAmount: call.saleAmount,
           productSold: call.productSold,
         });
-        // Use Bull queue for AI processing (includes AI quality scoring)
-        const { queueCallProcessing } = require('../queues/callProcessingQueue');
-        await queueCallProcessing(call._id, call.audioFilePath, {
-          priority: 5,
-          isSale: true,
-          saleAmount: call.saleAmount,
+        // Process directly without queue (Redis not available on Render free tier)
+        const { processCall } = require('../queues/callProcessingQueue');
+        setImmediate(() => {
+          processCall({
+            id: `direct-${call._id}`,
+            data: {
+              callId: call._id.toString(),
+              audioPath: call.audioFilePath,
+              metadata: {
+                isSale: true,
+                saleAmount: call.saleAmount,
+              },
+              queuedAt: Date.now(),
+            },
+            progress: async (pct) => {
+              logger.debug('Processing progress', { callId, progress: pct });
+            },
+          }).catch(error => {
+            logger.error('Call processing failed', { callId, error: error.message });
+          });
         });
       } else {
         logger.info(`Call ${callId} is NOT a sale - skipping AI processing`);
