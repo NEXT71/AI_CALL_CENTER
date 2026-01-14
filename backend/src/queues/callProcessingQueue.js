@@ -319,12 +319,30 @@ async function processCall(job) {
     // Step 7: Quality scoring using AI-based factors
     let qualityResult;
     try {
+      logger.info('🔍 Starting AI quality scoring', {
+        callId,
+        hasTranscript: !!transcription.text,
+        hasSpeakerLabeled: !!transcription.speaker_labeled_text,
+        transcriptLength: transcription.text?.length || 0,
+        language: transcription.language || 'english'
+      });
+      
       // Use new AI-based quality scoring with specific factors
       const aiQualityScore = await aiService.calculateQualityScore(
         transcription.text,
         transcription.speaker_labeled_text || null,
         transcription.language || 'english'
       );
+      
+      logger.info('✅ AI quality scoring response received', {
+        callId,
+        overallScore: aiQualityScore.overall_score,
+        hasFactors: !!aiQualityScore.factors,
+        hasDetails: !!aiQualityScore.details,
+        hasFlags: !!aiQualityScore.flags,
+        factors: aiQualityScore.factors,
+        flags: aiQualityScore.flags
+      });
       
       // Combine with traditional metrics for comprehensive scoring
       const traditionalScore = scoringService.calculateQualityScore({
@@ -347,17 +365,20 @@ async function processCall(job) {
         }
       };
       
-      logger.info('Quality scoring completed', {
+      logger.info('📊 Quality scoring completed with AI factors', {
         callId,
         aiScore: aiQualityScore.overall_score,
         traditionalScore: traditionalScore.score,
+        hasAiFactors: !!qualityResult.metrics.aiFactors,
+        aiFactorsKeys: qualityResult.metrics.aiFactors ? Object.keys(qualityResult.metrics.aiFactors) : [],
         flags: aiQualityScore.flags
       });
       
     } catch (error) {
-      logger.warn('AI quality scoring failed, falling back to traditional scoring', {
+      logger.error('❌ AI quality scoring failed, falling back to traditional scoring', {
         callId,
-        error: error.message
+        error: error.message,
+        stack: error.stack
       });
       
       // Fallback to traditional scoring if AI service fails
