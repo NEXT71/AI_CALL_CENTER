@@ -1292,7 +1292,14 @@ async def calculate_quality_score(request: QualityScoreRequest):
         return QualityScoreResponse(
             overall_score=round(overall_score, 2),
             factors=factors,
-            details=QualityDetails(**details),
+            details=QualityDetails(
+                customer_tone=details["customer_tone"],
+                detected_language=details["detected_language"],
+                agent_casual_phrases=details["agent_casual_phrases"],
+                customer_style=details["customer_style"],
+                abusive_words_found=details["abusive_words_found"],
+                dnc_phrases_found=details["dnc_phrases_found"]
+            ),
             flags=flags
         )
         
