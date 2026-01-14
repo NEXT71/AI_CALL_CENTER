@@ -2,6 +2,7 @@ import os
 import uvicorn
 import uuid
 import shutil
+import re
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -1255,10 +1256,13 @@ async def calculate_quality_score(request: QualityScoreRequest):
             "fuck", "shit", "damn", "hell", "ass", "bitch", "bastard", "crap",
             "stupid", "idiot", "moron", "dumb", "screw you"
         ]
-        
+
         found_abusive = []
-        for word in abusive_words:
-            if word in transcript_lower:
+        # Split transcript into words for better matching
+        words = re.findall(r'\b\w+\b', transcript_lower)
+
+        for word in words:
+            if word in abusive_words:
                 found_abusive.append(word)
         
         if found_abusive:
