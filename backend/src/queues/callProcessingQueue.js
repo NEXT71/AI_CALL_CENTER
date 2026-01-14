@@ -316,17 +316,60 @@ async function processCall(job) {
     );
     await job.progress(85);
 
-    // Step 7: Quality scoring
-    const qualityResult = scoringService.calculateQualityScore({
-      transcription: transcription.text,
-      sentiment: diarizationData.agentSentiment || sentiment.sentiment,
-      duration: callData.duration,
-      hasGreeting: complianceResult.hasGreeting,
-      hasProperClosing: complianceResult.hasProperClosing,
-      agentTalkTime: diarizationData.agentTalkTime || 0,
-      customerTalkTime: diarizationData.customerTalkTime || 0,
-      deadAirTotal: diarizationData.deadAirTotal || 0,
-    });
+    // Step 7: Quality scoring using AI-based factors
+    let qualityResult;
+    try {
+      // Use new AI-based quality scoring with specific factors
+      const aiQualityScore = await aiService.calculateQualityScore(
+        transcription.text,
+        transcription.speaker_labeled_text || null,
+        transcription.language || 'english'
+      );
+      
+      // Combine with traditional metrics for comprehensive scoring
+      const traditionalScore = scoringService.calculateQualityScore({
+        transcript: transcription.text,
+        sentiment: diarizationData.agentSentiment || sentiment.sentiment,
+        duration: callData.duration,
+        complianceScore: complianceResult.score,
+        talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio,
+        deadAirTotal: diarizationData.dead_air_total || diarizationData.deadAirTotal || 0,
+      });
+      
+      // Primary score is from AI (new factors), secondary metrics from traditional
+      qualityResult = {
+        score: aiQualityScore.overall_score,
+        metrics: {
+          ...traditionalScore.metrics,
+          aiFactors: aiQualityScore.factors,
+          aiDetails: aiQualityScore.details,
+          aiFlags: aiQualityScore.flags
+        }
+      };
+      
+      logger.info('Quality scoring completed', {
+        callId,
+        aiScore: aiQualityScore.overall_score,
+        traditionalScore: traditionalScore.score,
+        flags: aiQualityScore.flags
+      });
+      
+    } catch (error) {
+      logger.warn('AI quality scoring failed, falling back to traditional scoring', {
+        callId,
+        error: error.message
+      });
+      
+      // Fallback to traditional scoring if AI service fails
+      qualityResult = scoringService.calculateQualityScore({
+        transcript: transcription.text,
+        sentiment: diarizationData.agentSentiment || sentiment.sentiment,
+        duration: callData.duration,
+        complianceScore: complianceResult.score,
+        talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio,
+        deadAirTotal: diarizationData.dead_air_total || diarizationData.deadAirTotal || 0,
+      });
+    }
     await job.progress(95);
 
     // Update call with all results
