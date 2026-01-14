@@ -251,13 +251,7 @@ exports.uploadCall = [
           saleAmount: call.saleAmount,
           productSold: call.productSold,
         });
-        // Use Bull queue for AI processing (includes AI quality scoring)
-        const callQueue = require('../queues/callProcessingQueue');
-        await callQueue.queueCallProcessing(call._id, audioPath, {
-          priority: 5,
-          isSale: true,
-          saleAmount: call.saleAmount,
-        });
+        processCallAsync(call._id);
       } else {
         logger.info(`Call ${callId} is NOT a sale - skipping AI processing`);
       }
@@ -286,11 +280,8 @@ exports.uploadCall = [
 ];
 
 /**
- * DEPRECATED: Old synchronous processing function
- * Now replaced by Bull queue (callProcessingQueue.js) which includes AI quality scoring
- * This function is kept for reference but should not be used
+ * Process call asynchronously using FREE & open-source AI models
  */
-/*
 async function processCallAsync(callId) {
   try {
     const call = await Call.findById(callId);
@@ -432,7 +423,6 @@ async function processCallAsync(callId) {
     });
   }
 }
-*/
 
 /**
  * @route   GET /api/calls
