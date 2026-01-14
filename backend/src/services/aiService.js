@@ -331,6 +331,48 @@ exports.transcribeWithSpeakers = async (audioFilePath, minSpeakers = 2, maxSpeak
 };
 
 /**
+ * Calculate AI quality score using 6 business factors
+ */
+exports.calculateQualityScore = async (transcript, speakerLabeledTranscript = null, detectedLanguage = 'english') => {
+  try {
+    // Validate input
+    if (!transcript || transcript.trim().length === 0) {
+      throw new Error('Transcript cannot be empty');
+    }
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/calculate-quality-score`,
+      {
+        transcript,
+        speaker_labeled_transcript: speakerLabeledTranscript,
+        detected_language: detectedLanguage,
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000, // 1 minute timeout
+        validateStatus: function (status) {
+          return status < 500;
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Quality score calculation failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service quality score calculation error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Quality score calculation timeout');
+    }
+    
+    throw new Error(`Quality score calculation failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
  * Health check for AI service
  */
 exports.healthCheck = async () => {
