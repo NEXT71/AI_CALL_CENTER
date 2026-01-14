@@ -73,7 +73,6 @@ exports.checkCompliance = async (transcript, campaign) => {
 
 /**
  * Calculate quality score based on various metrics (AGENT-FOCUSED)
- * This method is kept for backward compatibility and additional metrics
  */
 exports.calculateQualityScore = (data) => {
   const { transcript, sentiment, complianceScore, duration, talkTimeRatio, deadAirTotal } = data;
