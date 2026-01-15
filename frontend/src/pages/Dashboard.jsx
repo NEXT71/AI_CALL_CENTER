@@ -282,46 +282,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Average Quality Score Card */}
-          <div className="kpi-card-enhanced group">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="kpi-label-enhanced">Avg Quality Score</p>
-                <p className="kpi-value-enhanced">{stats.overview?.avgQualityScore?.toFixed(1) || '0.0'}</p>
-                <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
-                  <ArrowUp size={14} className="animate-pulse" />
-                  <span>3.2% improvement</span>
-                </div>
-              </div>
-              <div className="kpi-icon-enhanced kpi-icon-green group-hover:scale-110 transition-transform duration-300">
-                <TrendingUp size={24} />
-              </div>
-            </div>
-            <div className="kpi-progress-bar mt-4">
-              <div className="kpi-progress-fill kpi-progress-green" style={{ width: `${Math.min(stats.overview?.avgQualityScore || 0, 100)}%` }}></div>
-            </div>
-          </div>
-
-          {/* Compliance Score Card */}
-          <div className="kpi-card-enhanced group">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="kpi-label-enhanced">Compliance Score</p>
-                <p className="kpi-value-enhanced">{stats.overview?.avgComplianceScore?.toFixed(1) || '0.0'}</p>
-                <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
-                  <CheckCircle size={14} className="animate-pulse" />
-                  <span>98% adherence</span>
-                </div>
-              </div>
-              <div className="kpi-icon-enhanced kpi-icon-purple group-hover:scale-110 transition-transform duration-300">
-                <CheckCircle size={24} />
-              </div>
-            </div>
-            <div className="kpi-progress-bar mt-4">
-              <div className="kpi-progress-fill kpi-progress-purple" style={{ width: `${Math.min(stats.overview?.avgComplianceScore || 0, 100)}%` }}></div>
-            </div>
-          </div>
-
           {/* Sales Conversion Card */}
           <div className="kpi-card-enhanced group">
             <div className="flex items-start justify-between">

@@ -4,7 +4,8 @@ import { callService, reportService } from '../services/apiService';
 import { 
   ArrowLeft, Download, Play, Pause, AlertTriangle, CheckCircle, 
   X, Phone, User, Calendar, Clock, Hash, TrendingUp, TrendingDown,
-  Shield, Award, MessageSquare, Volume2, FileText, BrainCircuit
+  Shield, Award, MessageSquare, Volume2, FileText, BrainCircuit,
+  Brain, Languages, Briefcase, MessageCircle, PhoneOff
 } from 'lucide-react';
 
 const CallDetails = () => {
@@ -118,33 +119,7 @@ const CallDetails = () => {
       </div>
 
       {/* Quality Score Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="kpi-card-enhanced group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-300">
-              <Award size={24} />
-            </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getScoreBadge(call.qualityScore)}`}>
-              {getScoreRating(call.qualityScore)}
-            </span>
-          </div>
-          <div className="text-3xl font-bold text-slate-900 mb-1">{call.qualityScore}%</div>
-          <div className="text-sm font-medium text-slate-500">Quality Score</div>
-        </div>
-
-        <div className="kpi-card-enhanced group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform duration-300">
-              <Shield size={24} />
-            </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getScoreBadge(call.complianceScore)}`}>
-              {getScoreRating(call.complianceScore)}
-            </span>
-          </div>
-          <div className="text-3xl font-bold text-slate-900 mb-1">{call.complianceScore}%</div>
-          <div className="text-sm font-medium text-slate-500">Compliance Score</div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="kpi-card-enhanced group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform duration-300">
@@ -257,144 +232,6 @@ const CallDetails = () => {
               </audio>
             </div>
           </div>
-
-          {/* Quality Metrics */}
-          {call.qualityMetrics && (
-            <div className="card-enhanced p-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <Award size={20} className="text-blue-600" />
-                Quality Metrics
-              </h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
-                  <span className="font-medium text-slate-700">Has Greeting</span>
-                  {call.qualityMetrics.hasGreeting ? (
-                    <div className="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                      <CheckCircle size={16} />
-                      <span>Yes</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-red-700 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                      <X size={16} />
-                      <span>No</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
-                  <span className="font-medium text-slate-700">Proper Closing</span>
-                  {call.qualityMetrics.hasProperClosing ? (
-                    <div className="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-1 rounded-full text-sm font-medium">
-                      <CheckCircle size={16} />
-                      <span>Yes</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-red-700 bg-red-50 px-3 py-1 rounded-full text-sm font-medium">
-                      <X size={16} />
-                      <span>No</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
-                  <span className="font-medium text-slate-700">Interruptions</span>
-                  <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-200">
-                    {call.qualityMetrics.agentInterruptionCount || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-colors">
-                  <span className="font-medium text-slate-700">Speech Rate</span>
-                  <span className="font-bold text-slate-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-200">
-                    {call.qualityMetrics.avgSpeechRate || 0} wpm
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* AI Quality Analysis - NEW 6-Factor Scoring */}
-          {call.qualityMetrics?.aiFactors && (
-            <div className="card-enhanced p-6 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
-              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <Award size={20} className="text-purple-600" />
-                AI Quality Analysis
-              </h2>
-              
-              {/* Customer Tone */}
-              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-700">Customer Tone</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    call.qualityMetrics.aiDetails?.customer_tone === 'positive' ? 'bg-green-100 text-green-700' :
-                    call.qualityMetrics.aiDetails?.customer_tone === 'neutral' ? 'bg-blue-100 text-blue-700' :
-                    call.qualityMetrics.aiDetails?.customer_tone === 'frustrated' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {call.qualityMetrics.aiDetails?.customer_tone || 'Unknown'}
-                  </span>
-                </div>
-                <div className="text-sm text-slate-600">
-                  Score: <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.customer_tone_score || 0}/25</span>
-                </div>
-              </div>
-
-              {/* Agent Professionalism */}
-              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-700">Agent Professionalism</span>
-                  <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.agent_professionalism_score || 0}/25</span>
-                </div>
-                {call.qualityMetrics.aiFlags?.agent_too_casual && (
-                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                    ⚠️ Agent used casual language
-                  </div>
-                )}
-              </div>
-
-              {/* Customer Communication */}
-              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-700">Customer Communication</span>
-                  <span className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.customer_communication_score || 0}/20</span>
-                </div>
-                <div className="text-xs text-slate-600">
-                  Style: {call.qualityMetrics.aiDetails?.customer_style || 'N/A'}
-                </div>
-              </div>
-
-              {/* Language */}
-              <div className="mb-4 p-4 bg-white rounded-xl shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Language</span>
-                  <div className="text-right">
-                    <div className="font-bold text-slate-900">{call.qualityMetrics.aiFactors.language_score || 0}/10</div>
-                    <div className="text-xs text-slate-600">{call.qualityMetrics.aiDetails?.detected_language || 'Unknown'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Critical Flags */}
-              {(call.qualityMetrics.aiFlags?.is_dnc_customer || 
-                call.qualityMetrics.aiFlags?.has_abusive_language ||
-                call.qualityMetrics.aiFlags?.customer_frustrated) && (
-                <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-                  <div className="font-bold text-red-700 mb-2 flex items-center gap-2">
-                    <AlertTriangle size={18} />
-                    Critical Issues Detected
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    {call.qualityMetrics.aiFlags.is_dnc_customer && (
-                      <div className="text-red-600 font-medium">🚫 Do Not Call (DNC) Request</div>
-                    )}
-                    {call.qualityMetrics.aiFlags.has_abusive_language && (
-                      <div className="text-red-600 font-medium">⚠️ Abusive Language Detected</div>
-                    )}
-                    {call.qualityMetrics.aiFlags.customer_frustrated && (
-                      <div className="text-amber-600 font-medium">😤 Customer Frustrated</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Right Column - Transcript & Analysis */}
@@ -443,6 +280,129 @@ const CallDetails = () => {
             </div>
           )}
 
+          {/* AI Quality Analysis */}
+          {call.qualityMetrics?.aiFactors && (
+            <div className="card-enhanced p-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <Brain size={20} className="text-purple-600" />
+                AI Quality Analysis
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Customer Tone Score */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User size={18} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Customer Tone</div>
+                      <div className="text-sm text-slate-600">{call.qualityMetrics.aiDetails?.customer_tone || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-blue-600">{call.qualityMetrics.aiFactors.customer_tone_score || 0}/10</div>
+                  </div>
+                </div>
+
+                {/* Language Score */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                      <Languages size={18} className="text-green-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Language Quality</div>
+                      <div className="text-sm text-slate-600">{call.qualityMetrics.aiDetails?.detected_language || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-green-600">{call.qualityMetrics.aiFactors.language_score || 0}/10</div>
+                  </div>
+                </div>
+
+                {/* Agent Professionalism Score */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Briefcase size={18} className="text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Agent Professionalism</div>
+                      <div className="text-sm text-slate-600">
+                        {call.qualityMetrics.aiDetails?.agent_casual_phrases?.length > 0 
+                          ? `${call.qualityMetrics.aiDetails.agent_casual_phrases.length} casual phrases detected`
+                          : 'Professional tone maintained'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-purple-600">{call.qualityMetrics.aiFactors.agent_professionalism_score || 0}/10</div>
+                  </div>
+                </div>
+
+                {/* Customer Communication Score */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                      <MessageCircle size={18} className="text-orange-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Customer Communication</div>
+                      <div className="text-sm text-slate-600">{call.qualityMetrics.aiDetails?.customer_style || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-orange-600">{call.qualityMetrics.aiFactors.customer_communication_score || 0}/10</div>
+                  </div>
+                </div>
+
+                {/* Abusive Language Penalty */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-rose-50 rounded-xl border border-red-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                      <AlertTriangle size={18} className="text-red-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Abusive Language</div>
+                      <div className="text-sm text-slate-600">
+                        {call.qualityMetrics.aiDetails?.abusive_words_found?.length > 0
+                          ? `${call.qualityMetrics.aiDetails.abusive_words_found.length} abusive words detected`
+                          : 'No abusive language detected'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-red-600">-{call.qualityMetrics.aiFactors.abusive_language_penalty || 0}</div>
+                  </div>
+                </div>
+
+                {/* DNC Penalty */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <PhoneOff size={18} className="text-gray-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">DNC Compliance</div>
+                      <div className="text-sm text-slate-600">
+                        {call.qualityMetrics.aiDetails?.dnc_phrases_found?.length > 0
+                          ? `${call.qualityMetrics.aiDetails.dnc_phrases_found.length} DNC violations detected`
+                          : 'No DNC violations detected'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gray-600">-{call.qualityMetrics.aiFactors.dnc_penalty || 0}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Transcript */}
           {(call.speakerLabeledTranscript || call.transcript) && (
             <div className="card-enhanced p-6">
@@ -454,49 +414,6 @@ const CallDetails = () => {
                 <p className="text-slate-700 whitespace-pre-wrap leading-relaxed font-normal text-base">
                   {call.speakerLabeledTranscript || call.transcript}
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* AI Recommendations */}
-          {report?.recommendations && report.recommendations.length > 0 && (
-            <div className="card-enhanced p-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                <BrainCircuit size={20} className="text-purple-600" />
-                AI Coaching Recommendations
-              </h2>
-              <div className="space-y-4">
-                {report.recommendations.map((rec, idx) => (
-                  <div key={idx} className={`border-l-4 p-5 rounded-r-xl shadow-sm transition-all hover:shadow-md ${
-                    rec.priority === 'Critical' ? 'border-red-500 bg-red-50/50' :
-                    rec.priority === 'High' ? 'border-orange-500 bg-orange-50/50' :
-                    rec.priority === 'Medium' ? 'border-amber-500 bg-amber-50/50' :
-                    'border-blue-500 bg-blue-50/50'
-                  }`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">
-                          {rec.category}
-                        </span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          rec.priority === 'Critical' ? 'bg-red-100 text-red-700' :
-                          rec.priority === 'High' ? 'bg-orange-100 text-orange-700' :
-                          rec.priority === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {rec.priority} Priority
-                        </span>
-                      </div>
-                    </div>
-                    <p className="font-bold text-slate-900 mb-2 text-lg">{rec.issue}</p>
-                    <div className="flex items-start gap-3 bg-white p-3 rounded-lg border border-slate-100">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0 mt-0.5">
-                        <CheckCircle size={14} />
-                      </div>
-                      <p className="text-slate-700 text-sm leading-relaxed">{rec.suggestion}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
