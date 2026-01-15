@@ -79,5 +79,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
-# Use startup script for queue-based deployment
+# Use startup script for serverless
 CMD ["/app/start.sh"]

@@ -331,7 +331,7 @@ exports.transcribeWithSpeakers = async (audioFilePath, minSpeakers = 2, maxSpeak
 };
 
 /**
- * Calculate AI quality score using direct HTTP call to RunPod endpoint
+ * Calculate AI quality score using 6 business factors
  */
 exports.calculateQualityScore = async (transcript, speakerLabeledTranscript = null, detectedLanguage = 'english') => {
   try {
@@ -349,7 +349,7 @@ exports.calculateQualityScore = async (transcript, speakerLabeledTranscript = nu
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 300000, // 5 minutes timeout for quality scoring
+        timeout: 60000, // 1 minute timeout
         validateStatus: function (status) {
           return status < 500;
         },
@@ -363,13 +363,11 @@ exports.calculateQualityScore = async (transcript, speakerLabeledTranscript = nu
     return response.data;
   } catch (error) {
     logger.error('AI Service quality score calculation error', { error: error.message });
-
+    
     if (error.code === 'ECONNABORTED') {
-      throw new Error('Quality score calculation timeout - transcript may be too long');
-    } else if (error.code === 'ECONNREFUSED') {
-      throw new Error('AI service unavailable - please check if the service is running');
+      throw new Error('Quality score calculation timeout');
     }
-
+    
     throw new Error(`Quality score calculation failed: ${error.response?.data?.detail || error.message}`);
   }
 };
