@@ -910,11 +910,7 @@ async def analyze_sentiment(request: SentimentRequest):
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        import time
-        start_time = time.time()
         result = analyze_sentiment_smart(request.text)
-        sentiment_time = time.time() - start_time
-        logger.info(f"⏱️ Sentiment analysis completed in {sentiment_time:.1f}s")
         
         if result['score'] >= 0.9:
             confidence = "very high"
@@ -1629,15 +1625,11 @@ async def diarize_audio(
             torch.cuda.empty_cache()
         
         # Run diarization with timeout handling
-        import time
-        start_time = time.time()
         diarization = pipeline(
             temp_audio_path,
             min_speakers=min_speakers,
             max_speakers=max_speakers
         )
-        diarization_time = time.time() - start_time
-        logger.info(f"⏱️ Diarization completed in {diarization_time:.1f}s")
         
         # Convert to serializable format
         speaker_segments = []
