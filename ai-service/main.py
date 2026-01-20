@@ -487,7 +487,10 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return Nonedef health_check():
+        return None
+
+
+def health_check():
     """Health check endpoint with GPU info"""
     import psutil
     memory = psutil.virtual_memory()
