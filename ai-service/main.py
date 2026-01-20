@@ -369,7 +369,27 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         import gc
         
         logger.info(f"📦 Chunking audio file: {audio_path}")
+        
+        # Check file exists and has content
+        if not os.path.exists(audio_path):
+            logger.error(f"❌ Audio file does not exist: {audio_path}")
+            return None, None
+            
+        file_size = os.path.getsize(audio_path)
+        if file_size < 1000:  # Less than 1KB
+            logger.error(f"❌ Audio file too small: {audio_path} ({file_size} bytes)")
+            return None, None
+            
+        logger.info(f"📦 Audio file size: {file_size} bytes")
+        
         audio = AudioSegment.from_file(audio_path)
+        
+        # Validate loaded audio
+        if len(audio) <= 0:
+            logger.error(f"❌ Loaded audio has zero duration: {audio_path}")
+            return None, None
+            
+        logger.info(f"📦 Loaded audio duration: {len(audio)}ms")
         
         # Convert to mono and set sample rate BEFORE chunking
         if audio.channels > 1:
@@ -390,9 +410,22 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         chunks = []
         step = chunk_length_ms - overlap_ms  # Step with overlap
         
+        # Prevent issues with invalid step size
+        if step <= 0:
+            step = chunk_length_ms  # No overlap if step would be negative/zero
+        
+        logger.info(f"📦 Audio duration: {duration_ms}ms, chunk_length: {chunk_length_ms}ms, step: {step}ms")
+        
         for i in range(0, duration_ms, step):
             chunk_end = min(i + chunk_length_ms, duration_ms)
             chunk = audio[i:chunk_end]
+            
+            logger.info(f"📦 Creating chunk {i//step}: start={i}ms, end={chunk_end}ms, length={len(chunk)}ms")
+            
+            # Skip empty or very short chunks
+            if len(chunk) < 1000:  # Less than 1 second
+                logger.warning(f"⚠️ Skipping very short chunk at {i}ms (length: {len(chunk)}ms)")
+                continue
             
             # Ensure chunk is mono (double-check)
             if chunk.channels > 1:
@@ -401,6 +434,12 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             chunk_path = f"{audio_path}_chunk_{i//step}.wav"
             # Export as WAV - already mono and 16kHz from parent audio
             chunk.export(chunk_path, format="wav")
+            
+            # Double-check the exported file has content
+            if os.path.exists(chunk_path) and os.path.getsize(chunk_path) < 1000:
+                logger.warning(f"⚠️ Skipping empty exported chunk: {chunk_path}")
+                continue
+            
             chunks.append({
                 "path": chunk_path,
                 "start_time": i / 1000,
@@ -434,6 +473,16 @@ def transcribe_chunk(model, chunk_path, chunk_info):
     try:
         logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
         
+        # Check if chunk file exists and has content
+        if not os.path.exists(chunk_path):
+            logger.error(f"❌ Chunk file does not exist: {chunk_path}")
+            return None
+            
+        file_size = os.path.getsize(chunk_path)
+        if file_size < 1000:  # Less than 1KB, likely empty
+            logger.warning(f"⚠️ Skipping empty or very small chunk: {chunk_path} ({file_size} bytes)")
+            return None
+        
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
@@ -452,6 +501,11 @@ def transcribe_chunk(model, chunk_path, chunk_info):
             condition_on_previous_text=False  # Prevent hallucination
         )
         
+        # Validate result
+        if not result or not result.get("text", "").strip():
+            logger.warning(f"⚠️ Empty transcription result for chunk: {chunk_path}")
+            return None
+        
         # Adjust timestamps based on chunk start time
         if "segments" in result:
             for segment in result["segments"]:
@@ -467,6 +521,21 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         
         return result
     except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error(f"❌ GPU out of memory on chunk {chunk_path}")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            gc.collect()
+        elif "cannot reshape tensor" in str(e).lower():
+            logger.error(f"❌ Empty tensor error on chunk {chunk_path} - chunk may be empty or corrupted ({os.path.getsize(chunk_path) if os.path.exists(chunk_path) else 0} bytes)")
+            return None
+        logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return None
         if "out of memory" in str(e).lower():
             logger.error(f"❌ GPU out of memory on chunk {chunk_path}")
             if CUDA_AVAILABLE:
@@ -553,6 +622,13 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         import librosa
         duration = librosa.get_duration(path=temp_path)
         logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+        
+        # Validate audio file
+        if duration <= 0:
+            raise HTTPException(status_code=400, detail="Audio file appears to be empty or corrupted")
+        
+        if duration < 1:
+            raise HTTPException(status_code=400, detail="Audio file is too short (minimum 1 second required)")
         
         # Process based on duration
         if duration > 600:  # 10+ minutes
@@ -1138,7 +1214,7 @@ async def calculate_quality_score(request: QualityScoreRequest):
     3. Agent professionalism (25 pts) - detects casual phrases
     4. Customer communication (20 pts) - polite/neutral/assertive/aggressive
     5. Abusive language (-30 pts max) - profanity detection
-    6. DNC detection (-20 pts) - Precise detection of explicit DNC requests from customers only
+    6. DNC detection (-20 pts) - "do not call", "stop calling", etc.
     """
     try:
         logger.info("🔍 Starting AI quality scoring")
@@ -1271,63 +1347,19 @@ async def calculate_quality_score(request: QualityScoreRequest):
             # -10 points per abusive word, max -30
             factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
         
-        # Factor 6: DNC Detection (-20 pts) - More precise detection
-        # Only flag as DNC if customer clearly expresses they don't want future calls
-        dnc_patterns = [
-            # Direct requests to stop calling
-            r"\b(?:please\s+)?(?:do\s+not|don't)\s+call\s+(?:me|us|this\s+number)\s+again\b",
-            r"\b(?:please\s+)?stop\s+calling\s+(?:me|us|this\s+number)\b",
-            r"\b(?:please\s+)?remove\s+(?:me|my\s+number|this\s+number)\s+from\s+your\s+(?:list|call\s+list)\b",
-            r"\b(?:please\s+)?take\s+(?:me|my\s+number|this\s+number)\s+off\s+(?:your\s+)?(?:call\s+)?list\b",
-            r"\bi\s+(?:do\s+not|don't)\s+want\s+(?:any\s+more|further|additional)\s+calls\b",
-            r"\bnever\s+call\s+(?:me|us|this\s+number)\s+again\b",
-            r"\bno\s+more\s+calls\b",
-            r"\bi\s+am\s+not\s+interested\s+in\s+(?:your\s+)?services?\b",
-            # Explicit DNC requests
-            r"\bput\s+me\s+on\s+(?:your\s+)?do\s+not\s+call\s+list\b",
-            r"\badd\s+(?:me|this\s+number)\s+to\s+(?:your\s+)?do\s+not\s+call\s+list\b"
+        # Factor 6: DNC Detection (-20 pts)
+        dnc_phrases = [
+            "do not call", "don't call", "stop calling", "remove me from", "take me off",
+            "not interested", "never call again", "no more calls"
         ]
-
+        
         found_dnc = []
-        # Check customer speech only (Speaker 2) if available
-        if request.speaker_labeled_transcript:
-            customer_lines = [line for line in request.speaker_labeled_transcript.split('\n')
-                            if line.strip().startswith('[Speaker 2]')]
-            customer_text = ' '.join([line.split(']', 1)[1].strip() if ']' in line else ''
-                                     for line in customer_lines])
-            text_to_check = customer_text.lower()
-        else:
-            # Fallback to full transcript if no speaker labels
-            text_to_check = transcript_lower
-
-        for pattern in dnc_patterns:
-            if re.search(pattern, text_to_check, re.IGNORECASE):
-                found_dnc.append(pattern)
-
-        # Additional check: exclude procedural phrases that might contain "do not call"
-        procedural_exclusions = [
-            r"do\s+not\s+call\s+it",  # "do not call it" in procedural context
-            r"do\s+not\s+call\s+back",  # "do not call back" as instruction
-            r"do\s+not\s+call\s+me\s+yet",  # temporary hold
-            r"do\s+not\s+call\s+until",  # conditional
-            r"stay\s+on\s+line",  # procedural instruction
-            r"bear\s+with\s+me",  # procedural instruction
-            r"let\s+me\s+connect",  # procedural instruction
-        ]
-
-        # Remove false positives
-        filtered_dnc = []
-        for pattern in found_dnc:
-            is_false_positive = False
-            for exclusion in procedural_exclusions:
-                if re.search(exclusion, text_to_check, re.IGNORECASE):
-                    is_false_positive = True
-                    break
-            if not is_false_positive:
-                filtered_dnc.append(pattern)
-
-        if filtered_dnc:
-            details["dnc_phrases_found"] = filtered_dnc
+        for phrase in dnc_phrases:
+            if phrase in transcript_lower:
+                found_dnc.append(phrase)
+        
+        if found_dnc:
+            details["dnc_phrases_found"] = found_dnc
             flags["is_dnc_customer"] = True
             factors["dnc_penalty"] = -20.0
         
