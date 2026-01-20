@@ -444,16 +444,8 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
                 chunk = chunk.set_channels(1)
             
             chunk_path = f"{audio_path}_chunk_{i//step}.wav"
-            # Export as WAV - already mono and 16kHz from parent audio
+            # Export as WAV - already mono and 16kHz from preprocessed audio
             chunk.export(chunk_path, format="wav")
-            
-            # CRITICAL FIX: Convert chunk with FFmpeg to ensure Whisper-compatible format
-            converted_chunk = convert_audio_with_ffmpeg(chunk_path, f"{chunk_path}_converted.wav")
-            if converted_chunk:
-                # Replace original chunk with converted one
-                os.remove(chunk_path)
-                chunk_path = converted_chunk
-                logger.info(f"✅ Converted chunk {i//step} with FFmpeg")
             
             chunks.append({
                 "path": chunk_path,
