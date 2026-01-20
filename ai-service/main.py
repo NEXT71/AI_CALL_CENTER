@@ -405,68 +405,108 @@ def convert_audio_with_ffmpeg(input_path: str, output_path: str = None) -> str:
 
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
     """
-    Split audio file into chunks for processing long recordings
+    Split audio file into chunks using FFmpeg for maximum reliability
     chunk_length_ms: chunk length in milliseconds (default 10 minutes)
-    overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
+    overlap_ms: overlap between chunks in milliseconds (default 5 seconds)
     """
     try:
-        from pydub import AudioSegment
         import gc
         
         logger.info(f"📦 Chunking audio file: {audio_path}")
-        audio = AudioSegment.from_file(audio_path)
         
-        # Convert to mono and set sample rate BEFORE chunking
-        if audio.channels > 1:
-            audio = audio.set_channels(1)
-            logger.info(f"✅ Converted to mono audio ({audio.channels} channel)")
+        # Get duration using ffprobe
+        probe_cmd = [
+            'ffprobe',
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_format',
+            audio_path
+        ]
         
-        # Set consistent sample rate
-        if audio.frame_rate != 16000:
-            audio = audio.set_frame_rate(16000)
-            logger.info(f"✅ Set sample rate to 16000 Hz")
+        probe_result = subprocess.run(
+            probe_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30
+        )
         
-        duration_ms = len(audio)
+        if probe_result.returncode != 0:
+            logger.error(f"ffprobe failed: {probe_result.stderr.decode()}")
+            return None, None
+        
+        import json
+        probe_data = json.loads(probe_result.stdout)
+        duration = float(probe_data['format']['duration'])
+        
+        logger.info(f"⏱️ Audio duration: {duration:.1f}s ({duration/60:.1f} min)")
         
         # Validate chunk size
-        if chunk_length_ms > duration_ms:
-            chunk_length_ms = duration_ms
+        chunk_length_sec = chunk_length_ms / 1000
+        overlap_sec = overlap_ms / 1000
+        
+        if chunk_length_sec > duration:
+            chunk_length_sec = duration
         
         chunks = []
-        step = chunk_length_ms - overlap_ms  # Step with overlap
+        step = chunk_length_sec - overlap_sec
+        chunk_index = 0
         
-        for i in range(0, duration_ms, step):
-            chunk_end = min(i + chunk_length_ms, duration_ms)
-            chunk = audio[i:chunk_end]
+        for start_time in range(0, int(duration), int(step)):
+            end_time = min(start_time + chunk_length_sec, duration)
+            actual_duration = end_time - start_time
             
-            # Ensure chunk is mono (double-check)
-            if chunk.channels > 1:
-                chunk = chunk.set_channels(1)
+            # Skip very short chunks
+            if actual_duration < 1.0:
+                logger.warning(f"Skipping short chunk: {actual_duration}s")
+                continue
             
-            chunk_path = f"{audio_path}_chunk_{i//step}.wav"
-            # Export as WAV - already mono and 16kHz from preprocessed audio
-            chunk.export(chunk_path, format="wav")
+            chunk_path = f"{audio_path}_chunk_{chunk_index}.wav"
             
-            chunks.append({
-                "path": chunk_path,
-                "start_time": i / 1000,
-                "end_time": chunk_end / 1000,
-                "overlap_start": (i + overlap_ms) / 1000 if i > 0 else 0
-            })
+            # Use FFmpeg to extract chunk
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-i', audio_path,
+                '-ss', str(start_time),
+                '-t', str(actual_duration),
+                '-ac', '1',  # Mono
+                '-ar', '16000',  # 16kHz
+                '-c:a', 'pcm_s16le',  # 16-bit PCM
+                '-f', 'wav',
+                '-y',  # Overwrite
+                chunk_path
+            ]
             
-            # Free memory after each chunk
-            del chunk
+            result = subprocess.run(
+                ffmpeg_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=60
+            )
             
-            # Break if we've reached the end
-            if chunk_end >= duration_ms:
+            if result.returncode == 0 and os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 1000:
+                logger.info(f"✅ Created chunk {chunk_index}: {start_time:.1f}s - {end_time:.1f}s ({actual_duration:.1f}s)")
+                
+                chunks.append({
+                    "path": chunk_path,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "overlap_start": start_time + overlap_sec if start_time > 0 else 0,
+                    "index": chunk_index
+                })
+                chunk_index += 1
+            else:
+                logger.error(f"Failed to create chunk {chunk_index}: {result.stderr.decode()}")
+            
+            if end_time >= duration:
                 break
         
-        # Explicitly free memory
-        del audio
-        gc.collect()
+        if not chunks:
+            logger.error("No valid chunks created")
+            return None, None
         
-        logger.info(f"✅ Created {len(chunks)} chunks with {overlap_ms}ms overlap")
-        return chunks, duration_ms / 1000
+        logger.info(f"✅ Created {len(chunks)} chunks with {overlap_sec}s overlap")
+        return chunks, duration
+        
     except Exception as e:
         logger.error(f"❌ Failed to chunk audio: {e}")
         import traceback
