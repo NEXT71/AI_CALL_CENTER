@@ -520,46 +520,6 @@ def transcribe_chunk(model, chunk_path, chunk_info):
     try:
         logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
         
-        # DEBUG: Check chunk file integrity
-        if not os.path.exists(chunk_path):
-            logger.error(f"Chunk file does not exist: {chunk_path}")
-            return None
-        
-        file_size = os.path.getsize(chunk_path)
-        logger.info(f"📁 Chunk file size: {file_size} bytes")
-        
-        if file_size < 1000:
-            logger.error(f"Chunk file too small: {file_size} bytes")
-            return None
-        
-        # Check duration with ffprobe
-        probe_cmd = [
-            'ffprobe',
-            '-v', 'quiet',
-            '-print_format', 'json',
-            '-show_format',
-            chunk_path
-        ]
-        
-        probe_result = subprocess.run(
-            probe_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=10
-        )
-        
-        if probe_result.returncode == 0:
-            import json
-            probe_data = json.loads(probe_result.stdout)
-            chunk_duration = float(probe_data['format']['duration'])
-            logger.info(f"⏱️ Chunk duration: {chunk_duration:.1f}s")
-            
-            if chunk_duration < 1.0:
-                logger.error(f"Chunk too short: {chunk_duration}s")
-                return None
-        else:
-            logger.warning(f"Could not probe chunk duration: {probe_result.stderr.decode()}")
-        
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
