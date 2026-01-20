@@ -90,6 +90,7 @@ else:
 # Thread pool for parallel chunk processing
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "4"))
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+model_lock = threading.Lock()  # Lock for thread-safe model access
 
 # Global model variables (lazy loaded)
 whisper_model = None
@@ -438,20 +439,27 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
-        # Clear GPU cache before processing
-        if CUDA_AVAILABLE:
-            torch.cuda.empty_cache()
-        
-        result = model.transcribe(
-            chunk_path,
-            verbose=False,
-            fp16=use_fp16,  # FP16 for GPU, disabled for CPU
-            language=None,  # Auto-detect language
-            temperature=0.0,  # Deterministic output
-            compression_ratio_threshold=2.4,  # Reject bad transcriptions
-            no_speech_threshold=0.6,  # Detect silence
-            condition_on_previous_text=False  # Prevent hallucination
-        )
+        # CRITICAL FIX: Lock the model to prevent race conditions during parallel processing
+        # OpenAI Whisper is not thread-safe; multiple threads cannot use the same model instance simultaneously.
+        with model_lock:
+            # Clear GPU cache before processing
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            
+            result = model.transcribe(
+                chunk_path,
+                verbose=False,
+                fp16=use_fp16,  # FP16 for GPU, disabled for CPU
+                language=None,  # Auto-detect language
+                temperature=0.0,  # Deterministic output
+                compression_ratio_threshold=2.4,  # Reject bad transcriptions
+                no_speech_threshold=0.6,  # Detect silence
+                condition_on_previous_text=False  # Prevent hallucination
+            )
+            
+            # Clear GPU cache after processing
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
         
         # Adjust timestamps based on chunk start time
         if "segments" in result:
@@ -479,11 +487,7 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return None
-
-
-@app.get("/health")
-async def health_check():
+        return Nonedef health_check():
     """Health check endpoint with GPU info"""
     import psutil
     memory = psutil.virtual_memory()
