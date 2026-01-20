@@ -463,10 +463,13 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             chunk_path = f"{audio_path}_chunk_{chunk_index}.wav"
             
             # Use FFmpeg to extract chunk
-            ffmpeg_cmd = [
-                'ffmpeg',
-                '-i', audio_path,
-                '-ss', str(start_time),
+            ffmpeg_cmd = ['ffmpeg', '-i', audio_path]
+            
+            # Only use -ss if not starting from beginning (avoids potential issues)
+            if start_time > 0:
+                ffmpeg_cmd.extend(['-ss', str(start_time)])
+            
+            ffmpeg_cmd.extend([
                 '-t', str(actual_duration),
                 '-ac', '1',  # Mono
                 '-ar', '16000',  # 16kHz
@@ -474,7 +477,7 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
                 '-f', 'wav',
                 '-y',  # Overwrite
                 chunk_path
-            ]
+            ])
             
             result = subprocess.run(
                 ffmpeg_cmd,
