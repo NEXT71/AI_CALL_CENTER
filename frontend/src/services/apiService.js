@@ -175,8 +175,8 @@ export const runpodService = {
     return response.data;
   },
 
-  startRunPod: async () => {
-    const response = await api.post('/runpod/start');
+  startRunPod: async (podId) => {
+    const response = await api.post('/runpod/start', { podId });
     return response.data;
   },
 
@@ -187,6 +187,11 @@ export const runpodService = {
 
   listRunPods: async () => {
     const response = await api.get('/runpod/list');
+    return response.data;
+  },
+
+  getBestPod: async () => {
+    const response = await api.get('/runpod/best');
     return response.data;
   },
 

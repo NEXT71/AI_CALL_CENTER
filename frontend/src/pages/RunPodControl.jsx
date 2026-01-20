@@ -5,6 +5,8 @@ import apiService from '../services/apiService';
 const RunPodControl = () => {
   const [podStatus, setPodStatus] = useState(null);
   const [serviceStatus, setServiceStatus] = useState(null);
+  const [availablePods, setAvailablePods] = useState([]);
+  const [selectedPodId, setSelectedPodId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,15 +21,27 @@ const RunPodControl = () => {
   const fetchStatuses = async () => {
     try {
       setError(null);
-      const [podResponse, serviceResponse] = await Promise.all([
+      const [podResponse, serviceResponse, podsResponse, bestPodResponse] = await Promise.all([
         apiService.getRunPodStatus().catch(() => null),
-        apiService.getServiceStatus().catch(() => null)
+        apiService.getServiceStatus().catch(() => null),
+        apiService.listRunPods().catch(() => null),
+        apiService.getBestPod().catch(() => null)
       ]);
+      
       if (podResponse?.success) {
         setPodStatus(podResponse.data);
+        setSelectedPodId(podResponse.data?.id);
+      } else if (bestPodResponse?.success) {
+        // If no current pod status, use the best available pod
+        setSelectedPodId(bestPodResponse.data?.id);
       }
+      
       if (serviceResponse?.success) {
         setServiceStatus(serviceResponse.data);
+      }
+      
+      if (podsResponse?.success) {
+        setAvailablePods(podsResponse.data || []);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch status');
@@ -37,11 +51,12 @@ const RunPodControl = () => {
   };
 
   const handleStartPod = async () => {
-    if (!confirm('Start the GPU pod? This will begin incurring costs (~$0.27/hr).')) return;
+    const podToStart = selectedPodId || 'best available pod';
+    if (!confirm(`Start the GPU pod (${podToStart})? This will begin incurring costs (~$0.27/hr).`)) return;
     
     try {
       setActionLoading(true);
-      const response = await apiService.startRunPod();
+      const response = await apiService.startRunPod(selectedPodId);
       if (response.success) {
         alert('✅ ' + response.message);
         setTimeout(fetchStatuses, 2000);
@@ -71,7 +86,7 @@ const RunPodControl = () => {
   };
 
   const handleStartService = async () => {
-    if (!confirm('Start the AI service? Make sure the pod is running first.')) return;
+    if (!confirm('Start the AI service? This will automatically clone the repository, install required libraries, and start the service if missing (may take 5-10 minutes). Make sure the pod is running first.')) return;
     
     try {
       setActionLoading(true);
@@ -176,6 +191,36 @@ const RunPodControl = () => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
+        </div>
+
+        {/* Pod Selector */}
+        <div className="card-enhanced bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Server className="w-5 h-5 text-slate-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Pod Selection</h2>
+                <p className="text-slate-600 text-sm">Choose which GPU pod to control</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={selectedPodId || ''}
+                onChange={(e) => setSelectedPodId(e.target.value || null)}
+                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              >
+                <option value="">Select a pod...</option>
+                {availablePods.map((pod) => (
+                  <option key={pod.id} value={pod.id}>
+                    {pod.name || `Pod ${pod.id.slice(-8)}`} - {pod.gpu?.count}x {pod.gpu?.name} (${pod.costPerHr?.toFixed(2)}/hr)
+                  </option>
+                ))}
+              </select>
+              <span className="text-sm text-slate-500">
+                {availablePods.length} pod{availablePods.length !== 1 ? 's' : ''} available
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Pod Status Card */}
@@ -309,11 +354,13 @@ const RunPodControl = () => {
                   <>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                      <span className="font-semibold">Service is running</span>
+                      <span className="font-semibold">Service is running with auto-restart</span>
                     </div>
-                    {serviceStatus?.pid && (
-                      <div className="text-xs">Process ID: {serviceStatus.pid}</div>
-                    )}
+                    <div className="text-xs space-y-1">
+                      <div>🔄 Monitor: {serviceStatus?.monitor ? 'Active' : 'Inactive'}</div>
+                      <div>🤖 AI Service: {serviceStatus?.service ? 'Running' : 'Stopped'}</div>
+                      <div>📝 Auto-restart enabled (max 10 attempts)</div>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -321,7 +368,7 @@ const RunPodControl = () => {
                       <span className="inline-block w-2 h-2 bg-slate-400 rounded-full"></span>
                       <span className="font-semibold">Service is stopped</span>
                     </div>
-                    <div className="text-xs">Start the service to process transcriptions</div>
+                    <div className="text-xs">Start the service to enable auto-restart protection</div>
                   </>
                 )}
               </div>
@@ -376,13 +423,15 @@ const RunPodControl = () => {
               <span className="font-semibold">🎯 How it works:</span>
             </p>
             <ol className="text-xs text-blue-800 space-y-1 ml-4 list-decimal">
+              <li><strong>Select Pod:</strong> Choose from available running pods or let the system auto-select the best one</li>
               <li><strong>Start Pod:</strong> Powers on the GPU instance (~1-2 min)</li>
-              <li><strong>Start Service:</strong> Launches the AI transcription service via SSH</li>
-              <li><strong>Stop Service:</strong> Stops the transcription service (pod keeps running)</li>
+              <li><strong>Start Service:</strong> Automatically clones repository, installs dependencies, and launches the AI transcription service with auto-restart protection (~5-10 min first time)</li>
+              <li><strong>Auto-Restart:</strong> Service automatically restarts if it crashes (up to 10 attempts)</li>
+              <li><strong>Stop Service:</strong> Stops the transcription service and monitor (pod keeps running)</li>
               <li><strong>Stop Pod:</strong> Powers off the GPU (stops billing)</li>
             </ol>
             <p className="text-xs text-blue-900 mt-2">
-              <span className="font-semibold">💡 Tip:</span> Keep the pod running if processing multiple calls. Only stop when idle for extended periods.
+              <span className="font-semibold">💡 Tip:</span> The service now runs with 24/7 monitoring. It will automatically restart if it crashes, ensuring continuous operation.
             </p>
           </div>
         </div>
