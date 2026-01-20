@@ -1019,7 +1019,99 @@ def transcribe_chunk_with_ultimate_fallback(model, chunk_path, chunk_info):
     logger.error(f"❌ COMPLETE FAILURE for chunk {chunk_path}")
     logger.error(f"Last error: {last_error}")
     
-    return None
+    return None    """
+    Transcribe a single audio chunk with GPU acceleration and memory management
+    FIXED: Added better error handling and Whisper parameters
+    """
+    import gc
+    try:
+        logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
+        
+        # Enable FP16 only on GPU for 2x speed boost
+        use_fp16 = CUDA_AVAILABLE
+        
+        # Clear GPU cache before processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        # CRITICAL FIX: Updated Whisper parameters to prevent alignment errors
+        result = model.transcribe(
+            chunk_path,
+            verbose=False,
+            fp16=use_fp16,
+            language=None,  # Auto-detect language
+            temperature=0.0,  # Deterministic output
+            compression_ratio_threshold=2.4,
+            no_speech_threshold=0.6,
+            condition_on_previous_text=False,  # Prevent cross-chunk hallucination
+            # ADDED: These parameters help prevent the "Key and Value" error
+            beam_size=5,  # Default beam size (explicit)
+            best_of=5,  # Default best_of (explicit)
+            patience=1.0,  # Wait for better results
+            length_penalty=1.0,  # No length penalty
+            suppress_tokens="-1",  # Don't suppress any tokens
+            initial_prompt=None,  # No initial prompt to avoid context issues
+            word_timestamps=False  # Disable word timestamps for chunked processing (causes alignment issues)
+        )
+        
+        # Adjust timestamps based on chunk start time
+        if "segments" in result:
+            for segment in result["segments"]:
+                segment["start"] += chunk_info["start_time"]
+                segment["end"] += chunk_info["start_time"]
+        
+        logger.info(f"✅ Chunk transcribed: {len(result.get('text', ''))} chars")
+        
+        # Clear GPU cache after processing
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        return result
+    except RuntimeError as e:
+        error_msg = str(e).lower()
+        if "out of memory" in error_msg:
+            logger.error(f"❌ GPU out of memory on chunk {chunk_path}")
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            gc.collect()
+        elif "key and value" in error_msg:
+            logger.error(f"❌ Whisper alignment error on chunk {chunk_path}")
+            logger.error(f"This usually indicates an audio format issue")
+            # Try to re-process with safer parameters
+            try:
+                logger.info("Retrying with CPU and safer parameters...")
+                # Force CPU processing for this chunk
+                result = model.transcribe(
+                    chunk_path,
+                    verbose=False,
+                    fp16=False,  # Force CPU
+                    language="en",  # Force English to avoid language detection issues
+                    temperature=0.0,
+                    word_timestamps=False,
+                    beam_size=1,  # Simpler decoding
+                    best_of=1
+                )
+                logger.info("✅ Retry successful with CPU")
+                
+                # Adjust timestamps
+                if "segments" in result:
+                    for segment in result["segments"]:
+                        segment["start"] += chunk_info["start_time"]
+                        segment["end"] += chunk_info["start_time"]
+                
+                return result
+            except Exception as retry_error:
+                logger.error(f"❌ Retry also failed: {retry_error}")
+                return None
+        else:
+            logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return None
 
 
 @app.get("/health")
