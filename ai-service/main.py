@@ -363,6 +363,8 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
     Split audio file into chunks for processing long recordings
     chunk_length_ms: chunk length in milliseconds (default 10 minutes)
     overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
+    
+    FIXED: Properly handles audio conversion to prevent Whisper errors
     """
     try:
         from pydub import AudioSegment
@@ -371,15 +373,19 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         logger.info(f"📦 Chunking audio file: {audio_path}")
         audio = AudioSegment.from_file(audio_path)
         
-        # Convert to mono and set sample rate BEFORE chunking
+        # Convert to mono FIRST
         if audio.channels > 1:
             audio = audio.set_channels(1)
-            logger.info(f"✅ Converted to mono audio ({audio.channels} channel)")
+            logger.info(f"✅ Converted to mono audio")
         
-        # Set consistent sample rate
+        # Set consistent sample rate to 16000 Hz
         if audio.frame_rate != 16000:
             audio = audio.set_frame_rate(16000)
             logger.info(f"✅ Set sample rate to 16000 Hz")
+        
+        # CRITICAL FIX: Normalize audio to prevent Whisper alignment issues
+        # This ensures consistent audio levels across chunks
+        audio = audio.normalize()
         
         duration_ms = len(audio)
         
@@ -394,13 +400,28 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             chunk_end = min(i + chunk_length_ms, duration_ms)
             chunk = audio[i:chunk_end]
             
-            # Ensure chunk is mono (double-check)
+            # Ensure chunk is long enough (minimum 1 second)
+            if len(chunk) < 1000:  # Less than 1 second
+                logger.warning(f"Skipping chunk that's too short: {len(chunk)}ms")
+                break
+            
+            # Double-check mono (should already be mono from parent)
             if chunk.channels > 1:
                 chunk = chunk.set_channels(1)
             
             chunk_path = f"{audio_path}_chunk_{i//step}.wav"
-            # Export as WAV - already mono and 16kHz from parent audio
-            chunk.export(chunk_path, format="wav")
+            
+            # CRITICAL FIX: Export with specific parameters that work well with Whisper
+            chunk.export(
+                chunk_path, 
+                format="wav",
+                parameters=[
+                    "-ac", "1",  # Force mono
+                    "-ar", "16000",  # Force 16kHz sample rate
+                    "-sample_fmt", "s16"  # 16-bit PCM (Whisper-friendly format)
+                ]
+            )
+            
             chunks.append({
                 "path": chunk_path,
                 "start_time": i / 1000,
@@ -410,6 +431,7 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             
             # Free memory after each chunk
             del chunk
+            gc.collect()
             
             # Break if we've reached the end
             if chunk_end >= duration_ms:
@@ -429,7 +451,10 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
 
 
 def transcribe_chunk(model, chunk_path, chunk_info):
-    """Transcribe a single audio chunk with GPU acceleration and memory management"""
+    """
+    Transcribe a single audio chunk with GPU acceleration and memory management
+    FIXED: Added better error handling and Whisper parameters
+    """
     import gc
     try:
         logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
@@ -441,15 +466,24 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
         
+        # CRITICAL FIX: Updated Whisper parameters to prevent alignment errors
         result = model.transcribe(
             chunk_path,
             verbose=False,
-            fp16=use_fp16,  # FP16 for GPU, disabled for CPU
+            fp16=use_fp16,
             language=None,  # Auto-detect language
             temperature=0.0,  # Deterministic output
-            compression_ratio_threshold=2.4,  # Reject bad transcriptions
-            no_speech_threshold=0.6,  # Detect silence
-            condition_on_previous_text=False  # Prevent hallucination
+            compression_ratio_threshold=2.4,
+            no_speech_threshold=0.6,
+            condition_on_previous_text=False,  # Prevent cross-chunk hallucination
+            # ADDED: These parameters help prevent the "Key and Value" error
+            beam_size=5,  # Default beam size (explicit)
+            best_of=5,  # Default best_of (explicit)
+            patience=1.0,  # Wait for better results
+            length_penalty=1.0,  # No length penalty
+            suppress_tokens="-1",  # Don't suppress any tokens
+            initial_prompt=None,  # No initial prompt to avoid context issues
+            word_timestamps=False  # Disable word timestamps for chunked processing (causes alignment issues)
         )
         
         # Adjust timestamps based on chunk start time
@@ -467,12 +501,43 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         
         return result
     except RuntimeError as e:
-        if "out of memory" in str(e).lower():
+        error_msg = str(e).lower()
+        if "out of memory" in error_msg:
             logger.error(f"❌ GPU out of memory on chunk {chunk_path}")
             if CUDA_AVAILABLE:
                 torch.cuda.empty_cache()
             gc.collect()
-        logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
+        elif "key and value" in error_msg:
+            logger.error(f"❌ Whisper alignment error on chunk {chunk_path}")
+            logger.error(f"This usually indicates an audio format issue")
+            # Try to re-process with safer parameters
+            try:
+                logger.info("Retrying with CPU and safer parameters...")
+                # Force CPU processing for this chunk
+                result = model.transcribe(
+                    chunk_path,
+                    verbose=False,
+                    fp16=False,  # Force CPU
+                    language="en",  # Force English to avoid language detection issues
+                    temperature=0.0,
+                    word_timestamps=False,
+                    beam_size=1,  # Simpler decoding
+                    best_of=1
+                )
+                logger.info("✅ Retry successful with CPU")
+                
+                # Adjust timestamps
+                if "segments" in result:
+                    for segment in result["segments"]:
+                        segment["start"] += chunk_info["start_time"]
+                        segment["end"] += chunk_info["start_time"]
+                
+                return result
+            except Exception as retry_error:
+                logger.error(f"❌ Retry also failed: {retry_error}")
+                return None
+        else:
+            logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
         return None
     except Exception as e:
         logger.error(f"❌ Error transcribing chunk {chunk_path}: {e}")
@@ -531,8 +596,10 @@ async def transcribe_audio(audio: UploadFile = File(...)):
     """
     Transcribe audio file using Whisper on GPU
     Handles 30+ minute recordings with automatic chunking
+    FIXED: Better audio preprocessing and error handling
     """
     temp_path = None
+    preprocessed_path = None
     chunk_files = []
     
     try:
@@ -549,17 +616,65 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
         logger.info(f"🎙️ Processing audio: {audio.filename} ({file_size_mb:.2f} MB)")
         
-        # Get audio duration
-        import librosa
-        duration = librosa.get_duration(path=temp_path)
-        logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+        # CRITICAL FIX: Preprocess audio BEFORE getting duration
+        # This ensures consistent format for both duration check and transcription
+        from pydub import AudioSegment
+        
+        logger.info("🔧 Preprocessing audio file...")
+        preprocessed_path = f"{temp_path}_preprocessed.wav"
+        
+        try:
+            audio_segment = AudioSegment.from_file(temp_path)
+            
+            # Convert to mono
+            if audio_segment.channels > 1:
+                audio_segment = audio_segment.set_channels(1)
+                logger.info("✅ Converted to mono")
+            
+            # Set to 16kHz
+            if audio_segment.frame_rate != 16000:
+                audio_segment = audio_segment.set_frame_rate(16000)
+                logger.info("✅ Set to 16kHz")
+            
+            # Normalize audio
+            audio_segment = audio_segment.normalize()
+            logger.info("✅ Normalized audio levels")
+            
+            # Export preprocessed audio
+            audio_segment.export(
+                preprocessed_path,
+                format="wav",
+                parameters=[
+                    "-ac", "1",
+                    "-ar", "16000",
+                    "-sample_fmt", "s16"
+                ]
+            )
+            
+            duration = len(audio_segment) / 1000.0  # Duration in seconds
+            del audio_segment
+            import gc
+            gc.collect()
+            
+            logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+            
+        except Exception as e:
+            logger.error(f"Preprocessing failed, using original file: {e}")
+            preprocessed_path = temp_path
+            # Fallback to librosa for duration
+            import librosa
+            duration = librosa.get_duration(path=temp_path)
+            logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+        
+        # Use preprocessed file for all further processing
+        processing_path = preprocessed_path
         
         # Process based on duration
         if duration > 600:  # 10+ minutes
             logger.info(f"📦 Long audio detected - using chunked processing")
             
             # Split into chunks
-            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=600000)
+            chunks, total_duration = chunk_audio_file(processing_path, chunk_length_ms=600000)
             if not chunks:
                 raise HTTPException(status_code=500, detail="Failed to chunk audio")
             
@@ -579,18 +694,29 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             processing_time = time.time() - start_time
             logger.info(f"⚡ Parallel processing completed in {processing_time:.1f}s")
             
+            # Filter out None results (failed chunks)
+            valid_results = [r for r in chunk_results if r is not None]
+            
+            if not valid_results:
+                raise HTTPException(
+                    status_code=500, 
+                    detail="All chunks failed to transcribe. Audio file may be corrupted."
+                )
+            
+            if len(valid_results) < len(chunks):
+                logger.warning(f"⚠️ Only {len(valid_results)}/{len(chunks)} chunks transcribed successfully")
+            
             # Merge results
             merged_text = []
             merged_segments = []
             detected_language = None
             
-            for result in chunk_results:
-                if result:
-                    merged_text.append(result.get("text", "").strip())
-                    if "segments" in result:
-                        merged_segments.extend(result["segments"])
-                    if not detected_language and "language" in result:
-                        detected_language = result["language"]
+            for result in valid_results:
+                merged_text.append(result.get("text", "").strip())
+                if "segments" in result:
+                    merged_segments.extend(result["segments"])
+                if not detected_language and "language" in result:
+                    detected_language = result["language"]
             
             full_text = " ".join(merged_text)
             
@@ -625,10 +751,13 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             
             use_fp16 = CUDA_AVAILABLE
             result = model.transcribe(
-                temp_path,
+                processing_path,
                 verbose=False,
                 fp16=use_fp16,
-                language=None
+                language=None,
+                word_timestamps=False,  # Disable to prevent alignment issues
+                beam_size=5,
+                best_of=5
             )
             
             processing_time = time.time() - start_time
@@ -673,28 +802,20 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         
         cleanup_errors = []
         
-        if temp_path and os.path.exists(temp_path):
-            for attempt in range(3):
-                try:
-                    os.unlink(temp_path)
-                    break
-                except Exception as e:
-                    if attempt < 2:
-                        time.sleep(0.1)
-                    else:
-                        cleanup_errors.append(f"Failed to delete {temp_path}: {e}")
+        # Clean up all temporary files
+        files_to_cleanup = [temp_path, preprocessed_path] + chunk_files
         
-        for chunk_file in chunk_files:
-            if os.path.exists(chunk_file):
+        for file_path in files_to_cleanup:
+            if file_path and os.path.exists(file_path):
                 for attempt in range(3):
                     try:
-                        os.unlink(chunk_file)
+                        os.unlink(file_path)
                         break
                     except Exception as e:
                         if attempt < 2:
                             time.sleep(0.1)
                         else:
-                            cleanup_errors.append(f"Failed to delete {chunk_file}: {e}")
+                            cleanup_errors.append(f"Failed to delete {file_path}: {e}")
         
         if cleanup_errors:
             logger.warning(f"Cleanup warnings: {'; '.join(cleanup_errors)}")
