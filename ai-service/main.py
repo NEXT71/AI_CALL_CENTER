@@ -905,95 +905,33 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 
 @app.post("/analyze-sentiment", response_model=SentimentResponse)
 async def analyze_sentiment(request: SentimentRequest):
-    """Analyze sentiment using GPU-accelerated DistilBERT"""
-    import gc
+    """Analyze sentiment using GPU-accelerated DistilBERT with batch processing"""
     try:
-        analyzer = load_sentiment_model()
-        if analyzer is None:
-            raise HTTPException(status_code=503, detail="Sentiment analyzer failed to load")
-
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        # For very long text, analyze in chunks and aggregate
-        max_chunk_chars = 2000
+        result = analyze_sentiment_smart(request.text)
         
-        if len(request.text) > max_chunk_chars:
-            logger.info(f"🔍 Long text detected ({len(request.text)} chars), analyzing in chunks")
-            
-            # Split into chunks (by sentences to avoid cutting mid-sentence)
-            chunks = []
-            current_chunk = ""
-            sentences = request.text.split('. ')
-            
-            for sentence in sentences:
-                if len(current_chunk) + len(sentence) < max_chunk_chars:
-                    current_chunk += sentence + ". "
-                else:
-                    if current_chunk:
-                        chunks.append(current_chunk.strip())
-                    current_chunk = sentence + ". "
-            
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-            
-            # Analyze each chunk
-            positive_scores = []
-            negative_scores = []
-            
-            for i, chunk in enumerate(chunks[:10]):  # Limit to 10 chunks
-                try:
-                    result = analyzer(chunk, truncation=True, max_length=512)[0]
-                    if result["label"].upper() == "POSITIVE":
-                        positive_scores.append(result["score"])
-                    else:
-                        negative_scores.append(result["score"])
-                except Exception as e:
-                    logger.warning(f"Failed to analyze chunk {i}: {e}")
-            
-            # Aggregate results
-            if len(positive_scores) > len(negative_scores):
-                label = "positive"
-                score = sum(positive_scores) / len(positive_scores) if positive_scores else 0.5
-            elif len(negative_scores) > len(positive_scores):
-                label = "negative"
-                score = sum(negative_scores) / len(negative_scores) if negative_scores else 0.5
-            else:
-                label = "neutral"
-                score = 0.5
-        else:
-            text = request.text[:max_chunk_chars]
-            logger.info(f"🔍 Analyzing sentiment: {len(text)} chars")
-            result = analyzer(text, truncation=True, max_length=512)[0]
-            
-            label_map = {
-                "POSITIVE": "positive",
-                "NEGATIVE": "negative",
-                "NEUTRAL": "neutral"
-            }
-            
-            label = label_map.get(result["label"].upper(), result["label"].lower())
-            score = result["score"]
-        
-        if score >= 0.9:
+        if result['score'] >= 0.9:
             confidence = "very high"
-        elif score >= 0.75:
+        elif result['score'] >= 0.75:
             confidence = "high"
-        elif score >= 0.6:
+        elif result['score'] >= 0.6:
             confidence = "moderate"
         else:
             confidence = "low"
         
-        logger.info(f"✅ Sentiment: {label} ({score:.2f})")
+        logger.info(f"✅ Sentiment: {result['label']} ({result['score']:.2f})")
         
         # Clear memory
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
+        import gc
         gc.collect()
         
         return SentimentResponse(
-            label=label,
-            score=round(score, 4),
+            label=result['label'],
+            score=round(result['score'], 4),
             confidence=confidence
         )
         
@@ -1004,6 +942,70 @@ async def analyze_sentiment(request: SentimentRequest):
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
+
+
+def analyze_sentiment_smart(text: str):
+    """
+    Splits text into chunks and processes them in batches for speed.
+    Handles texts longer than 512 tokens.
+    """
+    pipeline = load_sentiment_model()
+    if not pipeline:
+        return {"label": "NEUTRAL", "score": 0.5}
+
+    # Limit input text length to prevent timeouts (max 50,000 characters)
+    max_text_length = 50000
+    if len(text) > max_text_length:
+        logger.warning(f"Text too long ({len(text)} chars), truncating to {max_text_length}")
+        text = text[:max_text_length]
+
+    # 1. Split text into sentences/segments to respect model limits
+    chunks = [c.strip() for c in text.replace("?", ".").replace("!", ".").split(".") if len(c.strip()) > 5]
+    
+    if not chunks:
+        return {"label": "NEUTRAL", "score": 0.5}
+
+    # 2. Run inference in BATCHES (Much faster on GPU)
+    results = []
+    try:
+        # Pipeline handles batching if we pass a list
+        batch_results = pipeline(chunks, batch_size=16, truncation=True, max_length=512)
+        results = batch_results
+    except Exception as e:
+        logger.error(f"Batch sentiment error: {e}. Falling back to sequential.")
+        for chunk in chunks:
+            try:
+                res = pipeline(chunk, truncation=True, max_length=512)
+                results.append(res[0])
+            except:
+                continue
+
+    if not results:
+        return {"label": "NEUTRAL", "score": 0.5}
+
+    # 3. Aggregate Results (Weighted Average)
+    positive_score = 0
+    negative_score = 0
+    total_count = len(results)
+
+    for res in results:
+        score = res['score']
+        if res['label'] == 'POSITIVE':
+            positive_score += score
+        elif res['label'] == 'NEGATIVE':
+            negative_score += score
+        else: # NEUTRAL usually
+            pass
+
+    # Determine overall sentiment
+    if positive_score > negative_score:
+        final_label = "POSITIVE"
+        final_score = positive_score / total_count
+    else:
+        final_label = "NEGATIVE"
+        final_score = negative_score / total_count
+
+    return {"label": final_label, "score": final_score}
 
 
 @app.post("/extract-entities", response_model=EntityResponse)
@@ -1098,6 +1100,12 @@ async def summarize_text(request: SummarizeRequest):
 
         if not request.text or len(request.text.strip()) == 0:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+        # Limit input text length to prevent timeouts (max 100,000 characters)
+        max_text_length = 100000
+        if len(request.text) > max_text_length:
+            logger.warning(f"Text too long ({len(request.text)} chars), truncating to {max_text_length}")
+            request.text = request.text[:max_text_length]
 
         # Minimum text length for summarization
         if len(request.text.split()) < 50:
@@ -1582,6 +1590,21 @@ async def diarize_audio(
         # Check file size
         file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
         logger.info(f"Audio file size: {file_size_mb:.2f} MB")
+        
+        # Get audio duration
+        import librosa
+        duration = librosa.get_duration(path=temp_audio_path)
+        logger.info(f"Audio duration: {duration:.1f}s ({duration/60:.1f} min)")
+        
+        # Limit diarization to 30 minutes to prevent timeouts
+        max_duration = 1800  # 30 minutes
+        if duration > max_duration:
+            logger.warning(f"Audio too long ({duration:.1f}s), limiting diarization to first {max_duration}s")
+            # For very long audio, we could chunk, but for now, limit duration
+            raise HTTPException(
+                status_code=413,
+                detail=f"Audio too long for diarization ({duration:.1f}s). Maximum allowed: {max_duration}s (30 minutes)."
+            )
         
         if file_size_mb > 100:  # Warn for very large files
             logger.warning(f"Large audio file ({file_size_mb:.2f} MB) - diarization may take time")
