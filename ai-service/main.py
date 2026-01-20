@@ -4,6 +4,7 @@ import uuid
 import shutil
 import re
 import subprocess
+import threading
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -91,6 +92,9 @@ else:
 # Thread pool for parallel chunk processing
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "4"))
 executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
+
+# Lock for thread-safe model access (Whisper is not thread-safe)
+model_lock = threading.Lock()
 
 # Global model variables (lazy loaded)
 whisper_model = None
@@ -566,22 +570,27 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
-        # Clear GPU cache before processing
-        if CUDA_AVAILABLE:
-            torch.cuda.empty_cache()
-        
-        result = model.transcribe(
-            chunk_path,
-            verbose=False,
-            fp16=use_fp16,  # FP16 for GPU, disabled for CPU
-            language=None,  # Auto-detect language
-            temperature=0.0,  # Deterministic output
-            compression_ratio_threshold=2.4,  # Reject bad transcriptions
-            no_speech_threshold=0.6,  # Detect silence
-            condition_on_previous_text=False  # Prevent hallucination
-        )
-        
-        # Adjust timestamps based on chunk start time
+        # CRITICAL FIX: Lock the model to prevent race conditions during parallel processing
+        # OpenAI Whisper is not thread-safe; multiple threads cannot use the same model instance simultaneously.
+        with model_lock: 
+            # Clear GPU cache before processing
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
+            
+            result = model.transcribe(
+                chunk_path,
+                verbose=False,
+                fp16=use_fp16,
+                language=None,
+                temperature=0.0,
+                compression_ratio_threshold=2.4,
+                no_speech_threshold=0.6,
+                condition_on_previous_text=False
+            )
+            
+            # Clear GPU cache after processing
+            if CUDA_AVAILABLE:
+                torch.cuda.empty_cache()
         if "segments" in result:
             for segment in result["segments"]:
                 segment["start"] += chunk_info["start_time"]
