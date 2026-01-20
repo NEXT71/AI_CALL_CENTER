@@ -358,50 +358,6 @@ class TranscribeWithSpeakersResponse(BaseModel):
     word_count: Optional[int] = None
 
 
-def convert_audio_with_ffmpeg(input_path: str, output_path: str = None) -> str:
-    """
-    Convert audio using ffmpeg with parameters that Whisper loves
-    This is the NUCLEAR option that fixes 99% of Whisper issues
-    """
-    if output_path is None:
-        output_path = f"{input_path}_converted.wav"
-    
-    try:
-        # FFmpeg command optimized for Whisper
-        # This creates the exact format Whisper expects
-        cmd = [
-            'ffmpeg',
-            '-i', input_path,
-            '-ar', '16000',           # 16kHz sample rate
-            '-ac', '1',               # Mono
-            '-c:a', 'pcm_s16le',      # 16-bit PCM
-            '-f', 'wav',              # WAV format
-            '-y',                     # Overwrite output
-            output_path
-        ]
-        
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=60
-        )
-        
-        if result.returncode == 0 and os.path.exists(output_path):
-            logger.info(f"✅ FFmpeg conversion successful: {output_path}")
-            return output_path
-        else:
-            logger.error(f"FFmpeg failed: {result.stderr.decode()}")
-            return None
-            
-    except subprocess.TimeoutExpired:
-        logger.error("FFmpeg conversion timeout")
-        return None
-    except Exception as e:
-        logger.error(f"FFmpeg conversion error: {e}")
-        return None
-
-
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
     """
     Split audio file into chunks for processing long recordings
