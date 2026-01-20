@@ -473,7 +473,7 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
                 '-t', str(actual_duration),
                 '-ac', '1',  # Mono
                 '-ar', '16000',  # 16kHz
-                '-c', 'copy',  # Copy stream without re-encoding
+                '-c:a', 'pcm_s16le',  # 16-bit PCM
                 '-f', 'wav',
                 '-y',  # Overwrite
                 chunk_path
