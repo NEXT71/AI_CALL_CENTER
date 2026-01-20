@@ -382,21 +382,7 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             
         logger.info(f"📦 Audio file size: {file_size} bytes")
         
-        # Try loading with pydub, fallback to librosa if needed
-        try:
-            audio = AudioSegment.from_file(audio_path)
-        except Exception as e:
-            logger.warning(f"⚠️ Pydub failed to load {audio_path}, trying librosa: {e}")
-            try:
-                import numpy as np
-                y, sr = librosa.load(audio_path, sr=16000, mono=True)
-                # Convert to pydub format
-                y = (y * 32767).astype(np.int16)  # Convert to 16-bit PCM
-                audio = AudioSegment(y.tobytes(), frame_rate=16000, sample_width=2, channels=1)
-                logger.info("✅ Successfully loaded with librosa fallback")
-            except Exception as e2:
-                logger.error(f"❌ Both pydub and librosa failed to load {audio_path}: {e2}")
-                return None, None
+        audio = AudioSegment.from_file(audio_path)
         
         # Validate loaded audio
         if len(audio) <= 0:
@@ -446,45 +432,12 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
                 chunk = chunk.set_channels(1)
             
             chunk_path = f"{audio_path}_chunk_{i//step}.wav"
+            # Export as WAV - already mono and 16kHz from parent audio
+            chunk.export(chunk_path, format="wav")
             
-            # Export chunk using librosa for better compatibility
-            try:
-                import numpy as np
-                # Convert pydub chunk to numpy array
-                chunk_samples = np.array(chunk.get_array_of_samples())
-                
-                # Handle stereo to mono conversion if needed
-                if chunk.channels > 1:
-                    chunk_samples = chunk_samples.reshape((-1, chunk.channels))
-                    chunk_samples = chunk_samples.mean(axis=1)  # Convert to mono
-                
-                # Convert to float32 and normalize to [-1, 1] range
-                chunk_samples = chunk_samples.astype(np.float32)
-                if chunk.sample_width == 2:  # 16-bit
-                    chunk_samples /= 32768.0
-                elif chunk.sample_width == 1:  # 8-bit
-                    chunk_samples = (chunk_samples - 128) / 128.0
-                
-                # Save using soundfile for better Whisper compatibility
-                import soundfile as sf
-                sf.write(chunk_path, chunk_samples, 16000, format='WAV')
-                
-                logger.info(f"✅ Exported chunk {i//step} to {chunk_path}")
-                
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to export chunk {i//step}: {e}")
-                continue
-            
-            # Validate exported chunk
-            try:
-                # Quick validation using librosa
-                import librosa
-                chunk_duration = librosa.get_duration(path=chunk_path)
-                if chunk_duration <= 0:
-                    logger.warning(f"⚠️ Invalid chunk duration: {chunk_path} ({chunk_duration}s)")
-                    continue
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to validate chunk {chunk_path}: {e}")
+            # Double-check the exported file has content
+            if os.path.exists(chunk_path) and os.path.getsize(chunk_path) < 1000:
+                logger.warning(f"⚠️ Skipping empty exported chunk: {chunk_path}")
                 continue
             
             chunks.append({
@@ -530,22 +483,6 @@ def transcribe_chunk(model, chunk_path, chunk_info):
             logger.warning(f"⚠️ Skipping empty or very small chunk: {chunk_path} ({file_size} bytes)")
             return None
         
-        # Validate audio chunk before processing
-        try:
-            import librosa
-            chunk_duration = librosa.get_duration(path=chunk_path)
-            if chunk_duration <= 0.1:  # Less than 100ms
-                logger.warning(f"⚠️ Skipping too short chunk: {chunk_path} ({chunk_duration:.2f}s)")
-                return None
-            
-            # Log chunk details for debugging
-            y, sr = librosa.load(chunk_path, sr=None)
-            logger.info(f"📊 Chunk {os.path.basename(chunk_path)}: duration={chunk_duration:.2f}s, sample_rate={sr}, shape={y.shape}")
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to validate chunk audio {chunk_path}: {e}")
-            return None
-        
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
@@ -553,39 +490,16 @@ def transcribe_chunk(model, chunk_path, chunk_info):
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
         
-        # Try transcription with fallback handling
-        try:
-            result = model.transcribe(
-                chunk_path,
-                verbose=False,
-                fp16=use_fp16,  # FP16 for GPU, disabled for CPU
-                language=None,  # Auto-detect language
-                temperature=0.0,  # Deterministic output
-                compression_ratio_threshold=2.4,  # Reject bad transcriptions
-                no_speech_threshold=0.6,  # Detect silence
-                condition_on_previous_text=False  # Prevent hallucination
-            )
-        except Exception as transcribe_error:
-            # Try alternative: load with librosa and pass numpy array directly
-            logger.warning(f"⚠️ Direct transcription failed, trying alternative method: {transcribe_error}")
-            try:
-                import librosa
-                audio_array, sample_rate = librosa.load(chunk_path, sr=16000, mono=True)
-                
-                result = model.transcribe(
-                    audio_array,
-                    verbose=False,
-                    fp16=use_fp16,
-                    language=None,
-                    temperature=0.0,
-                    compression_ratio_threshold=2.4,
-                    no_speech_threshold=0.6,
-                    condition_on_previous_text=False
-                )
-                logger.info("✅ Alternative transcription method succeeded")
-            except Exception as alt_error:
-                logger.error(f"❌ Both transcription methods failed: direct={transcribe_error}, alt={alt_error}")
-                return None
+        result = model.transcribe(
+            chunk_path,
+            verbose=False,
+            fp16=use_fp16,  # FP16 for GPU, disabled for CPU
+            language=None,  # Auto-detect language
+            temperature=0.0,  # Deterministic output
+            compression_ratio_threshold=2.4,  # Reject bad transcriptions
+            no_speech_threshold=0.6,  # Detect silence
+            condition_on_previous_text=False  # Prevent hallucination
+        )
         
         # Validate result
         if not result or not result.get("text", "").strip():
@@ -614,9 +528,6 @@ def transcribe_chunk(model, chunk_path, chunk_info):
             gc.collect()
         elif "cannot reshape tensor" in str(e).lower():
             logger.error(f"❌ Empty tensor error on chunk {chunk_path} - chunk may be empty or corrupted ({os.path.getsize(chunk_path) if os.path.exists(chunk_path) else 0} bytes)")
-            return None
-        elif "key and value must have the same sequence length" in str(e).lower():
-            logger.error(f"❌ Sequence length mismatch on chunk {chunk_path} - chunk may be corrupted or too short")
             return None
         logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
         return None
