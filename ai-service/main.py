@@ -595,64 +595,17 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
         logger.info(f"🎙️ Processing audio: {audio.filename} ({file_size_mb:.2f} MB)")
         
-        # CRITICAL: Convert audio with FFmpeg FIRST (most reliable method)
-        logger.info("🔧 Converting audio with FFmpeg...")
-        preprocessed_path = f"/tmp/{uuid.uuid4()}_preprocessed.wav"
-        
-        converted = convert_audio_with_ffmpeg(temp_path, preprocessed_path)
-        
-        if not converted or not os.path.exists(preprocessed_path):
-            logger.warning("FFmpeg conversion failed, trying pydub...")
-            
-            # Fallback to pydub
-            from pydub import AudioSegment
-            preprocessed_path = f"{temp_path}_preprocessed.wav"
-            
-            try:
-                audio_seg = AudioSegment.from_file(temp_path)
-                if audio_seg.channels > 1:
-                    audio_seg = audio_seg.set_channels(1)
-                if audio_seg.frame_rate != 16000:
-                    audio_seg = audio_seg.set_frame_rate(16000)
-                audio_seg = audio_seg.normalize()
-                
-                audio_seg.export(
-                    preprocessed_path,
-                    format="wav",
-                    parameters=["-ac", "1", "-ar", "16000", "-sample_fmt", "s16"]
-                )
-                
-                duration = len(audio_seg) / 1000.0
-                del audio_seg
-                import gc
-                gc.collect()
-                
-            except Exception as e:
-                logger.error(f"Preprocessing completely failed: {e}")
-                raise HTTPException(status_code=500, detail="Audio preprocessing failed. File may be corrupted.")
-        else:
-            # Get duration from preprocessed file
-            from pydub import AudioSegment
-            try:
-                audio_seg = AudioSegment.from_file(preprocessed_path)
-                duration = len(audio_seg) / 1000.0
-                del audio_seg
-                import gc
-                gc.collect()
-            except:
-                import librosa
-                duration = librosa.get_duration(path=preprocessed_path)
-        
-        logger.info(f"⏱️ Duration: {duration:.1f}s ({duration/60:.1f} min)")
-        
-        processing_path = preprocessed_path
+        # Get audio duration
+        import librosa
+        duration = librosa.get_duration(path=temp_path)
+        logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
         
         # Process based on duration
         if duration > 600:  # 10+ minutes
             logger.info(f"📦 Long audio detected - using chunked processing")
             
             # Split into chunks
-            chunks, total_duration = chunk_audio_file(processing_path, chunk_length_ms=600000)
+            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=600000)
             if not chunks:
                 raise HTTPException(status_code=500, detail="Failed to chunk audio")
             
@@ -776,17 +729,6 @@ async def transcribe_audio(audio: UploadFile = File(...)):
                         time.sleep(0.1)
                     else:
                         cleanup_errors.append(f"Failed to delete {temp_path}: {e}")
-        
-        if preprocessed_path and os.path.exists(preprocessed_path):
-            for attempt in range(3):
-                try:
-                    os.unlink(preprocessed_path)
-                    break
-                except Exception as e:
-                    if attempt < 2:
-                        time.sleep(0.1)
-                    else:
-                        cleanup_errors.append(f"Failed to delete {preprocessed_path}: {e}")
         
         for chunk_file in chunk_files:
             if os.path.exists(chunk_file):
