@@ -394,6 +394,11 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
             chunk_end = min(i + chunk_length_ms, duration_ms)
             chunk = audio[i:chunk_end]
             
+            # Skip empty or very short chunks
+            if len(chunk) < 1000:  # Less than 1 second
+                logger.warning(f"⚠️ Skipping very short chunk at {i}ms (length: {len(chunk)}ms)")
+                continue
+            
             # Ensure chunk is mono (double-check)
             if chunk.channels > 1:
                 chunk = chunk.set_channels(1)
@@ -434,6 +439,16 @@ def transcribe_chunk(model, chunk_path, chunk_info):
     try:
         logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)}")
         
+        # Check if chunk file exists and has content
+        if not os.path.exists(chunk_path):
+            logger.error(f"❌ Chunk file does not exist: {chunk_path}")
+            return None
+            
+        file_size = os.path.getsize(chunk_path)
+        if file_size < 1000:  # Less than 1KB, likely empty
+            logger.warning(f"⚠️ Skipping empty or very small chunk: {chunk_path} ({file_size} bytes)")
+            return None
+        
         # Enable FP16 only on GPU for 2x speed boost
         use_fp16 = CUDA_AVAILABLE
         
@@ -451,6 +466,11 @@ def transcribe_chunk(model, chunk_path, chunk_info):
             no_speech_threshold=0.6,  # Detect silence
             condition_on_previous_text=False  # Prevent hallucination
         )
+        
+        # Validate result
+        if not result or not result.get("text", "").strip():
+            logger.warning(f"⚠️ Empty transcription result for chunk: {chunk_path}")
+            return None
         
         # Adjust timestamps based on chunk start time
         if "segments" in result:
@@ -472,6 +492,9 @@ def transcribe_chunk(model, chunk_path, chunk_info):
             if CUDA_AVAILABLE:
                 torch.cuda.empty_cache()
             gc.collect()
+        elif "cannot reshape tensor" in str(e).lower():
+            logger.error(f"❌ Empty tensor error on chunk {chunk_path} - chunk may be empty or corrupted")
+            return None
         logger.error(f"❌ Runtime error transcribing chunk {chunk_path}: {e}")
         return None
     except Exception as e:
