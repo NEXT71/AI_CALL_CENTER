@@ -754,9 +754,21 @@ async def analyze_sentiment(request: SentimentRequest):
             positive_scores = []
             negative_scores = []
             
+            # Define helper function for blocking sentiment analysis
+            def run_sentiment_analysis(analyzer_func, chunk_text):
+                return analyzer_func(chunk_text, truncation=True, max_length=512)[0]
+            
+            import asyncio
+            loop = asyncio.get_event_loop()
+            
             for i, chunk in enumerate(chunks[:10]):  # Limit to 10 chunks
                 try:
-                    result = analyzer(chunk, truncation=True, max_length=512)[0]
+                    result = await loop.run_in_executor(
+                        executor,
+                        run_sentiment_analysis,
+                        analyzer,
+                        chunk
+                    )
                     if result["label"].upper() == "POSITIVE":
                         positive_scores.append(result["score"])
                     else:
@@ -777,7 +789,19 @@ async def analyze_sentiment(request: SentimentRequest):
         else:
             text = request.text[:max_chunk_chars]
             logger.info(f"🔍 Analyzing sentiment: {len(text)} chars")
-            result = analyzer(text, truncation=True, max_length=512)[0]
+            
+            # Define helper function for blocking sentiment analysis
+            def run_sentiment_analysis(analyzer_func, chunk_text):
+                return analyzer_func(chunk_text, truncation=True, max_length=512)[0]
+            
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                executor,
+                run_sentiment_analysis,
+                analyzer,
+                text
+            )
             
             label_map = {
                 "POSITIVE": "positive",
@@ -1414,11 +1438,20 @@ async def diarize_audio(
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
         
-        # Run diarization with timeout handling
-        diarization = pipeline(
-            temp_audio_path,
-            min_speakers=min_speakers,
-            max_speakers=max_speakers
+        # Define helper function for blocking diarization
+        def run_diarization(pipeline_func, audio_path, min_spk, max_spk):
+            return pipeline_func(audio_path, min_speakers=min_spk, max_speakers=max_spk)
+        
+        # Run diarization asynchronously using thread pool
+        import asyncio
+        loop = asyncio.get_event_loop()
+        diarization = await loop.run_in_executor(
+            executor, 
+            run_diarization, 
+            pipeline, 
+            temp_audio_path, 
+            min_speakers, 
+            max_speakers
         )
         
         # Convert to serializable format

@@ -70,7 +70,7 @@ exports.analyzeSentiment = async (text) => {
       { text },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 120000, // 2 minutes timeout (increased for long texts)
+        timeout: 300000, // 5 minutes timeout (increased for safety)
         validateStatus: function (status) {
           return status < 500;
         },
