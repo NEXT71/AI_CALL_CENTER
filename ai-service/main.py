@@ -1467,14 +1467,10 @@ async def calculate_quality_score(request: QualityScoreRequest):
             # -10 points per abusive word, max -30
             factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
         
-        # Factor 6: DNC Detection (-20 pts) - Only flag clear opt-out requests
-        # More specific phrases that clearly indicate customer doesn't want future calls
+        # Factor 6: DNC Detection (-20 pts)
         dnc_phrases = [
-            "do not call me", "don't call me", "stop calling me", 
-            "remove me from your list", "take me off your list",
-            "i don't want calls", "never call me again", "no more calls please",
-            "opt me out", "unsubscribe from calls", "don't contact me",
-            "remove my number", "delete my number", "i'm not interested in calls"
+            "do not call", "don't call", "stop calling", "remove me from", "take me off",
+            "not interested", "never call again", "no more calls"
         ]
         
         found_dnc = []
