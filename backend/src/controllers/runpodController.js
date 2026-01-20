@@ -59,45 +59,6 @@ exports.getStatus = async (req, res, next) => {
 };
 
 /**
- * @route   GET /api/v1/runpod/best
- * @desc    Get the best available pod
- * @access  Private (Admin only)
- */
-exports.getBestPod = async (req, res, next) => {
-  try {
-    if (!runpodService.isConfigured()) {
-      return res.status(400).json({
-        success: false,
-        message: 'RunPod not configured. Please set RUNPOD_API_KEY in environment variables.',
-      });
-    }
-
-    const bestPod = await runpodService.findBestPod();
-
-    res.status(200).json({
-      success: true,
-      data: {
-        id: bestPod.id,
-        name: bestPod.name,
-        status: bestPod.desiredStatus,
-        gpu: {
-          name: bestPod.machine?.gpuDisplayName,
-          count: bestPod.machine?.gpuCount,
-        },
-        costPerHr: bestPod.costPerHr,
-        uptimeInSeconds: bestPod.uptimeInSeconds,
-      },
-    });
-  } catch (error) {
-    logger.error('Get best pod error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to find best pod',
-    });
-  }
-};
-
-/**
  * @route   POST /api/v1/runpod/start
  * @desc    Start RunPod
  * @access  Private (Admin only)
@@ -111,8 +72,7 @@ exports.startPod = async (req, res, next) => {
       });
     }
 
-    const { podId } = req.body;
-    const result = await runpodService.startPod(podId);
+    const result = await runpodService.startPod();
 
     // Log action
     await auditService.createAuditLog({

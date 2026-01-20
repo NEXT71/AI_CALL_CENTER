@@ -24,11 +24,6 @@ router.get('/status', (req, res, next) => {
   runpodController.getStatus(req, res, next);
 });
 
-router.get('/best', (req, res, next) => {
-  console.log('📍 DEBUG: GET /best route hit');
-  runpodController.getBestPod(req, res, next);
-});
-
 router.post('/start', (req, res, next) => {
   console.log('📍 DEBUG: POST /start route hit');
   runpodController.startPod(req, res, next);
