@@ -1,7 +1,6 @@
 import os
 import uvicorn
 import uuid
-import subprocess
 import shutil
 import re
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
@@ -358,197 +357,9 @@ class TranscribeWithSpeakersResponse(BaseModel):
     duration: Optional[float] = None
     word_count: Optional[int] = None
 
-def convert_audio_with_ffmpeg(input_path: str, output_path: str = None) -> str:
-    """
-    Convert audio using ffmpeg with parameters that Whisper loves
-    This is the NUCLEAR option that fixes 99% of Whisper issues
-    """
-    if output_path is None:
-        output_path = f"{input_path}_converted.wav"
-    
-    try:
-        # FFmpeg command optimized for Whisper
-        # This creates the exact format Whisper expects
-        cmd = [
-            'ffmpeg',
-            '-i', input_path,
-            '-ar', '16000',           # 16kHz sample rate
-            '-ac', '1',               # Mono
-            '-c:a', 'pcm_s16le',      # 16-bit PCM
-            '-f', 'wav',              # WAV format
-            '-y',                     # Overwrite output
-            output_path
-        ]
-        
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=60
-        )
-        
-        if result.returncode == 0 and os.path.exists(output_path):
-            logger.info(f"✅ FFmpeg conversion successful: {output_path}")
-            return output_path
-        else:
-            logger.error(f"FFmpeg failed: {result.stderr.decode()}")
-            return None
-            
-    except subprocess.TimeoutExpired:
-        logger.error("FFmpeg conversion timeout")
-        return None
-    except Exception as e:
-        logger.error(f"FFmpeg conversion error: {e}")
-        return None
 
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
     """
-    ULTIMATE audio chunking with multiple fallback methods
-    """
-    try:
-        from pydub import AudioSegment
-        import gc
-        
-        logger.info(f"📦 Chunking audio file: {audio_path}")
-        
-        # Try loading audio
-        try:
-            audio = AudioSegment.from_file(audio_path)
-        except Exception as e:
-            logger.error(f"pydub failed to load audio: {e}")
-            logger.info("Attempting FFmpeg conversion first...")
-            
-            # Try FFmpeg conversion
-            converted_path = convert_audio_with_ffmpeg(audio_path)
-            if converted_path:
-                try:
-                    audio = AudioSegment.from_file(converted_path)
-                    # Clean up converted file after loading
-                    os.remove(converted_path)
-                except Exception as e2:
-                    logger.error(f"Even FFmpeg conversion failed: {e2}")
-                    return None, None
-            else:
-                return None, None
-        
-        # Convert to mono
-        if audio.channels > 1:
-            audio = audio.set_channels(1)
-            logger.info(f"✅ Converted to mono")
-        
-        # Set to 16kHz
-        if audio.frame_rate != 16000:
-            audio = audio.set_frame_rate(16000)
-            logger.info(f"✅ Set to 16kHz")
-        
-        # Normalize
-        try:
-            audio = audio.normalize()
-            logger.info(f"✅ Normalized")
-        except:
-            pass
-        
-        duration_ms = len(audio)
-        
-        if chunk_length_ms > duration_ms:
-            chunk_length_ms = duration_ms
-        
-        chunks = []
-        step = chunk_length_ms - overlap_ms
-        chunk_index = 0
-        
-        for i in range(0, duration_ms, step):
-            chunk_end = min(i + chunk_length_ms, duration_ms)
-            chunk = audio[i:chunk_end]
-            
-            # Skip very short chunks
-            if len(chunk) < 1000:
-                logger.warning(f"Skipping short chunk: {len(chunk)}ms")
-                break
-            
-            if chunk.channels > 1:
-                chunk = chunk.set_channels(1)
-            
-            # Create chunk with unique name
-            chunk_path = f"{audio_path}_chunk_{chunk_index}.wav"
-            
-            # METHOD 1: Try pydub export with strict parameters
-            try:
-                chunk.export(
-                    chunk_path,
-                    format="wav",
-                    parameters=[
-                        "-ac", "1",
-                        "-ar", "16000",
-                        "-sample_fmt", "s16",
-                        "-acodec", "pcm_s16le"
-                    ]
-                )
-                
-                # Verify file
-                if not os.path.exists(chunk_path) or os.path.getsize(chunk_path) < 1000:
-                    raise Exception("Chunk file invalid or too small")
-                    
-                logger.info(f"✅ Chunk {chunk_index} created via pydub")
-                
-            except Exception as export_error:
-                logger.warning(f"pydub export failed for chunk {chunk_index}: {export_error}")
-                
-                # METHOD 2: Save as temp file then convert with ffmpeg
-                try:
-                    temp_chunk = f"{chunk_path}.temp.wav"
-                    chunk.export(temp_chunk, format="wav")
-                    
-                    # Convert with ffmpeg
-                    converted_chunk = convert_audio_with_ffmpeg(temp_chunk, chunk_path)
-                    
-                    # Clean up temp
-                    if os.path.exists(temp_chunk):
-                        os.remove(temp_chunk)
-                    
-                    if not converted_chunk or not os.path.exists(chunk_path):
-                        raise Exception("FFmpeg conversion failed")
-                    
-                    logger.info(f"✅ Chunk {chunk_index} created via FFmpeg")
-                    
-                except Exception as ffmpeg_error:
-                    logger.error(f"Both methods failed for chunk {chunk_index}: {ffmpeg_error}")
-                    del chunk
-                    gc.collect()
-                    continue
-            
-            # Validate chunk was created successfully
-            if os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 1000:
-                chunks.append({
-                    "path": chunk_path,
-                    "start_time": i / 1000,
-                    "end_time": chunk_end / 1000,
-                    "overlap_start": (i + overlap_ms) / 1000 if i > 0 else 0,
-                    "index": chunk_index
-                })
-                chunk_index += 1
-            
-            del chunk
-            gc.collect()
-            
-            if chunk_end >= duration_ms:
-                break
-        
-        del audio
-        gc.collect()
-        
-        if not chunks:
-            logger.error("No valid chunks created")
-            return None, None
-        
-        logger.info(f"✅ Created {len(chunks)} valid chunks")
-        return chunks, duration_ms / 1000
-        
-    except Exception as e:
-        logger.error(f"❌ Chunking failed: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return None, None    """
     Split audio file into chunks for processing long recordings
     chunk_length_ms: chunk length in milliseconds (default 10 minutes)
     overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
@@ -639,249 +450,8 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         return None, None
 
 
-def transcribe_chunk_with_ultimate_fallback(model, chunk_path, chunk_info):
+def transcribe_chunk(model, chunk_path, chunk_info):
     """
-    Transcribe with EVERY possible fallback strategy
-    """
-    import gc
-    import time
-    
-    # CRITICAL: Verify chunk file exists and is valid
-    if not os.path.exists(chunk_path):
-        logger.error(f"Chunk file doesn't exist: {chunk_path}")
-        return None
-    
-    file_size = os.path.getsize(chunk_path)
-    if file_size < 1000:  # Less than 1KB is suspicious
-        logger.error(f"Chunk file too small ({file_size} bytes): {chunk_path}")
-        return None
-    
-    logger.info(f"🎙️ Transcribing chunk: {os.path.basename(chunk_path)} ({file_size/1024:.1f} KB)")
-    
-    # Try converting the chunk with FFmpeg first as a preemptive fix
-    converted_chunk = None
-    try:
-        converted_chunk = convert_audio_with_ffmpeg(chunk_path, f"{chunk_path}_ffmpeg.wav")
-        if converted_chunk and os.path.exists(converted_chunk):
-            logger.info("✅ Pre-converted chunk with FFmpeg")
-            processing_path = converted_chunk
-        else:
-            processing_path = chunk_path
-    except Exception as e:
-        logger.warning(f"FFmpeg pre-conversion failed, using original: {e}")
-        processing_path = chunk_path
-    
-    strategies = [
-        {
-            "name": "GPU FP16 - No Word Timestamps",
-            "params": {
-                "fp16": CUDA_AVAILABLE,
-                "language": None,
-                "beam_size": 5,
-                "word_timestamps": False,
-                "condition_on_previous_text": False,
-                "temperature": 0.0
-            }
-        },
-        {
-            "name": "GPU FP32 - Simple Decoding",
-            "params": {
-                "fp16": False,
-                "language": None,
-                "beam_size": 1,  # Simplest decoding
-                "word_timestamps": False,
-                "condition_on_previous_text": False,
-                "temperature": 0.0
-            }
-        },
-        {
-            "name": "CPU - English Only",
-            "params": {
-                "fp16": False,
-                "language": "en",
-                "beam_size": 1,
-                "word_timestamps": False,
-                "condition_on_previous_text": False,
-                "temperature": 0.0,
-                "no_speech_threshold": 0.6
-            }
-        },
-        {
-            "name": "CPU - Greedy Decoding (Fastest)",
-            "params": {
-                "fp16": False,
-                "language": "en",
-                "beam_size": 1,
-                "best_of": 1,
-                "word_timestamps": False,
-                "condition_on_previous_text": False,
-                "temperature": 0.0,
-                "compression_ratio_threshold": 100.0,  # Very lenient
-                "logprob_threshold": -100.0,  # Very lenient
-                "no_speech_threshold": 0.8
-            }
-        }
-    ]
-    
-    last_error = None
-    
-    for strategy_idx, strategy in enumerate(strategies):
-        try:
-            logger.info(f"🔄 Strategy {strategy_idx + 1}/{len(strategies)}: {strategy['name']}")
-            
-            # Clear cache
-            if CUDA_AVAILABLE:
-                torch.cuda.empty_cache()
-            gc.collect()
-            
-            result = model.transcribe(
-                processing_path,
-                verbose=False,
-                **strategy['params']
-            )
-            
-            # Validate result
-            text = result.get("text", "").strip()
-            if not text or len(text) < 3:
-                logger.warning(f"Strategy returned empty/short text: '{text}'")
-                continue
-            
-            # Adjust timestamps
-            if "segments" in result:
-                for segment in result["segments"]:
-                    segment["start"] += chunk_info["start_time"]
-                    segment["end"] += chunk_info["start_time"]
-            
-            logger.info(f"✅ SUCCESS with {strategy['name']}: {len(text)} chars")
-            
-            # Cleanup
-            if converted_chunk and os.path.exists(converted_chunk):
-                try:
-                    os.remove(converted_chunk)
-                except:
-                    pass
-            
-            if CUDA_AVAILABLE:
-                torch.cuda.empty_cache()
-            gc.collect()
-            
-            return result
-            
-        except RuntimeError as e:
-            error_msg = str(e).lower()
-            last_error = e
-            
-            if "out of memory" in error_msg:
-                logger.error(f"❌ GPU OOM with {strategy['name']}")
-                if CUDA_AVAILABLE:
-                    torch.cuda.empty_cache()
-                gc.collect()
-                time.sleep(0.5)
-                continue
-            
-            elif "key" in error_msg and "value" in error_msg and "size" in error_msg:
-                logger.error(f"❌ Alignment error with {strategy['name']}: {error_msg}")
-                time.sleep(0.5)
-                continue
-            
-            else:
-                logger.error(f"❌ Runtime error with {strategy['name']}: {e}")
-                time.sleep(0.5)
-                continue
-        
-        except Exception as e:
-            logger.error(f"❌ Unexpected error with {strategy['name']}: {e}")
-            last_error = e
-            time.sleep(0.5)
-            continue
-    
-    # ALL STRATEGIES FAILED - Last resort: Try splitting chunk in half
-    logger.error(f"❌ All strategies failed. Attempting to split chunk in half...")
-    
-    try:
-        from pydub import AudioSegment
-        chunk_audio = AudioSegment.from_file(processing_path)
-        chunk_duration_ms = len(chunk_audio)
-        
-        if chunk_duration_ms > 30000:  # Only split if > 30 seconds
-            mid_point = chunk_duration_ms // 2
-            
-            # Split into two parts
-            part1 = chunk_audio[:mid_point]
-            part2 = chunk_audio[mid_point:]
-            
-            part1_path = f"{chunk_path}_part1.wav"
-            part2_path = f"{chunk_path}_part2.wav"
-            
-            part1.export(part1_path, format="wav", parameters=["-ac", "1", "-ar", "16000"])
-            part2.export(part2_path, format="wav", parameters=["-ac", "1", "-ar", "16000"])
-            
-            del chunk_audio, part1, part2
-            gc.collect()
-            
-            logger.info("🔪 Split chunk into 2 parts, retrying...")
-            
-            # Transcribe parts separately with simplest strategy
-            simple_params = {
-                "fp16": False,
-                "language": "en",
-                "beam_size": 1,
-                "best_of": 1,
-                "word_timestamps": False,
-                "condition_on_previous_text": False,
-                "temperature": 0.0
-            }
-            
-            result1 = model.transcribe(part1_path, verbose=False, **simple_params)
-            result2 = model.transcribe(part2_path, verbose=False, **simple_params)
-            
-            # Merge results
-            merged_text = result1.get("text", "").strip() + " " + result2.get("text", "").strip()
-            merged_segments = []
-            
-            # Adjust timestamps for part 1
-            for seg in result1.get("segments", []):
-                seg["start"] += chunk_info["start_time"]
-                seg["end"] += chunk_info["start_time"]
-                merged_segments.append(seg)
-            
-            # Adjust timestamps for part 2
-            part2_offset = chunk_info["start_time"] + (mid_point / 1000)
-            for seg in result2.get("segments", []):
-                seg["start"] += part2_offset
-                seg["end"] += part2_offset
-                merged_segments.append(seg)
-            
-            # Cleanup part files
-            for path in [part1_path, part2_path]:
-                if os.path.exists(path):
-                    try:
-                        os.remove(path)
-                    except:
-                        pass
-            
-            logger.info(f"✅ SUCCESS with split strategy: {len(merged_text)} chars")
-            
-            return {
-                "text": merged_text,
-                "segments": merged_segments,
-                "language": result1.get("language", "en")
-            }
-            
-    except Exception as split_error:
-        logger.error(f"❌ Split strategy also failed: {split_error}")
-    
-    # Cleanup converted chunk
-    if converted_chunk and os.path.exists(converted_chunk):
-        try:
-            os.remove(converted_chunk)
-        except:
-            pass
-    
-    logger.error(f"❌ COMPLETE FAILURE for chunk {chunk_path}")
-    logger.error(f"Last error: {last_error}")
-    
-    return None    """
     Transcribe a single audio chunk with GPU acceleration and memory management
     FIXED: Added better error handling and Whisper parameters
     """
@@ -1024,7 +594,9 @@ async def health_check():
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(audio: UploadFile = File(...)):
     """
-    ULTIMATE transcription endpoint with maximum error handling
+    Transcribe audio file using Whisper on GPU
+    Handles 30+ minute recordings with automatic chunking
+    FIXED: Better audio preprocessing and error handling
     """
     temp_path = None
     preprocessed_path = None
@@ -1036,115 +608,103 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
         
-        file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
-        logger.info(f"🎙️ Processing: {audio.filename} ({file_size_mb:.2f} MB)")
-        
-        # Load model
+        # Load Whisper model
         model = load_whisper_model()
         if model is None:
-            raise HTTPException(status_code=503, detail="Whisper model unavailable")
+            raise HTTPException(status_code=503, detail="Whisper model failed to load")
+
+        file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
+        logger.info(f"🎙️ Processing audio: {audio.filename} ({file_size_mb:.2f} MB)")
         
-        # CRITICAL: Convert audio with FFmpeg FIRST (most reliable method)
-        logger.info("🔧 Converting audio with FFmpeg...")
-        preprocessed_path = f"/tmp/{uuid.uuid4()}_preprocessed.wav"
+        # CRITICAL FIX: Preprocess audio BEFORE getting duration
+        # This ensures consistent format for both duration check and transcription
+        from pydub import AudioSegment
         
-        converted = convert_audio_with_ffmpeg(temp_path, preprocessed_path)
+        logger.info("🔧 Preprocessing audio file...")
+        preprocessed_path = f"{temp_path}_preprocessed.wav"
         
-        if not converted or not os.path.exists(preprocessed_path):
-            logger.warning("FFmpeg conversion failed, trying pydub...")
+        try:
+            audio_segment = AudioSegment.from_file(temp_path)
             
-            # Fallback to pydub
-            from pydub import AudioSegment
-            preprocessed_path = f"{temp_path}_preprocessed.wav"
+            # Convert to mono
+            if audio_segment.channels > 1:
+                audio_segment = audio_segment.set_channels(1)
+                logger.info("✅ Converted to mono")
             
-            try:
-                audio_seg = AudioSegment.from_file(temp_path)
-                if audio_seg.channels > 1:
-                    audio_seg = audio_seg.set_channels(1)
-                if audio_seg.frame_rate != 16000:
-                    audio_seg = audio_seg.set_frame_rate(16000)
-                audio_seg = audio_seg.normalize()
-                
-                audio_seg.export(
-                    preprocessed_path,
-                    format="wav",
-                    parameters=["-ac", "1", "-ar", "16000", "-sample_fmt", "s16"]
-                )
-                
-                duration = len(audio_seg) / 1000.0
-                del audio_seg
-                import gc
-                gc.collect()
-                
-            except Exception as e:
-                logger.error(f"Preprocessing completely failed: {e}")
-                raise HTTPException(status_code=500, detail="Audio preprocessing failed. File may be corrupted.")
-        else:
-            # Get duration from preprocessed file
-            from pydub import AudioSegment
-            try:
-                audio_seg = AudioSegment.from_file(preprocessed_path)
-                duration = len(audio_seg) / 1000.0
-                del audio_seg
-                import gc
-                gc.collect()
-            except:
-                import librosa
-                duration = librosa.get_duration(path=preprocessed_path)
+            # Set to 16kHz
+            if audio_segment.frame_rate != 16000:
+                audio_segment = audio_segment.set_frame_rate(16000)
+                logger.info("✅ Set to 16kHz")
+            
+            # Normalize audio
+            audio_segment = audio_segment.normalize()
+            logger.info("✅ Normalized audio levels")
+            
+            # Export preprocessed audio
+            audio_segment.export(
+                preprocessed_path,
+                format="wav",
+                parameters=[
+                    "-ac", "1",
+                    "-ar", "16000",
+                    "-sample_fmt", "s16"
+                ]
+            )
+            
+            duration = len(audio_segment) / 1000.0  # Duration in seconds
+            del audio_segment
+            import gc
+            gc.collect()
+            
+            logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
+            
+        except Exception as e:
+            logger.error(f"Preprocessing failed, using original file: {e}")
+            preprocessed_path = temp_path
+            # Fallback to librosa for duration
+            import librosa
+            duration = librosa.get_duration(path=temp_path)
+            logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
         
-        logger.info(f"⏱️ Duration: {duration:.1f}s ({duration/60:.1f} min)")
-        
+        # Use preprocessed file for all further processing
         processing_path = preprocessed_path
         
         # Process based on duration
         if duration > 600:  # 10+ minutes
-            logger.info("📦 Using chunked processing")
+            logger.info(f"📦 Long audio detected - using chunked processing")
             
+            # Split into chunks
             chunks, total_duration = chunk_audio_file(processing_path, chunk_length_ms=600000)
-            
             if not chunks:
                 raise HTTPException(status_code=500, detail="Failed to chunk audio")
             
-            chunk_files = [c["path"] for c in chunks]
-            logger.info(f"✅ Created {len(chunks)} chunks")
+            chunk_files = [chunk["path"] for chunk in chunks]
+            logger.info(f"✅ Split into {len(chunks)} chunks (10 min each)")
             
+            # Process chunks in parallel
             import time
             start_time = time.time()
             
-            # Process chunks with ultimate fallback
             loop = asyncio.get_event_loop()
             chunk_results = await asyncio.gather(*[
-                loop.run_in_executor(
-                    executor,
-                    transcribe_chunk_with_ultimate_fallback,
-                    model,
-                    chunk["path"],
-                    chunk
-                )
+                loop.run_in_executor(executor, transcribe_chunk, model, chunk["path"], chunk)
                 for chunk in chunks
             ])
             
             processing_time = time.time() - start_time
+            logger.info(f"⚡ Parallel processing completed in {processing_time:.1f}s")
             
-            # Filter valid results
+            # Filter out None results (failed chunks)
             valid_results = [r for r in chunk_results if r is not None]
             
             if not valid_results:
                 raise HTTPException(
-                    status_code=500,
-                    detail="All chunks failed. Audio file may be severely corrupted or in an unsupported format."
+                    status_code=500, 
+                    detail="All chunks failed to transcribe. Audio file may be corrupted."
                 )
             
-            failed_count = len(chunks) - len(valid_results)
-            if failed_count > 0:
-                logger.warning(f"⚠️ {failed_count}/{len(chunks)} chunks failed")
-                
-                # If too many failed, raise error
-                if failed_count > len(chunks) * 0.5:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Too many chunks failed ({failed_count}/{len(chunks)}). Audio quality issue."
-                    )
+            if len(valid_results) < len(chunks):
+                logger.warning(f"⚠️ Only {len(valid_results)}/{len(chunks)} chunks transcribed successfully")
             
             # Merge results
             merged_text = []
@@ -1152,28 +712,26 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             detected_language = None
             
             for result in valid_results:
-                text = result.get("text", "").strip()
-                if text:
-                    merged_text.append(text)
+                merged_text.append(result.get("text", "").strip())
                 if "segments" in result:
                     merged_segments.extend(result["segments"])
-                if not detected_language:
-                    detected_language = result.get("language")
+                if not detected_language and "language" in result:
+                    detected_language = result["language"]
             
             full_text = " ".join(merged_text)
             
-            timestamps = [
-                {
-                    "start": round(seg["start"], 2),
-                    "end": round(seg["end"], 2),
-                    "text": seg["text"].strip()
-                }
-                for seg in merged_segments
-            ]
+            # Format timestamps
+            timestamps = []
+            for segment in merged_segments:
+                timestamps.append({
+                    "start": round(segment["start"], 2),
+                    "end": round(segment["end"], 2),
+                    "text": segment["text"].strip()
+                })
             
             word_count = len(full_text.split()) if full_text else 0
             
-            logger.info(f"✅ Complete: {word_count} words, {len(timestamps)} segments")
+            logger.info(f"✅ Transcription complete: {word_count} words, {len(timestamps)} segments")
             logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
             
             return TranscribeResponse(
@@ -1184,32 +742,42 @@ async def transcribe_audio(audio: UploadFile = File(...)):
                 word_count=word_count
             )
         
-        else:  # Short audio
-            logger.info("🎯 Direct processing")
+        else:
+            # Short audio - process directly
+            logger.info("🎯 Processing directly (no chunking needed)")
             
-            result = transcribe_chunk_with_ultimate_fallback(
-                model,
+            import time
+            start_time = time.time()
+            
+            use_fp16 = CUDA_AVAILABLE
+            result = model.transcribe(
                 processing_path,
-                {"start_time": 0, "end_time": duration}
+                verbose=False,
+                fp16=use_fp16,
+                language=None,
+                word_timestamps=False,  # Disable to prevent alignment issues
+                beam_size=5,
+                best_of=5
             )
             
-            if not result:
-                raise HTTPException(status_code=500, detail="Transcription failed completely")
+            processing_time = time.time() - start_time
+            logger.info(f"⚡ Transcription completed in {processing_time:.1f}s")
+            logger.info(f"🚀 Speed: {duration/processing_time:.1f}x realtime")
             
             text = result.get("text", "").strip()
             language = result.get("language")
             word_count = len(text.split()) if text else 0
             
-            timestamps = [
-                {
-                    "start": round(seg["start"], 2),
-                    "end": round(seg["end"], 2),
-                    "text": seg["text"].strip()
-                }
-                for seg in result.get("segments", [])
-            ]
+            timestamps = []
+            if "segments" in result:
+                for segment in result["segments"]:
+                    timestamps.append({
+                        "start": round(segment["start"], 2),
+                        "end": round(segment["end"], 2),
+                        "text": segment["text"].strip()
+                    })
             
-            logger.info(f"✅ Complete: {word_count} words")
+            logger.info(f"✅ Complete: {word_count} words, {len(timestamps)} segments")
             
             return TranscribeResponse(
                 text=text,
@@ -1224,28 +792,39 @@ async def transcribe_audio(audio: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"❌ Transcription error: {e}")
         import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
     
     finally:
-        # Cleanup
+        # Cleanup with retry logic
         import gc
         import time
         
+        cleanup_errors = []
+        
+        # Clean up all temporary files
         files_to_cleanup = [temp_path, preprocessed_path] + chunk_files
         
         for file_path in files_to_cleanup:
             if file_path and os.path.exists(file_path):
-                for attempt in range(5):
+                for attempt in range(3):
                     try:
                         os.unlink(file_path)
                         break
-                    except:
-                        if attempt < 4:
-                            time.sleep(0.2)
+                    except Exception as e:
+                        if attempt < 2:
+                            time.sleep(0.1)
+                        else:
+                            cleanup_errors.append(f"Failed to delete {file_path}: {e}")
         
+        if cleanup_errors:
+            logger.warning(f"Cleanup warnings: {'; '.join(cleanup_errors)}")
+        
+        # Clear GPU memory
         if CUDA_AVAILABLE:
             torch.cuda.empty_cache()
+        
+        # Force garbage collection
         gc.collect()
 
 
@@ -1674,8 +1253,13 @@ class QualityScoreResponse(BaseModel):
 @app.post("/calculate-quality-score", response_model=QualityScoreResponse)
 async def calculate_quality_score(request: QualityScoreRequest):
     """
-    Calculate AI-based quality score with IMPROVED DNC detection
-    Only flags genuine customer requests to stop calling
+    Calculate AI-based quality score using 6 business factors:
+    1. Customer tone (25 pts) - sentiment analysis on customer speech
+    2. Language selection (10 pts) - English=10, Spanish/French/German=8, other=5
+    3. Agent professionalism (25 pts) - detects casual phrases
+    4. Customer communication (20 pts) - polite/neutral/assertive/aggressive
+    5. Abusive language (-30 pts max) - profanity detection
+    6. DNC detection (-20 pts) - "do not call", "stop calling", etc.
     """
     try:
         logger.info("🔍 Starting AI quality scoring")
@@ -1709,23 +1293,12 @@ async def calculate_quality_score(request: QualityScoreRequest):
         }
         
         # Factor 1: Customer Tone (25 points) - Sentiment analysis
-        sentiment_analyzer = load_sentiment_model()
-        if sentiment_analyzer and request.speaker_labeled_transcript:
-            # Extract customer lines only (assuming Speaker 2 is customer)
-            customer_lines = []
-            for line in request.speaker_labeled_transcript.split('\n'):
-                line = line.strip()
-                # Check for various speaker labels
-                if (line.startswith('[Speaker 2]') or 
-                    line.startswith('Customer:') or 
-                    line.startswith('CUSTOMER:')):
-                    # Extract text after speaker label
-                    if ']' in line:
-                        customer_lines.append(line.split(']', 1)[1].strip())
-                    elif ':' in line:
-                        customer_lines.append(line.split(':', 1)[1].strip())
-            
-            customer_text = ' '.join(customer_lines)
+        if request.speaker_labeled_transcript:
+            # Extract customer lines only (assuming speaker 1 is agent, speaker 2 is customer)
+            customer_lines = [line for line in request.speaker_labeled_transcript.split('\n') 
+                            if line.strip().startswith('[Speaker 2]')]
+            customer_text = ' '.join([line.split(']', 1)[1].strip() if ']' in line else '' 
+                                     for line in customer_lines])
             
             if customer_text and len(customer_text) > 10:
                 try:
@@ -1746,8 +1319,6 @@ async def calculate_quality_score(request: QualityScoreRequest):
                 except Exception as e:
                     logger.warning(f"Sentiment analysis failed: {e}")
                     factors["customer_tone_score"] = 18.0
-            else:
-                factors["customer_tone_score"] = 18.0
         else:
             # Fallback to whole transcript sentiment
             factors["customer_tone_score"] = 18.0
@@ -1769,9 +1340,7 @@ async def calculate_quality_score(request: QualityScoreRequest):
         
         found_casual = []
         for phrase in casual_phrases:
-            # Use word boundaries to avoid false matches
-            import re
-            if re.search(r'\b' + re.escape(phrase) + r'\b', transcript_lower):
+            if phrase in transcript_lower:
                 found_casual.append(phrase)
         
         details["agent_casual_phrases"] = found_casual
@@ -1818,139 +1387,24 @@ async def calculate_quality_score(request: QualityScoreRequest):
                 found_abusive.append(word)
         
         if found_abusive:
-            details["abusive_words_found"] = list(set(found_abusive))  # Remove duplicates
+            details["abusive_words_found"] = found_abusive
             flags["has_abusive_language"] = True
-            # -10 points per unique abusive word, max -30
-            factors["abusive_language_penalty"] = -min(len(set(found_abusive)) * 10, 30)
+            # -10 points per abusive word, max -30
+            factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
         
-        # ===================================================================
-        # Factor 6: IMPROVED DNC Detection (-20 pts)
-        # Only flags GENUINE customer requests to stop being called
-        # ===================================================================
+        # Factor 6: DNC Detection (-20 pts)
+        dnc_phrases = [
+            "do not call", "don't call", "stop calling", "remove me from", "take me off",
+            "not interested", "never call again", "no more calls"
+        ]
         
-        def is_genuine_dnc_request(transcript: str, speaker_labeled_transcript: str = None) -> tuple:
-            """
-            Detect genuine DNC requests using context-aware analysis
-            Returns: (is_dnc: bool, found_phrases: list)
-            """
-            import re
-            
-            # STRONG DNC indicators - these are very clear requests
-            strong_dnc_patterns = [
-                r'\b(do not|don\'t|dont)\s+(call|contact)\s+(me|us|this number)\b',
-                r'\b(stop|quit)\s+calling\s+(me|us|this number)\b',
-                r'\b(remove|take)\s+(me|us|this number)\s+(from|off)\s+(your|the)\s+(list|calls?)\b',
-                r'\bnever\s+call\s+(me|us|this number)\s+again\b',
-                r'\bno\s+more\s+calls?\b',
-                r'\bstop\s+contacting\s+(me|us)\b',
-                r'\bI\s+(do not|don\'t|dont)\s+want\s+(any|more|to\s+receive)\s+(calls?|contact)\b',
-                r'\bplease\s+(stop|remove|don\'t)\s+(calling|contacting)\b',
-                r'\bnot\s+interested\s+in\s+(calls?|being\s+contacted|this)\b',
-                r'\bunsubscribe\s+(me|us)\b',
-                r'\b(get|keep)\s+me\s+off\s+(your|the)\s+list\b'
-            ]
-            
-            # FALSE POSITIVE patterns - phrases that contain DNC words but aren't DNC requests
-            false_positive_patterns = [
-                r'\b(do not|don\'t|dont)\s+call\s+(it|that|this|them|him|her)\b',  # "don't call it"
-                r'\b(do not|don\'t|dont)\s+call\s+(the|a|an)\b',  # "don't call the..."
-                r'\bif\s+(I|we|they)\s+(do not|don\'t|dont)\s+call\b',  # "if I don't call"
-                r'\b(do not|don\'t|dont)\s+call\s+(back|anyone|someone)\b',  # "don't call back"
-                r'\bon\s+(the|a|any)\s+(do not|dnc)\s+call\s+(list|registry)\b',  # "on the DNC list"
-                r'\b(check|verify|confirm)\s+(the|our|your)\s+(do not|dnc)\s+call\b',  # Agent checking DNC
-                r'\bmake\s+sure.+not\s+on\s+(the|a)\s+(do not|dnc)\s+call\b',  # "make sure not on DNC"
-                r'\b(we|I|they)\s+will\s+not\s+call\b',  # Agent promise
-                r'\bshould\s+not\s+call\b',  # "should not call"
-                r'\bcannot\s+call\b',  # "cannot call"
-                r'\bmay\s+not\s+call\b',  # "may not call"
-            ]
-            
-            transcript_lower = transcript.lower()
-            found_dnc_phrases = []
-            
-            # First check for false positives
-            for pattern in false_positive_patterns:
-                if re.search(pattern, transcript_lower):
-                    logger.info(f"False positive DNC pattern detected: {pattern}")
-                    # If we find a false positive, be more strict with DNC detection
-                    
-            # Check for strong DNC patterns
-            for pattern in strong_dnc_patterns:
-                matches = re.finditer(pattern, transcript_lower)
-                for match in matches:
-                    phrase = match.group(0)
-                    
-                    # Additional context check: is this from the customer?
-                    if speaker_labeled_transcript:
-                        # Find this phrase in the labeled transcript
-                        context_window = 100  # chars before and after
-                        phrase_pos = speaker_labeled_transcript.lower().find(phrase)
-                        
-                        if phrase_pos != -1:
-                            # Get context around the phrase
-                            start = max(0, phrase_pos - context_window)
-                            end = min(len(speaker_labeled_transcript), phrase_pos + len(phrase) + context_window)
-                            context = speaker_labeled_transcript[start:end]
-                            
-                            # Check if this is from customer (Speaker 2) or agent (Speaker 1)
-                            # Look backwards for the most recent speaker label
-                            context_before = speaker_labeled_transcript[start:phrase_pos]
-                            
-                            # Find last speaker label before the phrase
-                            agent_labels = ['[Speaker 1]', 'Agent:', 'AGENT:']
-                            customer_labels = ['[Speaker 2]', 'Customer:', 'CUSTOMER:']
-                            
-                            last_agent_pos = max([context_before.rfind(label) for label in agent_labels])
-                            last_customer_pos = max([context_before.rfind(label) for label in customer_labels])
-                            
-                            # If customer spoke more recently than agent, it's a customer DNC request
-                            if last_customer_pos > last_agent_pos:
-                                found_dnc_phrases.append(phrase)
-                                logger.info(f"✓ Genuine customer DNC detected: '{phrase}'")
-                            else:
-                                logger.info(f"✗ Agent or unclear context DNC phrase ignored: '{phrase}'")
-                    else:
-                        # No speaker labeling, assume it's valid if it matches strong pattern
-                        found_dnc_phrases.append(phrase)
-            
-            # Additional check: Simple "not interested" must be from customer and clear
-            if speaker_labeled_transcript:
-                # Look for "not interested" from customer
-                customer_lines = []
-                for line in speaker_labeled_transcript.split('\n'):
-                    if any(label in line for label in ['[Speaker 2]', 'Customer:', 'CUSTOMER:']):
-                        customer_lines.append(line.lower())
-                
-                customer_text = ' '.join(customer_lines)
-                
-                # Check for "not interested" in customer speech
-                not_interested_patterns = [
-                    r'\bnot\s+interested\b',
-                    r'\bno\s+thank\s+you\b.{0,20}\bnot\s+interested\b'
-                ]
-                
-                for pattern in not_interested_patterns:
-                    if re.search(pattern, customer_text):
-                        # Make sure it's not "not interested in X" (where X is a specific thing)
-                        # but rather a general rejection
-                        match = re.search(r'not\s+interested(\s+in\s+\w+)?', customer_text)
-                        if match:
-                            # If it's just "not interested" without specific thing, it's DNC
-                            after_text = match.group(1)
-                            if not after_text or 'call' in after_text or 'this' in after_text:
-                                found_dnc_phrases.append("not interested")
-            
-            is_dnc = len(found_dnc_phrases) > 0
-            return is_dnc, list(set(found_dnc_phrases))
+        found_dnc = []
+        for phrase in dnc_phrases:
+            if phrase in transcript_lower:
+                found_dnc.append(phrase)
         
-        # Execute DNC detection
-        is_dnc, dnc_phrases = is_genuine_dnc_request(
-            request.transcript,
-            request.speaker_labeled_transcript
-        )
-        
-        if is_dnc:
-            details["dnc_phrases_found"] = dnc_phrases
+        if found_dnc:
+            details["dnc_phrases_found"] = found_dnc
             flags["is_dnc_customer"] = True
             factors["dnc_penalty"] = -20.0
         
@@ -1976,8 +1430,6 @@ async def calculate_quality_score(request: QualityScoreRequest):
         
     except Exception as e:
         logger.error(f"❌ Quality scoring error: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Quality scoring failed: {str(e)}")
 
 
