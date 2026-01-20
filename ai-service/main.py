@@ -1138,7 +1138,7 @@ async def calculate_quality_score(request: QualityScoreRequest):
     3. Agent professionalism (25 pts) - detects casual phrases
     4. Customer communication (20 pts) - polite/neutral/assertive/aggressive
     5. Abusive language (-30 pts max) - profanity detection
-    6. DNC detection (-20 pts) - Precise detection of explicit DNC requests from customers only
+    6. DNC detection (-20 pts) - "do not call", "stop calling", etc.
     """
     try:
         logger.info("🔍 Starting AI quality scoring")
@@ -1271,63 +1271,19 @@ async def calculate_quality_score(request: QualityScoreRequest):
             # -10 points per abusive word, max -30
             factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
         
-        # Factor 6: DNC Detection (-20 pts) - More precise detection
-        # Only flag as DNC if customer clearly expresses they don't want future calls
-        dnc_patterns = [
-            # Direct requests to stop calling
-            r"\b(?:please\s+)?(?:do\s+not|don't)\s+call\s+(?:me|us|this\s+number)\s+again\b",
-            r"\b(?:please\s+)?stop\s+calling\s+(?:me|us|this\s+number)\b",
-            r"\b(?:please\s+)?remove\s+(?:me|my\s+number|this\s+number)\s+from\s+your\s+(?:list|call\s+list)\b",
-            r"\b(?:please\s+)?take\s+(?:me|my\s+number|this\s+number)\s+off\s+(?:your\s+)?(?:call\s+)?list\b",
-            r"\bi\s+(?:do\s+not|don't)\s+want\s+(?:any\s+more|further|additional)\s+calls\b",
-            r"\bnever\s+call\s+(?:me|us|this\s+number)\s+again\b",
-            r"\bno\s+more\s+calls\b",
-            r"\bi\s+am\s+not\s+interested\s+in\s+(?:your\s+)?services?\b",
-            # Explicit DNC requests
-            r"\bput\s+me\s+on\s+(?:your\s+)?do\s+not\s+call\s+list\b",
-            r"\badd\s+(?:me|this\s+number)\s+to\s+(?:your\s+)?do\s+not\s+call\s+list\b"
+        # Factor 6: DNC Detection (-20 pts)
+        dnc_phrases = [
+            "do not call", "don't call", "stop calling", "remove me from", "take me off",
+            "not interested", "never call again", "no more calls"
         ]
-
+        
         found_dnc = []
-        # Check customer speech only (Speaker 2) if available
-        if request.speaker_labeled_transcript:
-            customer_lines = [line for line in request.speaker_labeled_transcript.split('\n')
-                            if line.strip().startswith('[Speaker 2]')]
-            customer_text = ' '.join([line.split(']', 1)[1].strip() if ']' in line else ''
-                                     for line in customer_lines])
-            text_to_check = customer_text.lower()
-        else:
-            # Fallback to full transcript if no speaker labels
-            text_to_check = transcript_lower
-
-        for pattern in dnc_patterns:
-            if re.search(pattern, text_to_check, re.IGNORECASE):
-                found_dnc.append(pattern)
-
-        # Additional check: exclude procedural phrases that might contain "do not call"
-        procedural_exclusions = [
-            r"do\s+not\s+call\s+it",  # "do not call it" in procedural context
-            r"do\s+not\s+call\s+back",  # "do not call back" as instruction
-            r"do\s+not\s+call\s+me\s+yet",  # temporary hold
-            r"do\s+not\s+call\s+until",  # conditional
-            r"stay\s+on\s+line",  # procedural instruction
-            r"bear\s+with\s+me",  # procedural instruction
-            r"let\s+me\s+connect",  # procedural instruction
-        ]
-
-        # Remove false positives
-        filtered_dnc = []
-        for pattern in found_dnc:
-            is_false_positive = False
-            for exclusion in procedural_exclusions:
-                if re.search(exclusion, text_to_check, re.IGNORECASE):
-                    is_false_positive = True
-                    break
-            if not is_false_positive:
-                filtered_dnc.append(pattern)
-
-        if filtered_dnc:
-            details["dnc_phrases_found"] = filtered_dnc
+        for phrase in dnc_phrases:
+            if phrase in transcript_lower:
+                found_dnc.append(phrase)
+        
+        if found_dnc:
+            details["dnc_phrases_found"] = found_dnc
             flags["is_dnc_customer"] = True
             factors["dnc_penalty"] = -20.0
         
