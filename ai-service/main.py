@@ -692,13 +692,7 @@ def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms:
         logger.error(f"❌ Chunking failed: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        return None, None    """
-    Split audio file into chunks for processing long recordings
-    chunk_length_ms: chunk length in milliseconds (default 10 minutes)
-    overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
-    
-    FIXED: Properly handles audio conversion to prevent Whisper errors
-    """
+        return None, None
     try:
         from pydub import AudioSegment
         import gc
