@@ -201,6 +201,18 @@ exports.verifySession = async (req, res, next) => {
 };
 
 /**
+ * @route   POST /api/subscriptions/create-portal-session
+ * @desc    Create customer portal session (not available for manual payments)
+ * @access  Private
+ */
+exports.createPortalSession = async (req, res, next) => {
+  return res.status(400).json({
+    success: false,
+    message: 'Customer portal not available for manual payments. Please contact support to manage your subscription.',
+  });
+};
+
+/**
  * @route   POST /api/subscriptions/activate
  * @desc    Manually activate subscription (for testing or webhook fallback)
  * @access  Private
