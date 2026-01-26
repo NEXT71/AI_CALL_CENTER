@@ -156,8 +156,12 @@ const Subscription = () => {
       setProcessingPlan(null);
     }
   };
+
+  const handleManageBilling = async () => {
+    try {
+      setProcessingPlan('portal');
       const response = await apiService.createBillingPortalSession();
-      
+
       if (response.success && response.data.url) {
         // Redirect to Stripe Billing Portal
         window.location.href = response.data.url;
@@ -168,6 +172,7 @@ const Subscription = () => {
     } finally {
       setProcessingPlan(null);
     }
+  };
   };
 
   if (loading) {
