@@ -31,11 +31,16 @@ const auditLogSchema = new mongoose.Schema(
         'DELETE_RULE',
         'VIEW_REPORT',
         'FAILED_LOGIN',
+        'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
+        'SUBSCRIPTION_ADMIN_ACTIVATED',
+        'SUBSCRIPTION_CANCEL_REQUEST',
+        'SUBSCRIPTION_REACTIVATE_REQUEST',
+        'SUBSCRIPTION_DOWNGRADE',
       ],
     },
     resourceType: {
       type: String,
-      enum: ['User', 'Call', 'ComplianceRule', 'Report', 'Auth'],
+      enum: ['User', 'Call', 'ComplianceRule', 'Report', 'Auth', 'Subscription'],
     },
     resourceId: {
       type: mongoose.Schema.Types.ObjectId,
