@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const subscriptionController = require('../controllers/subscriptionController');
 
-// Temporary simplified routes for testing
-router.get('/plans', (req, res) => {
-  res.json({ success: true, message: 'Plans endpoint working' });
-});
+// Public routes
+router.get('/plans', subscriptionController.getPlans);
 
+// Test protected route
 router.get('/test', (req, res) => {
   res.json({ success: true, message: 'Test endpoint working' });
 });
