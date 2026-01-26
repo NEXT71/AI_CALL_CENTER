@@ -43,19 +43,22 @@ const validateEnv = () => {
     warnings.push('AI_SERVICE_URL not set - AI processing will fail');
   }
 
-  // Validate Stripe configuration (warn if missing in production)
+  // Validate Stripe configuration (warn if missing in production and not using manual payments)
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      warnings.push('STRIPE_SECRET_KEY not set - payments will fail');
-    }
-    if (!process.env.STRIPE_PUBLISHABLE_KEY) {
-      warnings.push('STRIPE_PUBLISHABLE_KEY not set - frontend payments will fail');
-    }
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      warnings.push('STRIPE_WEBHOOK_SECRET not set - webhook verification will be skipped');
+    // Skip Stripe validation for manual payment mode
+    if (process.env.PAYMENT_MODE !== 'manual') {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        warnings.push('STRIPE_SECRET_KEY not set - payments will fail');
+      }
+      if (!process.env.STRIPE_PUBLISHABLE_KEY) {
+        warnings.push('STRIPE_PUBLISHABLE_KEY not set - frontend payments will fail');
+      }
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        warnings.push('STRIPE_WEBHOOK_SECRET not set - webhook verification will be skipped');
+      }
     }
     if (!process.env.FRONTEND_URL) {
-      warnings.push('FRONTEND_URL not set - Stripe redirects will fail');
+      warnings.push('FRONTEND_URL not set - redirects will fail');
     }
   }
 

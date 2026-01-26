@@ -51,7 +51,7 @@ exports.createCheckoutSession = async (req, res, next) => {
       });
     }
 
-    // Handle free plan - no Stripe checkout needed
+    // Handle free plan - no payment needed
     if (planType === 'free') {
       const user = await User.findById(req.user._id);
       if (!user) {
@@ -92,6 +92,7 @@ exports.createCheckoutSession = async (req, res, next) => {
       });
     }
 
+    // For paid plans - manual payment required
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({
@@ -100,32 +101,27 @@ exports.createCheckoutSession = async (req, res, next) => {
       });
     }
 
-    const session = await stripeService.createCheckoutSession(user, planType);
-
-    // Update user with customer ID if created
-    if (session.customer && !user.subscription.stripeCustomerId) {
-      user.subscription.stripeCustomerId = session.customer;
-      await user.save();
-    }
-
-    // Log subscription attempt
+    // Log manual payment request
     await auditService.createAuditLog({
       userId: user._id,
       userName: user.name,
       userRole: user.role,
-      action: 'SUBSCRIPTION_CHECKOUT',
+      action: 'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
       resourceType: 'Subscription',
-      details: { planType, sessionId: session.id },
+      details: { planType, paymentMethod: 'manual' },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'success',
+      status: 'pending',
     });
 
     res.status(200).json({
       success: true,
+      message: 'Manual payment required for this plan',
       data: {
-        sessionId: session.id,
-        url: session.url,
+        plan: planType,
+        status: 'pending_payment',
+        paymentRequired: true,
+        instructions: 'Contact support to complete payment',
       },
     });
   } catch (error) {
@@ -518,6 +514,141 @@ exports.getInvoices = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error fetching invoices:', error);
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/subscriptions/admin-activate
+ * @desc    Admin endpoint to manually activate subscription after payment
+ * @access  Private (Admin only)
+ */
+exports.adminActivateSubscription = async (req, res, next) => {
+  try {
+    const { userId, planType, paymentMethod, notes } = req.body;
+
+    // Check if requester is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.',
+      });
+    }
+
+    if (!userId || !planType) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID and plan type are required',
+      });
+    }
+
+    if (!['starter', 'professional', 'enterprise'].includes(planType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan type',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Update subscription to active
+    user.subscription.plan = planType;
+    user.subscription.status = 'active';
+    user.subscription.currentPeriodStart = new Date();
+    user.subscription.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+
+    await user.save();
+
+    // Log admin activation
+    await auditService.createAuditLog({
+      userId: user._id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'SUBSCRIPTION_ADMIN_ACTIVATED',
+      resourceType: 'Subscription',
+      details: {
+        planType,
+        paymentMethod: paymentMethod || 'manual',
+        notes: notes || '',
+        activatedBy: req.user._id
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      status: 'success',
+    });
+
+    logger.info('Subscription manually activated by admin:', {
+      userId: user._id,
+      planType,
+      activatedBy: req.user._id,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Subscription activated successfully',
+      data: {
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        plan: user.subscription.plan,
+        status: user.subscription.status,
+        activatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    logger.error('Error activating subscription:', error);
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/subscriptions/pending-payments
+ * @desc    Get users with pending manual payments (Admin only)
+ * @access  Private (Admin only)
+ */
+exports.getPendingPayments = async (req, res, next) => {
+  try {
+    // Check if requester is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.',
+      });
+    }
+
+    // Find users with pending payments by checking audit logs
+    const auditLogs = await require('../models/AuditLog').find({
+      action: 'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
+      status: 'pending',
+    }).sort({ createdAt: -1 });
+
+    const pendingUsers = [];
+    for (const log of auditLogs) {
+      const user = await User.findById(log.userId);
+      if (user && user.subscription.status !== 'active') {
+        pendingUsers.push({
+          userId: user._id,
+          userName: user.name,
+          userEmail: user.email,
+          requestedPlan: log.details.planType,
+          requestedAt: log.createdAt,
+          auditLogId: log._id,
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: pendingUsers,
+    });
+  } catch (error) {
+    logger.error('Error fetching pending payments:', error);
     next(error);
   }
 };

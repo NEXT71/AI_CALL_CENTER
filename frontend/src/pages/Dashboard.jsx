@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { callService, reportService } from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
-import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity } from 'lucide-react';
+import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -395,6 +395,75 @@ const Dashboard = () => {
           </>
         )}
       </div>
+
+      {/* Admin: Pending Payments Management */}
+      {user?.role === 'Admin' && (
+        <div className="card-enhanced animate-fade-in">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-md">
+              <CreditCard size={20} className="text-white" />
+            </div>
+            <h3 className="section-header-enhanced mb-0">Pending Payments</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-amber-800">Manual Payment Mode Active</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Users requesting paid plans need manual activation after payment is received.
+                    Check pending requests below and activate subscriptions once payment is confirmed.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <div className="p-4 border-b border-slate-200">
+                <h4 className="font-medium text-slate-900">Pending Activation Requests</h4>
+                <p className="text-sm text-slate-600">Users waiting for subscription activation</p>
+              </div>
+
+              <div className="p-4">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await apiService.getPendingPayments();
+                      if (response.success) {
+                        const pending = response.data;
+                        if (pending.length === 0) {
+                          alert('✅ No pending payments to process.');
+                        } else {
+                          const summary = pending.map(p =>
+                            `${p.userName} (${p.userEmail}) - ${p.requestedPlan} - Requested: ${new Date(p.requestedAt).toLocaleDateString()}`
+                          ).join('\n\n');
+
+                          const action = confirm(
+                            `📋 Pending Payments (${pending.length}):\n\n${summary}\n\nClick OK to manage these requests.`
+                          );
+
+                          if (action) {
+                            // Could open a modal or redirect to admin page
+                            alert('Admin panel for payment management would open here.');
+                          }
+                        }
+                      }
+                    } catch (error) {
+                      alert('Error loading pending payments.');
+                    }
+                  }}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <CreditCard size={16} />
+                  Check Pending Payments
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Calls Table */}
       <div className="card-enhanced animate-fade-in">

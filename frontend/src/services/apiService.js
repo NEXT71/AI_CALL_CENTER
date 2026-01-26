@@ -167,42 +167,20 @@ export const subscriptionService = {
     const response = await api.get('/subscriptions/invoices');
     return response.data;
   },
-};
 
-export const runpodService = {
-  getRunPodStatus: async () => {
-    const response = await api.get('/runpod/status');
+  // Admin functions
+  adminActivateSubscription: async (userId, planType, paymentMethod, notes) => {
+    const response = await api.post('/subscriptions/admin-activate', {
+      userId,
+      planType,
+      paymentMethod,
+      notes,
+    });
     return response.data;
   },
 
-  startRunPod: async () => {
-    const response = await api.post('/runpod/start');
-    return response.data;
-  },
-
-  stopRunPod: async () => {
-    const response = await api.post('/runpod/stop');
-    return response.data;
-  },
-
-  listRunPods: async () => {
-    const response = await api.get('/runpod/list');
-    return response.data;
-  },
-
-  // Service management
-  getServiceStatus: async () => {
-    const response = await api.get('/runpod/service/status');
-    return response.data;
-  },
-
-  startService: async () => {
-    const response = await api.post('/runpod/service/start');
-    return response.data;
-  },
-
-  stopService: async () => {
-    const response = await api.post('/runpod/service/stop');
+  getPendingPayments: async () => {
+    const response = await api.get('/subscriptions/pending-payments');
     return response.data;
   },
 };
@@ -213,7 +191,6 @@ const apiService = {
   ...ruleService,
   ...reportService,
   ...subscriptionService,
-  ...runpodService,
 };
 
 export default apiService;

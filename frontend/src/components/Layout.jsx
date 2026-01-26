@@ -14,8 +14,7 @@ import {
   ChevronRight,
   Settings,
   Bell,
-  Search,
-  Server
+  Search
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -56,7 +55,6 @@ const Layout = () => {
     { name: 'Sales Data', href: '/app/sales-data', icon: DollarSign, roles: ['Admin', 'Manager', 'QA'] },
     { name: 'Compliance Rules', href: '/app/rules', icon: FileText, roles: ['Admin', 'Manager'] },
     { name: 'Analytics', href: '/app/analytics', icon: BarChart3, roles: ['Admin', 'Manager', 'QA'] },
-    { name: 'GPU Control', href: '/app/runpod', icon: Server, roles: ['Admin'] },
     { name: 'Subscription', href: '/subscription', icon: CreditCard, roles: ['Admin', 'Manager', 'QA', 'Agent'] },
   ];
 

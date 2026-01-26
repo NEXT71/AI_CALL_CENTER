@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard, Star, Shield, Zap } from 'lucide-react';
+import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard, Star, Shield, Zap, Mail, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/apiService';
 
@@ -71,6 +71,8 @@ const Subscription = () => {
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -107,42 +109,27 @@ const Subscription = () => {
   const handleSubscribe = async (planId) => {
     try {
       setProcessingPlan(planId);
-      const response = await apiService.createCheckoutSession(planId);
-      
-      if (response.success) {
-        // Free tier doesn't need Stripe checkout
-        if (planId === 'free' || !response.data.url) {
-          // Refresh subscription data and show success
+
+      // Free tier - activate immediately
+      if (planId === 'free') {
+        const response = await apiService.createCheckoutSession(planId);
+        if (response.success) {
           await fetchData();
           alert('✅ Successfully switched to free plan!');
           return;
         }
-        
-        // Redirect to Stripe Checkout for paid plans
-        if (response.data.url) {
-          window.location.href = response.data.url;
-        }
-      } else {
-        throw new Error(response.message || 'Failed to create checkout session');
       }
+
+      // For paid plans, show payment modal
+      const plan = plans.find(p => p.id === planId);
+      if (plan) {
+        setSelectedPlan(plan);
+        setShowPaymentModal(true);
+      }
+
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      
-      // Show user-friendly error
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to start checkout process';
-      
-      if (errorMessage.includes('Price ID not configured')) {
-        alert(
-          '⚠️ Stripe Products Not Configured\n\n' +
-          'To enable subscriptions, please:\n' +
-          '1. Go to https://dashboard.stripe.com/test/products\n' +
-          '2. Create 3 products (Starter, Professional, Enterprise)\n' +
-          '3. Copy the Price IDs to your .env file\n\n' +
-          'Contact support if you need assistance.'
-        );
-      } else {
-        alert(`Error: ${errorMessage}\n\nPlease try again or contact support.`);
-      }
+      console.error('Error:', error);
+      alert('Error processing request. Please contact support.');
     } finally {
       setProcessingPlan(null);
     }
@@ -379,6 +366,98 @@ const Subscription = () => {
           Need a custom plan? <a href="mailto:sales@qualitypulse.com" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">Contact sales</a>
         </p>
       </div>
+
+      {/* Manual Payment Modal */}
+      {showPaymentModal && selectedPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-slate-900">Complete Your Payment</h3>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <selectedPlan.icon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900">{selectedPlan.name} Plan</h4>
+                    <p className="text-blue-700 text-sm">${selectedPlan.price}/{selectedPlan.interval}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <h4 className="font-semibold text-slate-900">Payment Instructions</h4>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium mb-1">Manual Payment Required</p>
+                      <p>Contact our support team to complete your subscription activation.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <Mail className="w-5 h-5 text-slate-600" />
+                    <div>
+                      <p className="font-medium text-slate-900">Email Support</p>
+                      <p className="text-sm text-slate-600">support@yourcompany.com</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <CreditCard className="w-5 h-5 text-slate-600" />
+                    <div>
+                      <p className="font-medium text-slate-900">Reference</p>
+                      <p className="text-sm text-slate-600">Plan: {selectedPlan.name}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h5 className="font-medium text-slate-900 mb-2">Payment Methods</h5>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Bank Transfer</li>
+                    <li>• PayPal</li>
+                    <li>• Payoneer</li>
+                    <li>• Other (contact support)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const instructions = `Plan: ${selectedPlan.name} ($${selectedPlan.price}/${selectedPlan.interval})\n\nContact: support@yourcompany.com\nReference: ${selectedPlan.name} Plan`;
+                    navigator.clipboard.writeText(instructions);
+                    alert('📋 Payment details copied to clipboard!');
+                  }}
+                  className="flex-1 btn btn-secondary"
+                >
+                  Copy Details
+                </button>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="flex-1 btn btn-primary"
+                >
+                  Got It
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

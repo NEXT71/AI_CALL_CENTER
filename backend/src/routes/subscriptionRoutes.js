@@ -17,6 +17,23 @@ router.get('/current', subscriptionController.getCurrentSubscription);
 router.post('/cancel', subscriptionController.cancelSubscription);
 router.post('/reactivate', subscriptionController.reactivateSubscription);
 router.get('/invoices', subscriptionController.getInvoices);
-router.get('/usage', subscriptionController.getUsage);
+// Admin routes (require admin role)
+router.post('/admin-activate', (req, res, next) => {
+  if (req.user.role !== 'Admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required.',
+    });
+  }
+  next();
+}, subscriptionController.adminActivateSubscription);
 
-module.exports = router;
+router.get('/pending-payments', (req, res, next) => {
+  if (req.user.role !== 'Admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required.',
+    });
+  }
+  next();
+}, subscriptionController.getPendingPayments);
