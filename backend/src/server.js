@@ -231,8 +231,8 @@ app.use(`${API_VERSION}/sales`, salesRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
 console.log('🔍 DEBUG: Mounting audit-logs routes...');
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
-// console.log('🔍 DEBUG: Mounting subscriptions routes...');
-// app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes); // Temporarily disabled for testing
+console.log('🔍 DEBUG: Mounting subscriptions routes...');
+app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
 console.log('✅ DEBUG: API routes mounted');
 
 // RunPod GPU Control API
