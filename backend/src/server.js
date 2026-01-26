@@ -252,7 +252,7 @@ app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req
 app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
 app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
-app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`));
+// app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled for testing
 
 // Debug: Log all incoming requests
 app.use((req, res, next) => {

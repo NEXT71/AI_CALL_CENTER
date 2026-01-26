@@ -1,15 +1,64 @@
 const User = require('../models/User');
-const stripeService = require('../services/stripeService');
+const AuditLog = require('../models/AuditLog');
+// const stripeService = require('../services/stripeService'); // Commented out for manual payments
 const auditService = require('../services/auditService');
 const { getUsageStats } = require('../middleware/usageLimits');
 const logger = require('../config/logger');
-const Stripe = require('stripe');
+// const Stripe = require('stripe'); // Commented out for manual payments
 
-// Initialize Stripe conditionally
-let stripe = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-}
+// Local plans configuration for manual payments
+const PLANS = {
+  free: {
+    name: 'Free',
+    amount: 0, // $0/month in cents
+    interval: 'month',
+    features: [
+      '10 calls/month',
+      'Basic transcription',
+      'Community support',
+      '1 user',
+      '7-day data retention',
+    ],
+  },
+  starter: {
+    name: 'Starter',
+    amount: 4900, // $49/month in cents
+    interval: 'month',
+    features: [
+      '100 calls/month',
+      'Basic analytics',
+      'Email support',
+      '1 user',
+    ],
+  },
+  professional: {
+    name: 'Professional',
+    amount: 9900, // $99/month in cents
+    interval: 'month',
+    features: [
+      '500 calls/month',
+      'Advanced analytics',
+      'Priority support',
+      '5 users',
+      'Custom rules',
+      'API access',
+    ],
+  },
+  enterprise: {
+    name: 'Enterprise',
+    amount: 24900, // $249/month in cents
+    interval: 'month',
+    features: [
+      'Unlimited calls',
+      'Full analytics suite',
+      '24/7 support',
+      'Unlimited users',
+      'Custom integrations',
+      'Dedicated account manager',
+      'SLA guarantee',
+    ],
+  },
+};
 
 /**
  * @route   GET /api/subscriptions/plans
@@ -18,7 +67,7 @@ if (process.env.STRIPE_SECRET_KEY) {
  */
 exports.getPlans = async (req, res, next) => {
   try {
-    const plans = Object.entries(stripeService.PLANS).map(([key, plan]) => ({
+    const plans = Object.entries(PLANS).map(([key, plan]) => ({
       id: key,
       name: plan.name,
       price: plan.amount / 100, // Convert to dollars
@@ -141,122 +190,14 @@ exports.createCheckoutSession = async (req, res, next) => {
 
 /**
  * @route   GET /api/subscriptions/verify-session/:sessionId
- * @desc    Verify checkout session and update subscription (fallback if webhook fails)
+ * @desc    Verify checkout session and update subscription (not available for manual payments)
  * @access  Private
  */
 exports.verifySession = async (req, res, next) => {
-  try {
-    const { sessionId } = req.params;
-    const user = await User.findById(req.user._id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    // Check if Stripe is configured
-    if (!stripe) {
-      return res.status(500).json({
-        success: false,
-        message: 'Stripe not configured',
-      });
-    }
-
-    // Retrieve the session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription', 'customer'],
-    });
-
-    // Verify session belongs to this user
-    if (session.metadata.userId !== user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized',
-      });
-    }
-
-    // If payment was successful, update user subscription
-    // For test mode, be more lenient with payment status
-    const isTestMode = process.env.STRIPE_SECRET_KEY?.includes('test');
-    const isPaymentComplete = (session.payment_status === 'paid' && session.status === 'complete') || 
-                             (isTestMode && session.status === 'complete');
-    
-    if (isPaymentComplete) {
-      const planType = session.metadata.planType;
-
-      // Update user subscription info
-      user.subscription.stripeCustomerId = session.customer.id || session.customer;
-      user.subscription.stripeSubscriptionId = session.subscription;
-      user.subscription.plan = planType;
-      user.subscription.status = 'active';
-      
-      // If subscription is expanded, set period dates
-      if (session.subscription && typeof session.subscription === 'object') {
-        user.subscription.currentPeriodStart = new Date(session.subscription.current_period_start * 1000);
-        user.subscription.currentPeriodEnd = new Date(session.subscription.current_period_end * 1000);
-      }
-
-      await user.save();
-
-      logger.info('Subscription verified and activated via verifySession:', {
-        userId: user._id,
-        planType,
-        sessionId,
-        subscriptionId: session.subscription,
-        isTestMode,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: 'Subscription activated successfully',
-        data: {
-          plan: user.subscription.plan,
-          status: user.subscription.status,
-        },
-      });
-    } else {
-      logger.warn('Session not paid or complete:', {
-        sessionId,
-        paymentStatus: session.payment_status,
-        status: session.status,
-        isTestMode,
-      });
-
-      // For test mode, still try to activate if session is complete
-      if (isTestMode && session.status === 'complete') {
-        const planType = session.metadata.planType;
-        
-        user.subscription.plan = planType;
-        user.subscription.status = 'active';
-        await user.save();
-
-        logger.info('Test mode: Subscription activated despite payment status:', {
-          userId: user._id,
-          planType,
-          sessionId,
-        });
-
-        return res.status(200).json({
-          success: true,
-          message: 'Subscription activated (test mode)',
-          data: {
-            plan: user.subscription.plan,
-            status: user.subscription.status,
-          },
-        });
-      }
-
-      return res.status(400).json({
-        success: false,
-        message: 'Payment not completed',
-      });
-    }
-  } catch (error) {
-    logger.error('Error verifying session:', error);
-    next(error);
-  }
+  return res.status(400).json({
+    success: false,
+    message: 'Session verification not available for manual payments. Please contact support.',
+  });
 };
 
 /**
@@ -332,32 +273,16 @@ exports.getCurrentSubscription = async (req, res, next) => {
     }
 
     let subscriptionDetails = {
-      plan: user.subscription?.plan || 'starter',
-      status: user.subscription?.status || 'trial',
+      plan: user.subscription?.plan || 'free',
+      status: user.subscription?.status || 'inactive',
       trialEndsAt: user.subscription?.trialEndsAt,
       currentPeriodStart: user.subscription?.currentPeriodStart,
       currentPeriodEnd: user.subscription?.currentPeriodEnd,
+      paymentMethod: 'manual', // Indicate manual payment system
     };
 
-    // If user has active Stripe subscription, get latest details
-    if (user.subscription?.stripeSubscriptionId) {
-      try {
-        const stripeSubscription = await stripeService.getSubscription(
-          user.subscription.stripeSubscriptionId
-        );
-
-        subscriptionDetails = {
-          ...subscriptionDetails,
-          stripeStatus: stripeSubscription.status,
-          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-          cancelAt: stripeSubscription.cancel_at,
-          currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-        };
-      } catch (error) {
-        logger.error('Error fetching Stripe subscription:', error);
-      }
-    }
+    // For manual payments, we don't need to fetch from external services
+    // All subscription data is stored locally
 
     res.status(200).json({
       success: true,
@@ -383,38 +308,36 @@ exports.cancelSubscription = async (req, res, next) => {
       });
     }
 
-    if (!user.subscription?.stripeSubscriptionId) {
+    if (!user.subscription || user.subscription.status !== 'active') {
       return res.status(400).json({
         success: false,
         message: 'No active subscription found',
       });
     }
 
-    const subscription = await stripeService.cancelSubscription(
-      user.subscription.stripeSubscriptionId
-    );
-
-    // Log cancellation
+    // For manual payments, cancellation is handled by admin
+    // Log the cancellation request
     await auditService.createAuditLog({
       userId: user._id,
       userName: user.name,
       userRole: user.role,
-      action: 'SUBSCRIPTION_CANCELLED',
+      action: 'SUBSCRIPTION_CANCEL_REQUEST',
       resourceType: 'Subscription',
-      details: { 
-        subscriptionId: subscription.id,
-        cancelAt: subscription.cancel_at,
+      details: {
+        planType: user.subscription.plan,
+        currentPeriodEnd: user.subscription.currentPeriodEnd,
       },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'success',
+      status: 'pending',
     });
 
     res.status(200).json({
       success: true,
-      message: 'Subscription will be cancelled at period end',
+      message: 'Cancellation request submitted. An admin will process your request.',
       data: {
-        cancelAt: new Date(subscription.cancel_at * 1000),
+        status: 'pending_admin_review',
+        message: 'Your subscription will remain active until an admin processes your cancellation request.',
       },
     });
   } catch (error) {
@@ -438,33 +361,37 @@ exports.reactivateSubscription = async (req, res, next) => {
       });
     }
 
-    if (!user.subscription?.stripeSubscriptionId) {
+    if (!user.subscription) {
       return res.status(400).json({
         success: false,
         message: 'No subscription found',
       });
     }
 
-    const subscription = await stripeService.reactivateSubscription(
-      user.subscription.stripeSubscriptionId
-    );
-
-    // Log reactivation
+    // For manual payments, reactivation requires admin approval
+    // Log the reactivation request
     await auditService.createAuditLog({
       userId: user._id,
       userName: user.name,
       userRole: user.role,
-      action: 'SUBSCRIPTION_REACTIVATED',
+      action: 'SUBSCRIPTION_REACTIVATE_REQUEST',
       resourceType: 'Subscription',
-      details: { subscriptionId: subscription.id },
+      details: {
+        planType: user.subscription.plan,
+        currentStatus: user.subscription.status,
+      },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'success',
+      status: 'pending',
     });
 
     res.status(200).json({
       success: true,
-      message: 'Subscription reactivated successfully',
+      message: 'Reactivation request submitted. An admin will process your request.',
+      data: {
+        status: 'pending_admin_review',
+        message: 'Your reactivation request has been submitted for admin review.',
+      },
     });
   } catch (error) {
     logger.error('Error reactivating subscription:', error);
@@ -487,30 +414,12 @@ exports.getInvoices = async (req, res, next) => {
       });
     }
 
-    if (!user.subscription?.stripeCustomerId) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-      });
-    }
-
-    const invoices = await stripeService.getInvoices(
-      user.subscription.stripeCustomerId
-    );
-
-    const formattedInvoices = invoices.map((invoice) => ({
-      id: invoice.id,
-      amount: invoice.amount_paid / 100,
-      currency: invoice.currency.toUpperCase(),
-      status: invoice.status,
-      date: new Date(invoice.created * 1000),
-      pdfUrl: invoice.invoice_pdf,
-      hostedUrl: invoice.hosted_invoice_url,
-    }));
-
+    // For manual payments, invoices are not generated automatically
+    // Return empty array with a note about manual payments
     res.status(200).json({
       success: true,
-      data: formattedInvoices,
+      data: [],
+      message: 'Invoices are not automatically generated for manual payments. Please contact support for payment records.',
     });
   } catch (error) {
     logger.error('Error fetching invoices:', error);
@@ -623,7 +532,7 @@ exports.getPendingPayments = async (req, res, next) => {
     }
 
     // Find users with pending payments by checking audit logs
-    const auditLogs = await require('../models/AuditLog').find({
+    const auditLogs = await AuditLog.find({
       action: 'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
       status: 'pending',
     }).sort({ createdAt: -1 });
