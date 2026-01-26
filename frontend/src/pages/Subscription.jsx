@@ -135,9 +135,27 @@ const Subscription = () => {
     }
   };
 
-  const handleManageBilling = async () => {
+  const handleConfirmPayment = async () => {
     try {
-      setProcessingPlan('portal');
+      setProcessingPlan(selectedPlan.id);
+      setShowPaymentModal(false);
+
+      const response = await apiService.createCheckoutSession(selectedPlan.id);
+
+      if (response.success) {
+        await fetchData();
+        alert('✅ Subscription request submitted! Our team will contact you to complete the payment.');
+        setSelectedPlan(null);
+      } else {
+        alert('❌ Error submitting request. Please contact support.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error submitting request. Please contact support.');
+    } finally {
+      setProcessingPlan(null);
+    }
+  };
       const response = await apiService.createBillingPortalSession();
       
       if (response.success && response.data.url) {
@@ -438,20 +456,25 @@ const Subscription = () => {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    const instructions = `Plan: ${selectedPlan.name} ($${selectedPlan.price}/${selectedPlan.interval})\n\nContact: support@yourcompany.com\nReference: ${selectedPlan.name} Plan`;
-                    navigator.clipboard.writeText(instructions);
-                    alert('📋 Payment details copied to clipboard!');
-                  }}
+                  onClick={() => setShowPaymentModal(false)}
                   className="flex-1 btn btn-secondary"
+                  disabled={processingPlan === selectedPlan.id}
                 >
-                  Copy Details
+                  Cancel
                 </button>
                 <button
-                  onClick={() => setShowPaymentModal(false)}
+                  onClick={handleConfirmPayment}
+                  disabled={processingPlan === selectedPlan.id}
                   className="flex-1 btn btn-primary"
                 >
-                  Got It
+                  {processingPlan === selectedPlan.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Request Subscription'
+                  )}
                 </button>
               </div>
             </div>
