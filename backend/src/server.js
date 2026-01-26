@@ -44,8 +44,8 @@ console.log('✅ DEBUG: salesRoutes imported');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 console.log('✅ DEBUG: auditLogRoutes imported');
 console.log('🔍 DEBUG: About to import subscriptionRoutes...');
-// const subscriptionRoutes = require('./routes/subscriptionRoutes');
-// console.log('✅ DEBUG: subscriptionRoutes imported');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+console.log('✅ DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
 console.log('✅ DEBUG: webhookRoutes imported');
 // RunPod GPU Control Routes
@@ -228,7 +228,7 @@ app.use(`${API_VERSION}/reports`, reportRoutes);
 app.use(`${API_VERSION}/sales`, salesRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
-// app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes); // Temporarily disabled - import failing
+app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
 
 // RunPod GPU Control API
 console.log('🚀 DEBUG: Registering RunPod routes at path:', `${API_VERSION}/runpod`);
@@ -252,7 +252,7 @@ app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req
 app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
 app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
-// app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled
+app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`));
 
 // Debug: Log all incoming requests
 app.use((req, res, next) => {
