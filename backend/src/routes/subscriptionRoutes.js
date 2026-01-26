@@ -3,6 +3,17 @@ const router = express.Router();
 const subscriptionController = require('../controllers/subscriptionController');
 const { protect } = require('../middleware/auth');
 
+// Admin middleware function
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'Admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin privileges required.',
+    });
+  }
+  next();
+};
+
 // Public routes
 router.get('/plans', subscriptionController.getPlans);
 
@@ -18,8 +29,8 @@ router.post('/cancel', subscriptionController.cancelSubscription);
 router.post('/reactivate', subscriptionController.reactivateSubscription);
 router.get('/invoices', subscriptionController.getInvoices);
 
-// Admin routes (without inline middleware for now)
-router.post('/admin-activate', subscriptionController.adminActivateSubscription);
-router.get('/pending-payments', subscriptionController.getPendingPayments);
+// Admin routes (with proper middleware)
+router.post('/admin-activate', requireAdmin, subscriptionController.adminActivateSubscription);
+router.get('/pending-payments', requireAdmin, subscriptionController.getPendingPayments);
 
 module.exports = router;
