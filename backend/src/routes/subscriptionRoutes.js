@@ -9,8 +9,17 @@ router.get('/plans', subscriptionController.getPlans);
 // Protected routes
 router.use(protect);
 
-router.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Protected test endpoint working' });
-});
+router.post('/create-checkout-session', subscriptionController.createCheckoutSession);
+router.get('/verify-session/:sessionId', subscriptionController.verifySession);
+router.post('/activate', subscriptionController.activateSubscription);
+router.post('/create-portal-session', subscriptionController.createPortalSession);
+router.get('/current', subscriptionController.getCurrentSubscription);
+router.post('/cancel', subscriptionController.cancelSubscription);
+router.post('/reactivate', subscriptionController.reactivateSubscription);
+router.get('/invoices', subscriptionController.getInvoices);
+
+// Admin routes (without inline middleware for now)
+router.post('/admin-activate', subscriptionController.adminActivateSubscription);
+router.get('/pending-payments', subscriptionController.getPendingPayments);
 
 module.exports = router;
