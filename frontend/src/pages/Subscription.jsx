@@ -173,7 +173,6 @@ const Subscription = () => {
       setProcessingPlan(null);
     }
   };
-  };
 
   if (loading) {
     return (
