@@ -43,7 +43,7 @@ const Signup = () => {
     },
     starter: {
       name: 'Starter',
-      price: '$49',
+      price: '$149',
       period: '/month',
       trialDays: 14,
       features: [
@@ -51,12 +51,14 @@ const Signup = () => {
         'AI transcription & scoring',
         'Basic compliance rules',
         'Email support',
-        '3 team members'
+        '3 team members',
+        '1 dedicated pod',
+        '30-day data retention'
       ]
     },
     professional: {
       name: 'Professional',
-      price: '$99',
+      price: '$249',
       period: '/month',
       trialDays: 14,
       features: [
@@ -65,13 +67,15 @@ const Signup = () => {
         'Custom compliance rules',
         'Priority support',
         '5 team members',
-        'API access'
+        '1 dedicated pod',
+        'API access',
+        '90-day data retention'
       ],
       popular: true
     },
     enterprise: {
       name: 'Enterprise',
-      price: '$249',
+      price: '$399',
       period: '/month',
       trialDays: 30,
       features: [

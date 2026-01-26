@@ -57,16 +57,17 @@ const Landing = () => {
     },
     {
       name: 'Starter',
-      price: '$49',
+      price: '$149',
       period: '/month',
       description: 'Perfect for small teams getting started',
       features: [
-        'Up to 500 calls/month',
+        'Up to 100 calls/month',
         'AI transcription & scoring',
         'Basic compliance rules',
         'Email support',
-        '3 team members',
-        'Dashboard analytics'
+        '1 team member',
+        '1 dedicated pod',
+        '30-day data retention'
       ],
       cta: 'Start Free Trial',
       ctaLink: '/signup?plan=starter',
@@ -74,18 +75,18 @@ const Landing = () => {
     },
     {
       name: 'Professional',
-      price: '$99',
+      price: '$249',
       period: '/month',
       description: 'Best for growing organizations',
       features: [
-        'Up to 2,500 calls/month',
+        'Up to 500 calls/month',
         'Advanced AI analysis',
         'Custom compliance rules',
         'Priority support',
-        '15 team members',
-        'Advanced analytics',
+        '5 team members',
+        '1 dedicated pod',
         'API access',
-        'Custom integrations'
+        '90-day data retention'
       ],
       cta: 'Start Free Trial',
       ctaLink: '/signup?plan=professional',
@@ -93,7 +94,7 @@ const Landing = () => {
     },
     {
       name: 'Enterprise',
-      price: '$249',
+      price: '$399',
       period: '/month',
       description: 'For large-scale operations',
       features: [

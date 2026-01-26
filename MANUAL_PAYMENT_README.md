@@ -4,7 +4,7 @@ This application now uses a manual payment system instead of automated Stripe pa
 
 ## For Users (Customers)
 
-1. **Select Plan**: Users can choose from Free, Starter ($49/month), Professional ($99/month), or Enterprise ($249/month) plans.
+1. **Select Plan**: Users can choose from Free, Starter ($149/month), Professional ($249/month), or Enterprise ($399/month) plans.
 
 2. **Free Plan**: Activated immediately without payment.
 

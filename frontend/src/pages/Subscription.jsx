@@ -24,7 +24,7 @@ const Subscription = () => {
     {
       id: 'starter',
       name: 'Starter',
-      price: 49,
+      price: 149,
       interval: 'month',
       icon: Zap,
       features: [
@@ -32,12 +32,14 @@ const Subscription = () => {
         'Basic analytics',
         'Email support',
         '1 user',
+        '1 dedicated pod',
+        '30-day data retention',
       ],
     },
     {
       id: 'professional',
       name: 'Professional',
-      price: 99,
+      price: 249,
       interval: 'month',
       icon: Star,
       features: [
@@ -45,14 +47,16 @@ const Subscription = () => {
         'Advanced analytics',
         'Priority support',
         '5 users',
+        '1 dedicated pod',
         'Custom rules',
         'API access',
+        '90-day data retention',
       ],
     },
     {
       id: 'enterprise',
       name: 'Enterprise',
-      price: 249,
+      price: 399,
       interval: 'month',
       icon: Shield,
       features: [
@@ -60,9 +64,11 @@ const Subscription = () => {
         'Full analytics suite',
         '24/7 support',
         'Unlimited users',
+        '1 dedicated pod',
         'Custom integrations',
         'Dedicated account manager',
         'SLA guarantee',
+        '1-year data retention',
       ],
     },
   ];
