@@ -151,7 +151,8 @@ exports.createCheckoutSession = async (req, res, next) => {
     }
 
     // Log manual payment request
-    await auditService.createAuditLog({
+    console.log('DEBUG: Creating audit log for user:', user.name, 'plan:', planType);
+    const auditLog = await auditService.createAuditLog({
       userId: user._id,
       userName: user.name,
       userRole: user.role,
@@ -162,6 +163,7 @@ exports.createCheckoutSession = async (req, res, next) => {
       userAgent: req.get('user-agent'),
       status: 'pending',
     });
+    console.log('DEBUG: Audit log created:', auditLog);
 
     res.status(200).json({
       success: true,
@@ -536,6 +538,8 @@ exports.adminActivateSubscription = async (req, res, next) => {
 exports.getPendingPayments = async (req, res, next) => {
   try {
     // Check if requester is admin
+    console.log('DEBUG: getPendingPayments called by user role:', req.user?.role);
+
     if (req.user.role !== 'Admin') {
       return res.status(403).json({
         success: false,
@@ -544,13 +548,17 @@ exports.getPendingPayments = async (req, res, next) => {
     }
 
     // Find users with pending payments by checking audit logs
+    console.log('DEBUG: Searching for audit logs...');
     const auditLogs = await AuditLog.find({
       action: 'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
       status: 'pending',
     }).sort({ createdAt: -1 });
 
+    console.log('DEBUG: Found', auditLogs.length, 'audit logs');
+
     const pendingUsers = [];
     for (const log of auditLogs) {
+      console.log('DEBUG: Processing log:', log.userName, log.details.planType, log.status);
       const user = await User.findById(log.userId);
       if (user && user.subscription.status !== 'active') {
         pendingUsers.push({
@@ -564,11 +572,14 @@ exports.getPendingPayments = async (req, res, next) => {
       }
     }
 
+    console.log('DEBUG: Returning', pendingUsers.length, 'pending users');
+
     res.status(200).json({
       success: true,
       data: pendingUsers,
     });
   } catch (error) {
+    console.log('DEBUG: Error in getPendingPayments:', error);
     logger.error('Error fetching pending payments:', error);
     next(error);
   }
