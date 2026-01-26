@@ -486,7 +486,6 @@ const Subscription = () => {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 };
