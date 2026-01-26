@@ -121,7 +121,9 @@ app.use(cors(corsOptions));
 
 // Stripe webhook endpoint - MUST be before body parser
 // Stripe needs raw body for signature verification
+console.log('🔍 DEBUG: Mounting webhook routes...');
 app.use('/api/webhooks', webhookRoutes);
+console.log('✅ DEBUG: Webhook routes mounted');
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -216,13 +218,20 @@ app.get('/health', async (req, res) => {
 const API_VERSION = '/api/v1';
 console.log('🔍 DEBUG: Mounting API routes...');
 
+console.log('🔍 DEBUG: Mounting auth routes...');
 app.use(`${API_VERSION}/auth`, authRoutes);
+console.log('🔍 DEBUG: Mounting calls routes...');
 app.use(`${API_VERSION}/calls`, callRoutes);
+console.log('🔍 DEBUG: Mounting rules routes...');
 app.use(`${API_VERSION}/rules`, ruleRoutes);
+console.log('🔍 DEBUG: Mounting reports routes...');
 app.use(`${API_VERSION}/reports`, reportRoutes);
+console.log('🔍 DEBUG: Mounting sales routes...');
 app.use(`${API_VERSION}/sales`, salesRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
+console.log('🔍 DEBUG: Mounting audit-logs routes...');
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
+console.log('🔍 DEBUG: Mounting subscriptions routes...');
 app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
 console.log('✅ DEBUG: API routes mounted');
 
@@ -242,6 +251,7 @@ if (runpodRoutes.stack) {
 }
 
 // Legacy routes (deprecated - redirect to v1)
+console.log('🔍 DEBUG: Setting up legacy routes...');
 app.use('/api/auth', (req, res) => res.redirect(308, `${API_VERSION}/auth${req.url}`));
 app.use('/api/calls', (req, res) => res.redirect(308, `${API_VERSION}/calls${req.url}`));
 app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req.url}`));
@@ -249,8 +259,10 @@ app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports$
 app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
 // app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled for testing
+console.log('✅ DEBUG: Legacy routes set up');
 
 // Debug: Log all incoming requests
+console.log('🔍 DEBUG: Setting up debug middleware...');
 app.use((req, res, next) => {
   if (req.path.includes('/runpod')) {
     console.log('🔍 DEBUG: Incoming request to RunPod route:');
@@ -261,8 +273,10 @@ app.use((req, res, next) => {
   }
   next();
 });
+console.log('✅ DEBUG: Debug middleware set up');
 
 // 404 Handler
+console.log('🔍 DEBUG: Setting up 404 handler...');
 app.use('*', (req, res) => {
   console.log('❌ DEBUG: 404 - Route not found:', req.originalUrl);
   res.status(404).json({
@@ -270,12 +284,17 @@ app.use('*', (req, res) => {
     message: `Route ${req.originalUrl} not found`,
   });
 });
+console.log('✅ DEBUG: 404 handler set up');
 
 // Error handling middleware (must be last)
+console.log('🔍 DEBUG: Setting up error handling middleware...');
 app.use(errorHandler);
+console.log('✅ DEBUG: Error handling middleware set up');
 
 // Start server
 const PORT = config.port;
+console.log('🔍 DEBUG: Config port value:', PORT);
+console.log('🔍 DEBUG: Config object:', JSON.stringify(config, null, 2));
 console.log('🔍 DEBUG: About to start server on port:', PORT);
 
 const server = app.listen(PORT, () => {
@@ -313,6 +332,7 @@ const gracefulShutdown = (signal) => {
 };
 
 // Handle shutdown signals
+console.log('🔍 DEBUG: Setting up graceful shutdown handlers...');
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
@@ -327,5 +347,6 @@ process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception - shutting down', { error: err.message, stack: err.stack });
   process.exit(1);
 });
+console.log('✅ DEBUG: Graceful shutdown handlers set up');
 
 module.exports = app;
