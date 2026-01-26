@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { callService, reportService } from '../services/apiService';
+import { callService, reportService, apiService } from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
-import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard } from 'lucide-react';
+import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard, RefreshCw } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [salesData, setSalesData] = useState(null);
   const [recentCalls, setRecentCalls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pendingPayments, setPendingPayments] = useState([]);
   const [campaign, setCampaign] = useState('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -32,15 +33,29 @@ const Dashboard = () => {
     
     try {
       setLoading(true);
-      const [callsResponse, analyticsResponse, salesResponse] = await Promise.all([
+      const promises = [
         callService.getCalls({ limit: 10, status: 'completed', campaign }),
         reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
         reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
-      ]);
+      ];
+
+      // Add pending payments for admin users
+      if (user.role === 'Admin') {
+        promises.push(
+          apiService.getPendingPayments().catch(() => ({ success: false, data: [] }))
+        );
+      }
+
+      const [callsResponse, analyticsResponse, salesResponse, pendingResponse] = await Promise.all(promises);
 
       setRecentCalls(callsResponse.data);
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
+      
+      // Set pending payments for admin
+      if (user.role === 'Admin' && pendingResponse) {
+        setPendingPayments(pendingResponse.success ? pendingResponse.data : []);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -98,6 +113,36 @@ const Dashboard = () => {
       case 'expired': return 'Expired';
       case 'cancelled': return 'Cancelled';
       default: return 'Unknown';
+    }
+  };
+
+  const handleActivateSubscription = async (payment) => {
+    const paymentMethod = prompt('Enter payment method (e.g., Bank Transfer, PayPal, Payoneer):', 'Bank Transfer');
+    if (!paymentMethod) return;
+
+    const notes = prompt('Add any notes about this payment (optional):', '');
+
+    try {
+      const response = await apiService.adminActivateSubscription(
+        payment.userId,
+        payment.requestedPlan,
+        paymentMethod,
+        notes
+      );
+
+      if (response.success) {
+        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.userName}\nEmail: ${response.data.userEmail}\nPlan: ${response.data.plan}\nStatus: ${response.data.status}`);
+
+        // Refresh pending payments
+        const refreshResponse = await apiService.getPendingPayments();
+        if (refreshResponse.success) {
+          setPendingPayments(refreshResponse.data);
+        }
+      } else {
+        alert('Error activating subscription: ' + response.message);
+      }
+    } catch (error) {
+      alert('Error activating subscription. Please try again.');
     }
   };
 
@@ -403,7 +448,7 @@ const Dashboard = () => {
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-md">
               <CreditCard size={20} className="text-white" />
             </div>
-            <h3 className="section-header-enhanced mb-0">Pending Payments</h3>
+            <h3 className="section-header-enhanced mb-0">Subscription Management</h3>
           </div>
 
           <div className="space-y-4">
@@ -414,51 +459,88 @@ const Dashboard = () => {
                   <h4 className="font-medium text-amber-800">Manual Payment Mode Active</h4>
                   <p className="text-sm text-amber-700 mt-1">
                     Users requesting paid plans need manual activation after payment is received.
-                    Check pending requests below and activate subscriptions once payment is confirmed.
+                    Use the tools below to manage subscription activations.
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Pending Payments Table */}
             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-slate-200">
-                <h4 className="font-medium text-slate-900">Pending Activation Requests</h4>
-                <p className="text-sm text-slate-600">Users waiting for subscription activation</p>
-              </div>
-
-              <div className="p-4">
+              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-slate-900">Pending Activation Requests</h4>
+                  <p className="text-sm text-slate-600">Users waiting for subscription activation</p>
+                </div>
                 <button
                   onClick={async () => {
                     try {
+                      setLoading(true);
                       const response = await apiService.getPendingPayments();
                       if (response.success) {
-                        const pending = response.data;
-                        if (pending.length === 0) {
-                          alert('✅ No pending payments to process.');
-                        } else {
-                          const summary = pending.map(p =>
-                            `${p.userName} (${p.userEmail}) - ${p.requestedPlan} - Requested: ${new Date(p.requestedAt).toLocaleDateString()}`
-                          ).join('\n\n');
-
-                          const action = confirm(
-                            `📋 Pending Payments (${pending.length}):\n\n${summary}\n\nClick OK to manage these requests.`
-                          );
-
-                          if (action) {
-                            // Could open a modal or redirect to admin page
-                            alert('Admin panel for payment management would open here.');
-                          }
-                        }
+                        setPendingPayments(response.data);
                       }
                     } catch (error) {
                       alert('Error loading pending payments.');
+                    } finally {
+                      setLoading(false);
                     }
                   }}
-                  className="btn btn-primary flex items-center gap-2"
+                  className="btn btn-secondary flex items-center gap-2"
                 >
-                  <CreditCard size={16} />
-                  Check Pending Payments
+                  <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                  Refresh
                 </button>
+              </div>
+
+              <div className="p-4">
+                {pendingPayments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                    <p className="text-slate-600">No pending payments to process</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingPayments.map((payment) => (
+                      <div key={payment.auditLogId} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h5 className="font-medium text-slate-900">{payment.userName}</h5>
+                            <p className="text-sm text-slate-600">{payment.userEmail}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                              {payment.requestedPlan.toUpperCase()}
+                            </span>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {new Date(payment.requestedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleActivateSubscription(payment)}
+                            className="btn btn-primary text-sm flex items-center gap-2"
+                          >
+                            <CheckCircle size={14} />
+                            Activate
+                          </button>
+                          <button
+                            onClick={() => {
+                              const details = `User: ${payment.userName} (${payment.userEmail})\nPlan: ${payment.requestedPlan}\nRequested: ${new Date(payment.requestedAt).toLocaleDateString()}`;
+                              navigator.clipboard.writeText(details);
+                              alert('User details copied to clipboard');
+                            }}
+                            className="btn btn-secondary text-sm"
+                          >
+                            Copy Details
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
