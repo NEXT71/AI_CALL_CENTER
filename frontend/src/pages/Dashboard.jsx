@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { callService, reportService, apiService } from '../services/apiService';
+import { callService, reportService } from '../services/apiService';
+import apiService from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
 import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard, RefreshCw } from 'lucide-react';
