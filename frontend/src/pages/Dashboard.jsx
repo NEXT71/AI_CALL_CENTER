@@ -43,18 +43,9 @@ const Dashboard = () => {
 
       // Add pending payments for admin users
       if (user.role === 'Admin') {
-        console.log('DEBUG: User is admin, fetching pending payments...');
         promises.push(
-          apiService.getPendingPayments().then((response) => {
-            console.log('DEBUG: getPendingPayments response:', response);
-            return response;
-          }).catch((error) => {
-            console.log('DEBUG: getPendingPayments failed:', error);
-            return { success: false, data: [] };
-          })
+          apiService.getPendingPayments().catch(() => ({ success: false, data: [] }))
         );
-      } else {
-        console.log('DEBUG: User role is not Admin:', user.role, 'user object:', user);
       }
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
