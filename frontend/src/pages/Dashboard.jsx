@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { callService, reportService } from '../services/apiService';
 import apiService from '../services/apiService';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
@@ -12,6 +11,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [salesData, setSalesData] = useState(null);
   const [recentCalls, setRecentCalls] = useState([]);
+  const [currentSubscription, setCurrentSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [campaign, setCampaign] = useState('');
@@ -35,9 +35,10 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const promises = [
-        callService.getCalls({ limit: 10, status: 'completed', campaign }),
-        reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
-        reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
+        apiService.callService.getCalls({ limit: 10, status: 'completed', campaign }),
+        apiService.reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
+        apiService.reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
+        apiService.getCurrentSubscription().catch(() => ({ success: false })),
       ];
 
       // Add pending payments for admin users
@@ -47,11 +48,12 @@ const Dashboard = () => {
         );
       }
 
-      const [callsResponse, analyticsResponse, salesResponse, pendingResponse] = await Promise.all(promises);
+      const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
       setRecentCalls(callsResponse.data);
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
+      setCurrentSubscription(subscriptionResponse.success ? subscriptionResponse.data : null);
       
       // Set pending payments for admin
       if (user.role === 'Admin' && pendingResponse) {
@@ -161,7 +163,7 @@ const Dashboard = () => {
       <EmailVerificationBanner />
 
       {/* Current Plan Display */}
-      {user?.subscription && (
+      {currentSubscription && (
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -170,7 +172,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">
-                  {getPlanDisplayName(user.subscription.plan)}
+                  {getPlanDisplayName(currentSubscription.plan)}
                 </h3>
                 <p className="text-sm text-slate-600">
                   Current subscription plan
@@ -178,14 +180,14 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(user.subscription.status)}`}>
-                {getStatusText(user.subscription.status)}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(currentSubscription.status)}`}>
+                {getStatusText(currentSubscription.status)}
               </span>
-              {user.subscription.status === 'trial' && user.subscription.trialEndsAt && (
+              {currentSubscription.status === 'trial' && currentSubscription.trialEndsAt && (
                 <div className="text-right">
                   <p className="text-sm text-slate-600">Trial ends</p>
                   <p className="text-sm font-medium text-slate-900">
-                    {new Date(user.subscription.trialEndsAt).toLocaleDateString()}
+                    {new Date(currentSubscription.trialEndsAt).toLocaleDateString()}
                   </p>
                 </div>
               )}
