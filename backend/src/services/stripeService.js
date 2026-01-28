@@ -29,42 +29,48 @@ const PLANS = {
   starter: {
     name: 'Starter',
     priceId: process.env.STRIPE_STARTER_PRICE_ID,
-    amount: 4900, // $49/month in cents
+    amount: 14900, // $149/month in cents (80% of pod cost)
     interval: 'month',
     features: [
       '100 calls/month',
       'Basic analytics',
       'Email support',
       '1 user',
+      '1 dedicated pod',
+      '30-day data retention',
     ],
   },
   professional: {
     name: 'Professional',
     priceId: process.env.STRIPE_PROFESSIONAL_PRICE_ID,
-    amount: 9900, // $99/month in cents
+    amount: 24900, // $249/month in cents (133% of pod cost)
     interval: 'month',
     features: [
       '500 calls/month',
       'Advanced analytics',
       'Priority support',
       '5 users',
+      '1 dedicated pod',
       'Custom rules',
       'API access',
+      '90-day data retention',
     ],
   },
   enterprise: {
     name: 'Enterprise',
     priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
-    amount: 24900, // $249/month in cents
+    amount: 39900, // $399/month in cents (213% of pod cost)
     interval: 'month',
     features: [
       'Unlimited calls',
       'Full analytics suite',
       '24/7 support',
       'Unlimited users',
+      '1 dedicated pod',
       'Custom integrations',
       'Dedicated account manager',
       'SLA guarantee',
+      '1-year data retention',
     ],
   },
 };

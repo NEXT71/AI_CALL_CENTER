@@ -66,8 +66,6 @@ const PLANS = {
     ],
   },
 };
-  },
-};
 
 /**
  * @route   GET /api/subscriptions/plans
