@@ -28,9 +28,13 @@ const generateTokens = (userId) => {
  */
 exports.register = async (req, res, next) => {
   try {
+    // Check if this is the first user (for initial setup)
+    const userCount = await User.countDocuments();
+    const isFirstUser = userCount === 0;
+
     // In production, this should be protected - only admins can create users
     // For development/initial setup, you can disable this check
-    if (req.user && req.user.role !== 'Admin') {
+    if (!isFirstUser && req.user && req.user.role !== 'Admin') {
       return res.status(403).json({
         success: false,
         message: 'Only administrators can register new users',
@@ -47,6 +51,9 @@ exports.register = async (req, res, next) => {
         message: 'User with this email already exists',
       });
     }
+
+    // Determine role: first user is Admin, others default to User
+    const userRole = isFirstUser ? 'Admin' : (role || 'User');
 
     // Calculate plan and status
     const selectedPlan = plan || 'free';
@@ -73,7 +80,7 @@ exports.register = async (req, res, next) => {
       name,
       email,
       password,
-      role: role || 'User',
+      role: userRole,
       department,
       company,
       phone,

@@ -152,8 +152,7 @@ const Signup = () => {
         password: formData.password,
         company: sanitizedCompany,
         phone: sanitizedPhone,
-        plan: formData.plan,
-        role: 'Admin' // First user is admin
+        plan: formData.plan
       });
 
       if (result.success) {
