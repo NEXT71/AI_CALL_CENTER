@@ -22,7 +22,7 @@ const Analytics = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await reportService.getAnalyticsSummary(dateRange, campaign);
+      const response = await reportService.getAnalyticsSummary({ ...dateRange, campaign });
       setAnalytics(response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);

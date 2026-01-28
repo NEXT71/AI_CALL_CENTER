@@ -39,7 +39,7 @@ const Dashboard = () => {
       // Only fetch call data for non-admin users
       if (user.role !== 'Admin') {
         promises.push(
-          apiService.callService.getCalls({ limit: 10, status: 'completed', campaign })
+          apiService.getCalls({ limit: 10, status: 'completed', campaign })
         );
       } else {
         promises.push(Promise.resolve({ data: [] })); // Empty array for admin
@@ -49,6 +49,7 @@ const Dashboard = () => {
         apiService.getAnalyticsSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
         apiService.getSalesSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
         apiService.getCurrentSubscription().catch(() => ({ success: false })),
+        apiService.getPendingPayments().catch(() => ({ success: false, data: [] })),
       );
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);

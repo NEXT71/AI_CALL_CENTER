@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { authService } from '../services/apiService';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -48,18 +49,12 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (roleFilter) params.append('role', roleFilter);
+      const params = {};
+      if (searchTerm) params.search = searchTerm;
+      if (roleFilter) params.role = roleFilter;
 
-      const response = await fetch(`/api/v1/auth/users?${params}`, {
-        credentials: 'include'
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch users');
-
-      const data = await response.json();
-      setUsers(data.data);
+      const response = await authService.getUsers(params);
+      setUsers(response.data);
     } catch (error) {
       toast.error('Failed to load users');
       console.error('Error fetching users:', error);
@@ -71,20 +66,7 @@ const UserManagement = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create user');
-      }
-
+      await authService.register(formData);
       toast.success('User created successfully');
       setShowCreateModal(false);
       setFormData({
@@ -98,33 +80,20 @@ const UserManagement = () => {
       });
       fetchUsers();
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.message || 'Failed to create user');
     }
   };
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/v1/auth/users/${selectedUser._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update user');
-      }
-
+      await authService.updateUser(selectedUser._id, formData);
       toast.success('User updated successfully');
       setShowEditModal(false);
       setSelectedUser(null);
       fetchUsers();
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.message || 'Failed to update user');
     }
   };
 
@@ -132,13 +101,7 @@ const UserManagement = () => {
     if (!confirm('Are you sure you want to deactivate this user?')) return;
 
     try {
-      const response = await fetch(`/api/v1/auth/users/${userId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (!response.ok) throw new Error('Failed to deactivate user');
-
+      await authService.deactivateUser(userId);
       toast.success('User deactivated successfully');
       fetchUsers();
     } catch (error) {
@@ -149,17 +112,7 @@ const UserManagement = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/v1/auth/users/${selectedUser._id}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ newPassword })
-      });
-
-      if (!response.ok) throw new Error('Failed to reset password');
-
+      await authService.resetUserPassword(selectedUser._id, { newPassword });
       toast.success('Password reset successfully');
       setShowResetPasswordModal(false);
       setSelectedUser(null);
