@@ -34,12 +34,22 @@ const Dashboard = () => {
     
     try {
       setLoading(true);
-      const promises = [
-        apiService.callService.getCalls({ limit: 10, status: 'completed', campaign }),
+      const promises = [];
+
+      // Only fetch call data for non-admin users
+      if (user.role !== 'Admin') {
+        promises.push(
+          apiService.callService.getCalls({ limit: 10, status: 'completed', campaign })
+        );
+      } else {
+        promises.push(Promise.resolve({ data: [] })); // Empty array for admin
+      }
+
+      promises.push(
         apiService.reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
         apiService.reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
         apiService.getCurrentSubscription().catch(() => ({ success: false })),
-      ];
+      );
 
       // Add pending payments for admin users
       if (user.role === 'Admin') {
@@ -265,50 +275,181 @@ const Dashboard = () => {
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link
-            to="/app/upload"
-            className="quick-action-btn group"
-          >
-            <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors duration-200">
-              <Upload size={20} className="text-blue-600" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Upload Call</span>
-          </Link>
-          
-          <Link
-            to="/app/sales-data"
-            className="quick-action-btn group"
-          >
-            <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors duration-200">
-              <DollarSign size={20} className="text-green-600" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Add Sales</span>
-          </Link>
-          
-          <Link
-            to="/app/calls"
-            className="quick-action-btn group"
-          >
-            <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors duration-200">
-              <Phone size={20} className="text-purple-600" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">View Calls</span>
-          </Link>
-          
-          <Link
-            to="/app/analytics"
-            className="quick-action-btn group"
-          >
-            <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors duration-200">
-              <BarChart3 size={20} className="text-orange-600" />
-            </div>
-            <span className="text-sm font-medium text-slate-700">Analytics</span>
-          </Link>
+          {user?.role === 'Admin' ? (
+            <>
+              <div className="quick-action-btn group cursor-not-allowed opacity-50">
+                <div className="p-3 bg-blue-50 rounded-xl">
+                  <Users size={20} className="text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">User Management</span>
+                <span className="text-xs text-slate-500 block">Coming Soon</span>
+              </div>
+              
+              <div className="quick-action-btn group cursor-not-allowed opacity-50">
+                <div className="p-3 bg-green-50 rounded-xl">
+                  <CreditCard size={20} className="text-green-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">Payment Processing</span>
+                <span className="text-xs text-slate-500 block">See Below</span>
+              </div>
+              
+              <div className="quick-action-btn group cursor-not-allowed opacity-50">
+                <div className="p-3 bg-purple-50 rounded-xl">
+                  <BarChart3 size={20} className="text-purple-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">System Reports</span>
+                <span className="text-xs text-slate-500 block">Coming Soon</span>
+              </div>
+              
+              <Link
+                to="/subscription"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors duration-200">
+                  <Award size={20} className="text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">Manage Plan</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/app/upload"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors duration-200">
+                  <Upload size={20} className="text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">Upload Call</span>
+              </Link>
+              
+              <Link
+                to="/app/sales-data"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors duration-200">
+                  <DollarSign size={20} className="text-green-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">Add Sales</span>
+              </Link>
+              
+              <Link
+                to="/app/calls"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors duration-200">
+                  <Phone size={20} className="text-purple-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">View Calls</span>
+              </Link>
+              
+              <Link
+                to="/app/analytics"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors duration-200">
+                  <BarChart3 size={20} className="text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-700">Analytics</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Admin System Overview */}
+      {user?.role === 'Admin' && (
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 animate-fade-in">
+          <h2 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            System Overview
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Users Card */}
+            <div className="kpi-card-enhanced group">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="kpi-label-enhanced">Total Users</p>
+                  <p className="kpi-value-enhanced">--</p>
+                  <div className="kpi-change-enhanced kpi-change-neutral flex items-center gap-1.5 mt-3">
+                    <Users size={14} />
+                    <span>System users</span>
+                  </div>
+                </div>
+                <div className="kpi-icon-enhanced kpi-icon-blue group-hover:scale-110 transition-transform duration-300">
+                  <Users size={24} />
+                </div>
+              </div>
+              <div className="kpi-progress-bar mt-4">
+                <div className="kpi-progress-fill kpi-progress-blue" style={{ width: '100%' }}></div>
+              </div>
+            </div>
+
+            {/* Active Subscriptions Card */}
+            <div className="kpi-card-enhanced group">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="kpi-label-enhanced">Active Subscriptions</p>
+                  <p className="kpi-value-enhanced">--</p>
+                  <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
+                    <Award size={14} />
+                    <span>Paid plans</span>
+                  </div>
+                </div>
+                <div className="kpi-icon-enhanced kpi-icon-green group-hover:scale-110 transition-transform duration-300">
+                  <Award size={24} />
+                </div>
+              </div>
+              <div className="kpi-progress-bar mt-4">
+                <div className="kpi-progress-fill kpi-progress-green" style={{ width: '75%' }}></div>
+              </div>
+            </div>
+
+            {/* Monthly Revenue Card */}
+            <div className="kpi-card-enhanced group">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="kpi-label-enhanced">Monthly Revenue</p>
+                  <p className="kpi-value-enhanced">$--</p>
+                  <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
+                    <TrendingUp size={14} />
+                    <span>MRR</span>
+                  </div>
+                </div>
+                <div className="kpi-icon-enhanced kpi-icon-purple group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign size={24} />
+                </div>
+              </div>
+              <div className="kpi-progress-bar mt-4">
+                <div className="kpi-progress-fill kpi-progress-purple" style={{ width: '60%' }}></div>
+              </div>
+            </div>
+
+            {/* Pending Payments Card */}
+            <div className="kpi-card-enhanced group">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="kpi-label-enhanced">Pending Payments</p>
+                  <p className="kpi-value-enhanced">{pendingPayments.length}</p>
+                  <div className="kpi-change-enhanced kpi-change-neutral flex items-center gap-1.5 mt-3">
+                    <CreditCard size={14} />
+                    <span>Awaiting activation</span>
+                  </div>
+                </div>
+                <div className="kpi-icon-enhanced kpi-icon-orange group-hover:scale-110 transition-transform duration-300">
+                  <CreditCard size={24} />
+                </div>
+              </div>
+              <div className="kpi-progress-bar mt-4">
+                <div className="kpi-progress-fill kpi-progress-orange" style={{ width: `${Math.min((pendingPayments.length / 10) * 100, 100)}%` }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
-      {stats && (
+      {stats && user?.role !== 'Admin' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Total Calls Card */}
           <div className="kpi-card-enhanced group">
@@ -353,10 +494,11 @@ const Dashboard = () => {
       )}
 
       {/* Sales Performance & Agent Leaderboard & Sales Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales Widget - Today's Performance */}
-        {['Admin', 'Manager', 'QA'].includes(user?.role) && (
-          <div className="h-full">
+      {user?.role !== 'Admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Sales Widget - Today's Performance */}
+          {['Manager', 'QA'].includes(user?.role) && (
+            <div className="h-full">
             <SalesWidget />
           </div>
         )}
@@ -443,6 +585,7 @@ const Dashboard = () => {
           </>
         )}
       </div>
+      )}
 
       {/* Admin: Pending Payments Management */}
       {user?.role === 'Admin' && (
@@ -551,7 +694,8 @@ const Dashboard = () => {
       )}
 
       {/* Recent Calls Table */}
-      <div className="card-enhanced animate-fade-in">
+      {user?.role !== 'Admin' && (
+        <div className="card-enhanced animate-fade-in">
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md">
@@ -690,6 +834,7 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
