@@ -46,16 +46,8 @@ const Dashboard = () => {
       }
 
       promises.push(
-        apiService.reportService.getAnalyticsSummary(dateRange, campaign).catch(() => ({ data: null })),
-        apiService.reportService.getSalesSummary(dateRange, campaign).catch(() => ({ data: null })),
-        apiService.getCurrentSubscription().catch(() => ({ success: false })),
-      );
-
-      // Add pending payments for admin users
-      if (user.role === 'Admin') {
-        promises.push(
-          apiService.getPendingPayments().catch(() => ({ success: false, data: [] }))
-        );
+      apiService.getAnalyticsSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
+      apiService.getSalesSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
       }
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);

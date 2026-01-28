@@ -25,6 +25,32 @@ export const authService = {
     const response = await api.post('/auth/refresh', { refreshToken });
     return response.data;
   },
+
+  // User management (Admin only)
+  getUsers: async (params = {}) => {
+    const response = await api.get('/auth/users', { params });
+    return response.data;
+  },
+
+  getUserById: async (userId) => {
+    const response = await api.get(`/auth/users/${userId}`);
+    return response.data;
+  },
+
+  updateUser: async (userId, userData) => {
+    const response = await api.put(`/auth/users/${userId}`, userData);
+    return response.data;
+  },
+
+  deactivateUser: async (userId) => {
+    const response = await api.delete(`/auth/users/${userId}`);
+    return response.data;
+  },
+
+  resetUserPassword: async (userId, newPassword) => {
+    const response = await api.post(`/auth/users/${userId}/reset-password`, { newPassword });
+    return response.data;
+  },
 };
 
 export const callService = {
@@ -118,6 +144,22 @@ export const reportService = {
 
   getBestSaleCalls: async (params = {}) => {
     const response = await api.get('/reports/sales/best-calls', { params });
+    return response.data;
+  },
+
+  // System reports
+  getSystemSummary: async () => {
+    const response = await api.get('/reports/system/summary');
+    return response.data;
+  },
+
+  getUserActivityReport: async (params = {}) => {
+    const response = await api.get('/reports/system/user-activity', { params });
+    return response.data;
+  },
+
+  getSubscriptionAnalytics: async () => {
+    const response = await api.get('/reports/system/subscription-analytics');
     return response.data;
   },
 };
