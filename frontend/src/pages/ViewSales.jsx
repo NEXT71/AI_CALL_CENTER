@@ -151,9 +151,9 @@ const ViewSales = () => {
   };
 
   // Check permissions
-  const canAddSales = ['Admin', 'Manager', 'QA'].includes(user?.role);
+  const canAddSales = ['Admin', 'User'].includes(user?.role);
   const canDelete = user?.role === 'Admin';
-  const canViewReports = ['Admin', 'Manager', 'QA'].includes(user?.role);
+  const canViewReports = ['Admin', 'User'].includes(user?.role);
 
   return (
     <div className="animate-fade-in">

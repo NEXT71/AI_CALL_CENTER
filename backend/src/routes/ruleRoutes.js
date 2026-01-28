@@ -14,7 +14,7 @@ router.get('/campaigns/list', ruleController.getCampaigns);
 // Create rule
 router.post(
   '/',
-  authorize('Admin', 'Manager'),
+  authorize('Admin'),
   validateComplianceRule,
   handleValidationErrors,
   ruleController.createRule
@@ -29,7 +29,7 @@ router.get('/:id', validateObjectId('id'), handleValidationErrors, ruleControlle
 // Update rule
 router.put(
   '/:id',
-  authorize('Admin', 'Manager'),
+  authorize('Admin'),
   validateObjectId('id'),
   handleValidationErrors,
   ruleController.updateRule

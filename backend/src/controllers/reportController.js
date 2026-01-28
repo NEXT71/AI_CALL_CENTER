@@ -115,7 +115,7 @@ exports.getCallReport = async (req, res, next) => {
 /**
  * @route   GET /api/reports/analytics/summary
  * @desc    Get analytics summary
- * @access  Private (Admin, Manager, QA)
+ * @access  Private (Admin, User)
  */
 exports.getAnalyticsSummary = async (req, res, next) => {
   try {
@@ -327,7 +327,7 @@ function generateRecommendations(call) {
 /**
  * @route   GET /api/reports/sales/summary
  * @desc    Get sales summary analytics
- * @access  Private (Admin, Manager, QA)
+ * @access  Private (Admin, User)
  */
 exports.getSalesSummary = async (req, res, next) => {
   try {
@@ -394,7 +394,7 @@ exports.getSalesSummary = async (req, res, next) => {
 /**
  * @route   GET /api/reports/sales/by-agent
  * @desc    Get sales performance by agent
- * @access  Private (Admin, Manager, QA)
+ * @access  Private (Admin, User)
  */
 exports.getSalesByAgent = async (req, res, next) => {
   try {
@@ -446,7 +446,7 @@ exports.getSalesByAgent = async (req, res, next) => {
 /**
  * @route   GET /api/reports/sales/by-product
  * @desc    Get sales performance by product
- * @access  Private (Admin, Manager, QA)
+ * @access  Private (Admin, User)
  */
 exports.getSalesByProduct = async (req, res, next) => {
   try {
@@ -499,7 +499,7 @@ exports.getSalesByProduct = async (req, res, next) => {
 /**
  * @route   GET /api/reports/sales/best-calls
  * @desc    Get best sale calls for training
- * @access  Private (Admin, Manager, QA)
+ * @access  Private (Admin, User)
  */
 exports.getBestSaleCalls = async (req, res, next) => {
   try {

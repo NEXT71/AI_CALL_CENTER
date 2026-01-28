@@ -12,10 +12,10 @@ router.use(checkTrialExpiration);
 // Get campaigns list (all authenticated users)
 router.get('/campaigns', salesController.getCampaigns);
 
-// Create sales record (QA & Admin only)
+// Create sales record (Admin & User)
 router.post(
   '/',
-  authorize('Admin', 'QA'),
+  authorize('Admin', 'User'),
   [
     body('agentId').isMongoId().withMessage('Invalid agent ID'),
     body('campaign').trim().notEmpty().withMessage('Campaign is required'),
@@ -37,24 +37,24 @@ router.get('/', salesController.getSalesRecords);
 router.get('/analytics', salesController.getSalesAnalytics);
 
 // Export sales data to CSV
-router.get('/export', authorize('Admin', 'Manager', 'QA'), salesController.exportSalesData);
+router.get('/export', authorize('Admin', 'User'), salesController.exportSalesData);
 
 // Get single sales record by ID
 router.get('/:id', validateObjectId('id'), handleValidationErrors, salesController.getSalesRecordById);
 
-// Update sales record (QA can only update own, Admin can update all)
+// Update sales record (User can only update own, Admin can update all)
 router.put(
   '/:id',
-  authorize('Admin', 'QA'),
+  authorize('Admin', 'User'),
   validateObjectId('id'),
   handleValidationErrors,
   salesController.updateSalesRecord
 );
 
-// Add QA review to sales record (QA & Admin only)
+// Add QA review to sales record (Admin & User)
 router.post(
   '/:id/review',
-  authorize('Admin', 'QA'),
+  authorize('Admin', 'User'),
   validateObjectId('id'),
   [
     body('verified').isBoolean().withMessage('Verified must be true or false'),

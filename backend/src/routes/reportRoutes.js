@@ -19,32 +19,32 @@ router.get(
 // Get analytics summary
 router.get(
   '/analytics/summary',
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin', 'User'),
   reportController.getAnalyticsSummary
 );
 
 // Sales-specific reports
 router.get(
   '/sales/summary',
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin', 'User'),
   reportController.getSalesSummary
 );
 
 router.get(
   '/sales/by-agent',
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin', 'User'),
   reportController.getSalesByAgent
 );
 
 router.get(
   '/sales/by-product',
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin', 'User'),
   reportController.getSalesByProduct
 );
 
 router.get(
   '/sales/best-calls',
-  authorize('Admin'),
+  authorize('Admin', 'User'),
   reportController.getBestSaleCalls
 );
 

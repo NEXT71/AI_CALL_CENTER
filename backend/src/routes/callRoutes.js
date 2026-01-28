@@ -15,7 +15,7 @@ router.post(
   '/upload',
   uploadLimiter,
   checkCallLimit, // Check if user has exceeded monthly call limit
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin', 'User'),
   callController.uploadCall
 );
 
@@ -31,7 +31,7 @@ router.get('/:id/audio', validateObjectId('id'), handleValidationErrors, callCon
 // Delete call
 router.delete(
   '/:id',
-  authorize('Admin', 'Manager'),
+  authorize('Admin'),
   validateObjectId('id'),
   handleValidationErrors,
   callController.deleteCall

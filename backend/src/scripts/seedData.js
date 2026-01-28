@@ -251,9 +251,10 @@ async function seedDatabase() {
     console.log('\n✅ Database seeded successfully!');
     console.log('\n🔑 Login Credentials:');
     console.log('  Admin:   admin@nextel.com / Admin123!');
-    console.log('  Manager: manager@nextel.com / Manager123!');
-    console.log('  QA:      qa@nextel.com / QA123!');
-    console.log('  Agent:   agent1@nextel.com / Agent123!');
+    console.log('  User:    qa.manager@nextel.com / QA123!');
+    console.log('  User:    qa1@nextel.com / QA123!');
+    console.log('  User:    qa2@nextel.com / QA123!');
+    console.log('  User:    ops@nextel.com / Ops123!');
     console.log('='.repeat(50));
 
     process.exit(0);

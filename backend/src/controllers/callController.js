@@ -495,7 +495,7 @@ exports.getCalls = async (req, res, next) => {
     if (req.user.role === 'Agent') {
       query.agentId = req.user._id;
     } else if (req.user.role !== 'Admin') {
-      // For non-admin users (Manager, QA, etc.), only show calls from their company
+      // For non-admin users, only show calls from their company
       if (req.user.company) {
         query.company = req.user.company;
       }
@@ -629,7 +629,7 @@ exports.getCallAudio = async (req, res, next) => {
 /**
  * @route   DELETE /api/calls/:id
  * @desc    Delete a call
- * @access  Private (Admin, Manager only)
+ * @access  Private (Admin only)
  */
 exports.deleteCall = async (req, res, next) => {
   try {

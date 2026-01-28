@@ -185,8 +185,8 @@ const Login = () => {
                   <code className="font-mono text-blue-600">admin@nextel.com</code>
                 </div>
                 <div className="flex justify-between items-center py-1 px-2 bg-white rounded border border-slate-100">
-                  <span>Manager:</span>
-                  <code className="font-mono text-blue-600">manager@nextel.com</code>
+                  <span>User:</span>
+                  <code className="font-mono text-blue-600">qa.manager@nextel.com</code>
                 </div>
                 <div className="flex justify-between items-center py-1 px-2 bg-white rounded border border-slate-100">
                   <span>Agent:</span>

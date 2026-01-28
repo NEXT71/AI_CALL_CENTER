@@ -495,7 +495,7 @@ const Dashboard = () => {
       {user?.role !== 'Admin' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sales Widget - Today's Performance */}
-          {['Manager', 'QA'].includes(user?.role) && (
+          {user?.role === 'User' && (
             <div className="h-full">
             <SalesWidget />
           </div>
@@ -504,7 +504,7 @@ const Dashboard = () => {
         {salesData && salesData.totalSales > 0 && (
           <>
             {/* Sales Metrics */}
-            <div className={`${['Admin', 'Manager', 'QA'].includes(user?.role) ? 'lg:col-span-2' : 'lg:col-span-3'} card-enhanced`}>
+            <div className={`${user?.role === 'Admin' ? 'lg:col-span-2' : 'lg:col-span-3'} card-enhanced`}>
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-md">
                   <TrendingUp size={20} className="text-white" />

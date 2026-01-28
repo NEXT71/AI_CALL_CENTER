@@ -490,7 +490,7 @@ exports.resetPassword = async (req, res, next) => {
 
 /**
  * @route   GET /api/auth/users
- * @desc    Get list of users (Admin/QA/Manager only)
+ * @desc    Get list of users (Admin only)
  * @access  Private
  */
 exports.getUsers = async (req, res, next) => {
