@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const config = require('../config/config');
 const auditService = require('../services/auditService');
@@ -499,13 +500,164 @@ exports.getUsers = async (req, res, next) => {
     }
 
     const users = await User.find(filter)
-      .select('name email role department')
+      .select('name email role department isActive company phone subscription.plan subscription.status createdAt')
       .limit(parseInt(limit))
       .sort({ name: 1 });
 
     res.status(200).json({
       success: true,
       data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/auth/users/:id
+ * @desc    Get user by ID
+ * @access  Private - Admin only
+ */
+exports.getUserById = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password -passwordResetToken -emailVerificationToken');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   PUT /api/auth/users/:id
+ * @desc    Update user
+ * @access  Private - Admin only
+ */
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { name, email, role, department, company, phone, isActive } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (role !== undefined) updateData.role = role;
+    if (department !== undefined) updateData.department = department;
+    if (company !== undefined) updateData.company = company;
+    if (phone !== undefined) updateData.phone = phone;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Log user update
+    await auditService.logUserUpdate(req.user, user, updateData, req);
+
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   DELETE /api/auth/users/:id
+ * @desc    Deactivate user (soft delete)
+ * @access  Private - Admin only
+ */
+exports.deactivateUser = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Log user deactivation
+    await auditService.logUserDeactivation(req.user, user, req);
+
+    res.status(200).json({
+      success: true,
+      message: 'User deactivated successfully',
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/auth/users/:id/reset-password
+ * @desc    Reset user password (admin function)
+ * @access  Private - Admin only
+ */
+exports.resetUserPassword = async (req, res, next) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password is required',
+      });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { 
+        password: hashedPassword,
+        tokenVersion: (await User.findById(req.params.id)).tokenVersion + 1
+      },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Log password reset
+    await auditService.logPasswordReset(req.user, user, req);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully',
     });
   } catch (error) {
     next(error);

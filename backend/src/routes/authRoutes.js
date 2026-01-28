@@ -51,7 +51,11 @@ router.post('/reset-password/:token', authController.resetPassword);
 
 // Protected routes
 router.get('/me', protect, authController.getMe);
-router.get('/users', protect, authorize('Admin', 'Manager', 'QA'), authController.getUsers);
+router.get('/users', protect, authorize('Admin'), authController.getUsers);
+router.get('/users/:id', protect, authorize('Admin'), authController.getUserById);
+router.put('/users/:id', protect, authorize('Admin'), authController.updateUser);
+router.delete('/users/:id', protect, authorize('Admin'), authController.deactivateUser);
+router.post('/users/:id/reset-password', protect, authorize('Admin'), authController.resetUserPassword);
 router.post('/logout', protect, authController.logout);
 
 module.exports = router;

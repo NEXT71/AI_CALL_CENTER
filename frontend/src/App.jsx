@@ -20,6 +20,8 @@ import SubscriptionCancelled from './pages/SubscriptionCancelled';
 import ViewSales from './pages/ViewSales';
 import AddSales from './pages/AddSales';
 import SalesReports from './pages/SalesReports';
+import UserManagement from './pages/UserManagement';
+import SystemReports from './pages/SystemReports';
 import Landing from './pages/Landing';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -62,8 +64,8 @@ function App() {
             <Route path="sales-data" element={<RoleGuard allowedRoles={['User']}><ViewSales /></RoleGuard>} />
             <Route path="sales-data/add" element={<RoleGuard allowedRoles={['User']}><AddSales /></RoleGuard>} />
             <Route path="sales-reports" element={<RoleGuard allowedRoles={['Admin']}><SalesReports /></RoleGuard>} />
-            <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><div className="p-8 text-center"><h2 className="text-2xl font-bold text-slate-900 mb-4">User Management</h2><p className="text-slate-600">Coming Soon - Full user management interface</p></div></RoleGuard>} />
-            <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><div className="p-8 text-center"><h2 className="text-2xl font-bold text-slate-900 mb-4">System Reports</h2><p className="text-slate-600">Coming Soon - System analytics and reports</p></div></RoleGuard>} />
+            <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><UserManagement /></RoleGuard>} />
+            <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><SystemReports /></RoleGuard>} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />

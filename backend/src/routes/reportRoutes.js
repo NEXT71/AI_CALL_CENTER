@@ -44,8 +44,27 @@ router.get(
 
 router.get(
   '/sales/best-calls',
-  authorize('Admin', 'Manager', 'QA'),
+  authorize('Admin'),
   reportController.getBestSaleCalls
+);
+
+// System reports
+router.get(
+  '/system/summary',
+  authorize('Admin'),
+  reportController.getSystemSummary
+);
+
+router.get(
+  '/system/user-activity',
+  authorize('Admin'),
+  reportController.getUserActivityReport
+);
+
+router.get(
+  '/system/subscription-analytics',
+  authorize('Admin'),
+  reportController.getSubscriptionAnalytics
 );
 
 module.exports = router;

@@ -518,3 +518,342 @@ exports.getBestSaleCalls = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @route   GET /api/reports/system/summary
+ * @desc    Get system overview and health metrics
+ * @access  Private - Admin only
+ */
+exports.getSystemSummary = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const AuditLog = require('../models/AuditLog');
+    const SalesRecord = require('../models/SalesRecord');
+
+    // User statistics
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ isActive: true });
+    const adminUsers = await User.countDocuments({ role: 'Admin' });
+    const userUsers = await User.countDocuments({ role: 'User' });
+
+    // Subscription statistics
+    const subscriptionStats = await User.aggregate([
+      {
+        $group: {
+          _id: '$subscription.plan',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const subscriptionByStatus = await User.aggregate([
+      {
+        $group: {
+          _id: '$subscription.status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Recent activity (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentLogins = await AuditLog.countDocuments({
+      action: 'LOGIN',
+      timestamp: { $gte: thirtyDaysAgo }
+    });
+
+    const recentRegistrations = await AuditLog.countDocuments({
+      action: 'USER_REGISTRATION',
+      timestamp: { $gte: thirtyDaysAgo }
+    });
+
+    // Call statistics
+    const totalCalls = await Call.countDocuments();
+    const completedCalls = await Call.countDocuments({ status: 'completed' });
+    const pendingCalls = await Call.countDocuments({ status: 'pending' });
+
+    // Sales statistics
+    const totalSales = await SalesRecord.countDocuments();
+    const totalRevenue = await SalesRecord.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          inactive: totalUsers - activeUsers,
+          byRole: {
+            admin: adminUsers,
+            user: userUsers
+          }
+        },
+        subscriptions: {
+          byPlan: subscriptionStats,
+          byStatus: subscriptionByStatus
+        },
+        activity: {
+          recentLogins,
+          recentRegistrations,
+          period: 'last 30 days'
+        },
+        calls: {
+          total: totalCalls,
+          completed: completedCalls,
+          pending: pendingCalls,
+          completionRate: totalCalls > 0 ? (completedCalls / totalCalls * 100).toFixed(1) : 0
+        },
+        sales: {
+          totalRecords: totalSales,
+          totalRevenue: totalRevenue[0]?.total || 0
+        },
+        generatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/reports/system/user-activity
+ * @desc    Get user activity and engagement metrics
+ * @access  Private - Admin only
+ */
+exports.getUserActivityReport = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const AuditLog = require('../models/AuditLog');
+    const { period = '30' } = req.query;
+    
+    const days = parseInt(period);
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // User login activity
+    const loginActivity = await AuditLog.aggregate([
+      {
+        $match: {
+          action: 'LOGIN',
+          timestamp: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            userId: '$userId',
+            date: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: '$timestamp'
+              }
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id.userId',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $unwind: '$user'
+      },
+      {
+        $project: {
+          userId: '$_id.userId',
+          userName: '$user.name',
+          userEmail: '$user.email',
+          userRole: '$user.role',
+          date: '$_id.date',
+          loginCount: '$count'
+        }
+      },
+      {
+        $sort: { date: -1, loginCount: -1 }
+      }
+    ]);
+
+    // Most active users
+    const mostActiveUsers = await AuditLog.aggregate([
+      {
+        $match: {
+          action: { $in: ['LOGIN', 'UPLOAD_CALL', 'VIEW_CALL', 'GENERATE_REPORT'] },
+          timestamp: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: '$userId',
+          activityCount: { $sum: 1 },
+          lastActivity: { $max: '$timestamp' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $unwind: '$user'
+      },
+      {
+        $project: {
+          userId: '$_id',
+          userName: '$user.name',
+          userEmail: '$user.email',
+          userRole: '$user.role',
+          activityCount: 1,
+          lastActivity: 1
+        }
+      },
+      {
+        $sort: { activityCount: -1 }
+      },
+      {
+        $limit: 20
+      }
+    ]);
+
+    // Daily activity summary
+    const dailyActivity = await AuditLog.aggregate([
+      {
+        $match: {
+          timestamp: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            date: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: '$timestamp'
+              }
+            },
+            action: '$action'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.date': 1, '_id.action': 1 }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        loginActivity,
+        mostActiveUsers,
+        dailyActivity,
+        period: `${days} days`,
+        generatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @route   GET /api/reports/system/subscription-analytics
+ * @desc    Get subscription and revenue analytics
+ * @access  Private - Admin only
+ */
+exports.getSubscriptionAnalytics = async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    
+    // Subscription distribution
+    const subscriptionDistribution = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            plan: '$subscription.plan',
+            status: '$subscription.status'
+          },
+          count: { $sum: 1 },
+          users: { $push: { name: '$name', email: '$email', createdAt: '$createdAt' } }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // Trial vs paid conversion
+    const trialUsers = await User.countDocuments({ 'subscription.status': 'trial' });
+    const paidUsers = await User.countDocuments({ 
+      'subscription.status': 'active',
+      'subscription.plan': { $ne: 'free' }
+    });
+    const conversionRate = trialUsers > 0 ? (paidUsers / (trialUsers + paidUsers) * 100).toFixed(1) : 0;
+
+    // Revenue by plan (mock data - in real app, this would come from Stripe)
+    const revenueByPlan = [
+      { plan: 'starter', amount: 29, users: 0 },
+      { plan: 'professional', amount: 79, users: 0 },
+      { plan: 'enterprise', amount: 199, users: 0 }
+    ];
+
+    // Update with actual user counts
+    subscriptionDistribution.forEach(dist => {
+      const planRevenue = revenueByPlan.find(r => r.plan === dist._id.plan);
+      if (planRevenue && dist._id.status === 'active') {
+        planRevenue.users = dist.count;
+      }
+    });
+
+    const totalRevenue = revenueByPlan.reduce((sum, plan) => sum + (plan.amount * plan.users), 0);
+
+    // Churn analysis (users who cancelled or expired)
+    const churnedUsers = await User.countDocuments({
+      'subscription.status': { $in: ['cancelled', 'expired'] }
+    });
+
+    // Recent subscriptions (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentSubscriptions = await User.find({
+      'subscription.currentPeriodStart': { $gte: thirtyDaysAgo }
+    }).select('name email subscription.plan subscription.status subscription.currentPeriodStart');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subscriptionDistribution,
+        conversionMetrics: {
+          trialUsers,
+          paidUsers,
+          conversionRate: parseFloat(conversionRate)
+        },
+        revenue: {
+          byPlan: revenueByPlan,
+          totalMonthly: totalRevenue,
+          currency: 'USD'
+        },
+        churn: {
+          churnedUsers,
+          churnRate: totalRevenue > 0 ? (churnedUsers / (paidUsers + churnedUsers) * 100).toFixed(1) : 0
+        },
+        recentSubscriptions,
+        generatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
