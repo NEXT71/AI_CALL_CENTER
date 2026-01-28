@@ -277,13 +277,15 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {user?.role === 'Admin' ? (
             <>
-              <div className="quick-action-btn group cursor-not-allowed opacity-50">
-                <div className="p-3 bg-blue-50 rounded-xl">
+              <Link
+                to="/app/users"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors duration-200">
                   <Users size={20} className="text-blue-600" />
                 </div>
                 <span className="text-sm font-medium text-slate-700">User Management</span>
-                <span className="text-xs text-slate-500 block">Coming Soon</span>
-              </div>
+              </Link>
               
               <div className="quick-action-btn group cursor-not-allowed opacity-50">
                 <div className="p-3 bg-green-50 rounded-xl">
@@ -293,13 +295,15 @@ const Dashboard = () => {
                 <span className="text-xs text-slate-500 block">See Below</span>
               </div>
               
-              <div className="quick-action-btn group cursor-not-allowed opacity-50">
-                <div className="p-3 bg-purple-50 rounded-xl">
+              <Link
+                to="/app/reports"
+                className="quick-action-btn group"
+              >
+                <div className="p-3 bg-purple-50 rounded-xl group-hover:bg-purple-100 transition-colors duration-200">
                   <BarChart3 size={20} className="text-purple-600" />
                 </div>
                 <span className="text-sm font-medium text-slate-700">System Reports</span>
-                <span className="text-xs text-slate-500 block">Coming Soon</span>
-              </div>
+              </Link>
               
               <Link
                 to="/subscription"

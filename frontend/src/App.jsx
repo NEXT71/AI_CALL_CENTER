@@ -54,14 +54,16 @@ function App() {
           <Route path="/app" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/app/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="calls" element={<RoleGuard allowedRoles={['Admin', 'User']}><CallsList /></RoleGuard>} />
-            <Route path="calls/:id" element={<RoleGuard allowedRoles={['Admin', 'User']}><CallDetails /></RoleGuard>} />
-            <Route path="upload" element={<RoleGuard allowedRoles={['Admin', 'User']}><UploadCall /></RoleGuard>} />
+            <Route path="calls" element={<RoleGuard allowedRoles={['User']}><CallsList /></RoleGuard>} />
+            <Route path="calls/:id" element={<RoleGuard allowedRoles={['User']}><CallDetails /></RoleGuard>} />
+            <Route path="upload" element={<RoleGuard allowedRoles={['User']}><UploadCall /></RoleGuard>} />
             <Route path="rules" element={<RoleGuard allowedRoles={['Admin']}><ComplianceRules /></RoleGuard>} />
-            <Route path="analytics" element={<RoleGuard allowedRoles={['Admin']}><Analytics /></RoleGuard>} />
-            <Route path="sales-data" element={<RoleGuard allowedRoles={['Admin', 'User']}><ViewSales /></RoleGuard>} />
-            <Route path="sales-data/add" element={<RoleGuard allowedRoles={['Admin', 'User']}><AddSales /></RoleGuard>} />
+            <Route path="analytics" element={<RoleGuard allowedRoles={['User']}><Analytics /></RoleGuard>} />
+            <Route path="sales-data" element={<RoleGuard allowedRoles={['User']}><ViewSales /></RoleGuard>} />
+            <Route path="sales-data/add" element={<RoleGuard allowedRoles={['User']}><AddSales /></RoleGuard>} />
             <Route path="sales-reports" element={<RoleGuard allowedRoles={['Admin']}><SalesReports /></RoleGuard>} />
+            <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><div className="p-8 text-center"><h2 className="text-2xl font-bold text-slate-900 mb-4">User Management</h2><p className="text-slate-600">Coming Soon - Full user management interface</p></div></RoleGuard>} />
+            <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><div className="p-8 text-center"><h2 className="text-2xl font-bold text-slate-900 mb-4">System Reports</h2><p className="text-slate-600">Coming Soon - System analytics and reports</p></div></RoleGuard>} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />
