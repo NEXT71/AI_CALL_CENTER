@@ -230,6 +230,7 @@ exports.uploadCall = [
         customerId,
         customerName,
         campaign,
+        company: req.user.company || '', // Add company from uploader
         duration: duration ? parseInt(duration) : 0,
         callDate: new Date(callDate),
         audioFilePath: req.file.path,
@@ -493,6 +494,11 @@ exports.getCalls = async (req, res, next) => {
     // Role-based access control
     if (req.user.role === 'Agent') {
       query.agentId = req.user._id;
+    } else if (req.user.role !== 'Admin') {
+      // For non-admin users (Manager, QA, etc.), only show calls from their company
+      if (req.user.company) {
+        query.company = req.user.company;
+      }
     }
 
     // Execute query with pagination

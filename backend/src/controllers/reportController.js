@@ -133,6 +133,11 @@ exports.getAnalyticsSummary = async (req, res, next) => {
     if (campaign) query.campaign = campaign;
     if (agentId) query.agentId = agentId;
 
+    // Company-based filtering for non-admin users
+    if (req.user.role !== 'Admin' && req.user.company) {
+      query.company = req.user.company;
+    }
+
     // Get all calls matching criteria
     const calls = await Call.find(query);
 
@@ -339,6 +344,11 @@ exports.getSalesSummary = async (req, res, next) => {
     
     if (campaign) match.campaign = campaign;
 
+    // Company-based filtering for non-admin users
+    if (req.user.role !== 'Admin' && req.user.company) {
+      match.company = req.user.company;
+    }
+
     const summary = await Call.aggregate([
       { $match: match },
       {
@@ -400,6 +410,11 @@ exports.getSalesByAgent = async (req, res, next) => {
     
     if (campaign) match.campaign = campaign;
 
+    // Company-based filtering for non-admin users
+    if (req.user.role !== 'Admin' && req.user.company) {
+      match.company = req.user.company;
+    }
+
     const sales = await Call.aggregate([
       { $match: match },
       {
@@ -451,6 +466,11 @@ exports.getSalesByProduct = async (req, res, next) => {
     
     if (campaign) match.campaign = campaign;
 
+    // Company-based filtering for non-admin users
+    if (req.user.role !== 'Admin' && req.user.company) {
+      match.company = req.user.company;
+    }
+
     const products = await Call.aggregate([
       { $match: match },
       {
@@ -498,6 +518,11 @@ exports.getBestSaleCalls = async (req, res, next) => {
     };
 
     if (campaign) query.campaign = campaign;
+
+    // Company-based filtering for non-admin users
+    if (req.user.role !== 'Admin' && req.user.company) {
+      query.company = req.user.company;
+    }
 
     const bestCalls = await Call.find(query)
       .sort({ qualityScore: -1, complianceScore: -1, saleAmount: -1 })

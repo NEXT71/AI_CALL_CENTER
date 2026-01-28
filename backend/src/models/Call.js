@@ -29,6 +29,11 @@ const callSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    company: {
+      type: String,
+      trim: true,
+      required: true,
+    },
     duration: {
       type: Number, // seconds
       required: false,
