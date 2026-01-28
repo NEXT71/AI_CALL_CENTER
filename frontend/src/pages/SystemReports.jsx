@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { reportService } from '../services/apiService';
 
 const SystemReports = () => {
   const [systemSummary, setSystemSummary] = useState(null);
@@ -34,24 +35,14 @@ const SystemReports = () => {
     try {
       setLoading(true);
       const [summaryRes, activityRes, subscriptionRes] = await Promise.all([
-        fetch('/api/v1/reports/system/summary', { credentials: 'include' }),
-        fetch('/api/v1/reports/system/user-activity', { credentials: 'include' }),
-        fetch('/api/v1/reports/system/subscription-analytics', { credentials: 'include' })
+        reportService.getSystemSummary(),
+        reportService.getUserActivityReport(),
+        reportService.getSubscriptionAnalytics()
       ]);
 
-      if (!summaryRes.ok || !activityRes.ok || !subscriptionRes.ok) {
-        throw new Error('Failed to fetch reports');
-      }
-
-      const [summaryData, activityData, subscriptionData] = await Promise.all([
-        summaryRes.json(),
-        activityRes.json(),
-        subscriptionRes.json()
-      ]);
-
-      setSystemSummary(summaryData.data);
-      setUserActivity(activityData.data);
-      setSubscriptionAnalytics(subscriptionData.data);
+      setSystemSummary(summaryRes.data);
+      setUserActivity(activityRes.data);
+      setSubscriptionAnalytics(subscriptionRes.data);
     } catch (error) {
       toast.error('Failed to load system reports');
       console.error('Error fetching reports:', error);
