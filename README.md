@@ -4,7 +4,7 @@ A production-ready MVP for an AI-based call quality and compliance auto-scoring 
 
 ## 🎯 Features
 
-- **Authentication & Authorization**: JWT-based auth with role-based access control (Admin, Manager, QA, Agent)
+- **Authentication & Authorization**: JWT-based auth with role-based access control (Admin, User)
 - **Call Upload & Management**: Upload call recordings with metadata
 - **Speech-to-Text**: Automated transcription using OpenAI Whisper
 - **Compliance Checking**: Rule-based compliance validation against mandatory and forbidden phrases
