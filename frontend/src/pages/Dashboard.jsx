@@ -46,9 +46,10 @@ const Dashboard = () => {
       }
 
       promises.push(
-      apiService.getAnalyticsSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
-      apiService.getSalesSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
-      }
+        apiService.getAnalyticsSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
+        apiService.getSalesSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
+        apiService.getCurrentSubscription().catch(() => ({ success: false })),
+      );
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
