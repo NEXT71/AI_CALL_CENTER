@@ -77,6 +77,12 @@ async function handleCheckoutSessionCompleted(session) {
       return;
     }
 
+    // Validate plan type
+    if (!['starter', 'professional', 'enterprise'].includes(planType)) {
+      logger.error('Invalid plan type in checkout session:', { planType, sessionId: session.id });
+      return;
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       logger.error('User not found for checkout session:', { userId, sessionId: session.id });
@@ -108,6 +114,17 @@ async function handleCheckoutSessionCompleted(session) {
 async function handleSubscriptionCreated(subscription) {
   const userId = subscription.metadata.userId;
   const planType = subscription.metadata.planType;
+
+  if (!userId || !planType) {
+    logger.error('Missing metadata in subscription:', { subscriptionId: subscription.id, metadata: subscription.metadata });
+    return;
+  }
+
+  // Validate plan type
+  if (!['starter', 'professional', 'enterprise'].includes(planType)) {
+    logger.error('Invalid plan type in subscription:', { planType, subscriptionId: subscription.id });
+    return;
+  }
 
   const user = await User.findById(userId);
   if (!user) {

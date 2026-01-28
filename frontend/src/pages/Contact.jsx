@@ -16,7 +16,6 @@ const Contact = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // In production, this would send to backend
-    console.log('Contact form submitted:', formData);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };

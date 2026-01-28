@@ -3,7 +3,10 @@ const config = require('../config/config');
 const logger = require('../config/logger');
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy');
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Pricing plans configuration
 const PLANS = {
