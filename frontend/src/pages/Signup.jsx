@@ -81,11 +81,10 @@ const Signup = () => {
       features: [
         'Unlimited calls',
         'Dedicated AI models',
-        'White-label options',
-        '24/7 premium support',
+        'Priority support',
         'Unlimited team members',
-        'Custom integrations',
-        'SLA guarantee'
+        'API access',
+        '1-year data retention'
       ]
     }
   };

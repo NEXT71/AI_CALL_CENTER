@@ -156,11 +156,11 @@ const Landing = () => {
     },
     {
       question: 'Can I integrate with my existing systems?',
-      answer: 'Yes! We provide a REST API for seamless integration with your CRM, help desk, or workforce management systems. Enterprise plans also support custom integrations and webhooks.'
+      answer: 'We provide a REST API for integration with your systems. Contact us to discuss your specific integration needs.'
     },
     {
       question: 'What file formats are supported?',
-      answer: 'We support all common audio formats including WAV, MP3, M4A, FLAC, OGG, and more. Files can be uploaded via web interface, API, or direct integrations.'
+      answer: 'We support all common audio formats including WAV, MP3, M4A, FLAC, OGG, and more. Files can be uploaded via web interface.'
     },
     {
       question: 'Do you offer training and support?',
@@ -176,7 +176,7 @@ const Landing = () => {
     { text: 'Secure & Encrypted', icon: Shield },
     { text: 'Privacy Focused', icon: Lock },
     { text: '99.9% Uptime', icon: Award },
-    { text: '24/7 Support', icon: HeadphonesIcon }
+    { text: 'Email Support', icon: HeadphonesIcon }
   ];
 
   const clientLogos = [
@@ -560,7 +560,7 @@ const Landing = () => {
               <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Quality Scoring</span>
               <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Compliance Monitoring</span>
               <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Analytics Dashboard</span>
-              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Unlimited Storage</span>
+              <span className="flex items-center gap-2"><Check size={16} className="text-blue-600" /> Generous Storage</span>
             </div>
           </div>
         </div>

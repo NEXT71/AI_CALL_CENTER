@@ -302,9 +302,9 @@ const Terms = () => {
                 {[
                   'Obtaining proper consent for call recording in your jurisdiction',
                   'Complying with local, state, and federal recording laws',
-                  'Adhering to GDPR, CCPA, and other privacy regulations',
+                  'Understanding applicable privacy regulations in your region',
                   'Implementing proper data retention and deletion policies',
-                  'Ensuring compliance with industry-specific regulations (PCI-DSS, HIPAA, etc.)'
+                  'Ensuring compliance with industry-specific regulations as applicable'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-slate-600">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2.5 flex-shrink-0"></div>

@@ -80,14 +80,14 @@ const Contact = () => {
               <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4">
                 <MessageSquare size={24} />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Live Chat</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Documentation</h3>
               <p className="text-slate-600 mb-4 text-sm leading-relaxed">
-                Available Monday - Friday, 8am - 6pm EST for immediate assistance
+                Access guides, tutorials, and resources to help you get started
               </p>
-              <button className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-2 group">
-                Start Live Chat
+              <Link to="/about" className="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-2 group">
+                View Docs
                 <ArrowLeft size={16} className="rotate-180 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Link>
             </div>
 
             <div className="card-enhanced p-6 hover:translate-y-[-2px] transition-transform duration-300">
@@ -283,15 +283,15 @@ const Contact = () => {
               },
               {
                 q: "Do you support custom integrations?",
-                a: "Yes, we offer APIs and custom integrations for most call center platforms, CRM systems, and dialers."
+                a: "We provide API access for integration. Contact us to discuss your specific platform and requirements."
               },
               {
                 q: "What about data security?",
                 a: "We maintain industry-standard security certifications. All data is encrypted, and we offer custom security agreements for enterprise clients."
               },
               {
-                q: "Do you offer white-label solutions?",
-                a: "Yes, we offer white-label options for agencies who want to provide quality assurance as part of their service offering."
+                q: "Do you offer custom solutions?",
+                a: "Yes, we can discuss custom solutions for enterprise clients with specific needs."
               }
             ].map((faq, idx) => (
               <div key={idx} className="card-enhanced p-6 hover:shadow-md transition-shadow">
