@@ -152,7 +152,7 @@ const Landing = () => {
     },
     {
       question: 'Is my data secure?',
-      answer: 'Yes! We use enterprise-grade encryption (AES-256) for data at rest and TLS 1.3 for data in transit. We\'re GDPR compliant, SOC 2 certified, and offer role-based access controls to protect your sensitive call data.'
+      answer: 'Yes! We use industry-standard encryption for data at rest and in transit. We implement role-based access controls, secure authentication, and follow security best practices to protect your sensitive call data.'
     },
     {
       question: 'Can I integrate with my existing systems?',
@@ -173,8 +173,8 @@ const Landing = () => {
   ];
 
   const trustBadges = [
-    { text: 'SOC 2 Certified', icon: Shield },
-    { text: 'GDPR Compliant', icon: Lock },
+    { text: 'Secure & Encrypted', icon: Shield },
+    { text: 'Privacy Focused', icon: Lock },
     { text: '99.9% Uptime', icon: Award },
     { text: '24/7 Support', icon: HeadphonesIcon }
   ];
@@ -612,7 +612,7 @@ const Landing = () => {
               Why Call Centers Choose QualityPulse
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Join thousands of call centers already using AI to deliver exceptional customer experiences
+              Join call centers using AI to deliver exceptional customer experiences
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 max-w-5xl mx-auto">
@@ -733,7 +733,7 @@ const Landing = () => {
             Ready to Transform Your Call Center Quality?
           </h2>
           <p className="text-xl text-blue-100 mb-12 leading-relaxed max-w-2xl mx-auto">
-            Join thousands of call centers using AI to deliver exceptional customer experiences. Start your free trial today.
+            Join call centers using AI to deliver exceptional customer experiences. Start your free trial today.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
             <Link to="/signup" className="btn-enhanced bg-white text-blue-600 hover:bg-blue-50 border-white shadow-xl shadow-blue-900/20 px-8 py-4 text-lg font-bold group">

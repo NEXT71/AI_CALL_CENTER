@@ -159,7 +159,7 @@ const About = () => {
                 "Custom ML Models for Quality Scoring",
                 "Real-time Analysis & Processing",
                 "Scalable Cloud Infrastructure",
-                "Enterprise-grade Security (SOC 2, GDPR)"
+                "Enterprise-grade Security & Encryption"
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                   <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" />
@@ -175,15 +175,15 @@ const About = () => {
           <h2 className="text-2xl font-bold mb-8 text-center">By the Numbers</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-4xl font-bold mb-2">10M+</div>
-              <div className="text-blue-100 text-sm font-medium">Calls Analyzed</div>
+              <div className="text-4xl font-bold mb-2">Fast</div>
+              <div className="text-blue-100 text-sm font-medium">Processing Time</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold mb-2">500+</div>
-              <div className="text-blue-100 text-sm font-medium">Companies</div>
+              <div className="text-4xl font-bold mb-2">Smart</div>
+              <div className="text-blue-100 text-sm font-medium">AI Analysis</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold mb-2">99.2%</div>
+              <div className="text-4xl font-bold mb-2">High</div>
               <div className="text-blue-100 text-sm font-medium">Accuracy Rate</div>
             </div>
             <div className="text-center">

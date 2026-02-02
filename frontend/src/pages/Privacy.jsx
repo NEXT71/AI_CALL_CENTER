@@ -122,11 +122,11 @@ const Privacy = () => {
                   <h4 className="font-bold text-slate-900 mb-2">4.1 Service Providers</h4>
                   <p className="mb-2">We use trusted third-party service providers for:</p>
                   <ul className="list-disc ml-6 space-y-1">
-                    <li>Cloud hosting (AWS, Google Cloud)</li>
-                    <li>AI/ML processing (OpenAI API)</li>
+                    <li>Cloud hosting and infrastructure</li>
+                    <li>AI/ML processing (Open-source models)</li>
                     <li>Payment processing (Stripe)</li>
-                    <li>Email delivery (SendGrid)</li>
-                    <li>Analytics (Google Analytics)</li>
+                    <li>Email delivery services</li>
+                    <li>System monitoring and analytics</li>
                   </ul>
                 </div>
 
