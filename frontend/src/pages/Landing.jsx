@@ -8,7 +8,7 @@ const Landing = () => {
     {
       icon: Phone,
       title: 'AI-Powered Transcription',
-      description: 'Automatic speech-to-text conversion with 99% accuracy using OpenAI Whisper technology.'
+      description: 'Automatic speech-to-text conversion with high accuracy using advanced Whisper technology.'
     },
     {
       icon: TrendingUp,
@@ -27,13 +27,13 @@ const Landing = () => {
     },
     {
       icon: Zap,
-      title: 'Real-Time Processing',
-      description: 'Fast call analysis with automated scoring and feedback generation in minutes.'
+      title: 'Fast Automated Processing',
+      description: 'Quick call analysis with automated scoring and feedback generation within minutes.'
     },
     {
       icon: Users,
       title: 'Team Management',
-      description: 'Role-based access control for admins, managers, QA teams, and agents.'
+      description: 'Role-based access control for admins and users with secure authentication.'
     }
   ];
 
@@ -140,7 +140,7 @@ const Landing = () => {
   const faqs = [
     {
       question: 'How does the AI transcription work?',
-      answer: 'We use OpenAI\'s Whisper technology, the most advanced speech-to-text AI available, achieving 99% accuracy across multiple languages and accents. The transcription process is fully automated and typically completes within minutes of upload.'
+      answer: 'We use advanced Whisper AI technology, one of the most accurate speech-to-text systems available, delivering industry-leading accuracy across multiple languages and accents. The transcription process is fully automated and typically completes within minutes of upload.'
     },
     {
       question: 'Can I customize the compliance rules?',
@@ -365,7 +365,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-slate-100">
             <div className="text-center px-4">
-              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">99%</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">High</p>
               <p className="text-sm font-medium text-slate-600 mt-2 uppercase tracking-wide">Transcription Accuracy</p>
             </div>
             <div className="text-center px-4">

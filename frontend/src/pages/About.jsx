@@ -154,7 +154,7 @@ const About = () => {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                "Advanced Speech Recognition (99%+ accuracy)",
+                "Advanced Speech Recognition (Industry-leading accuracy)",
                 "Natural Language Processing & Sentiment Analysis",
                 "Custom ML Models for Quality Scoring",
                 "Real-time Analysis & Processing",
