@@ -322,6 +322,13 @@ async function processCallAsync(callId) {
     call.transcript = transcriptionResult.text;
     call.transcriptTimestamps = transcriptionResult.timestamps || [];
     call.wordCount = transcriptionResult.word_count || call.transcript.split(' ').length;
+    
+    // Update duration from transcription if not set or is 0
+    if (transcriptionResult.duration && (!call.duration || call.duration === 0)) {
+      call.duration = Math.round(transcriptionResult.duration);
+      logger.info('Duration updated from audio file', { callId: call.callId, duration: call.duration });
+    }
+    
     await call.save();
 
     // Step 2: Speaker Diarization (FREE pyannote.audio) - CRITICAL
