@@ -475,7 +475,7 @@ const CallsList = () => {
                             </div>
                           </td>
                           <td>
-                            {call.duration ? (
+                            {call.duration !== null && call.duration !== undefined ? (
                               <span className="font-mono text-sm text-slate-600">
                                 {Math.floor(call.duration / 60)}:{String(call.duration % 60).padStart(2, '0')}
                               </span>

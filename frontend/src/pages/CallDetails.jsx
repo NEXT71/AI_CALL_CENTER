@@ -152,7 +152,7 @@ const CallDetails = () => {
             </span>
           </div>
           <div className="text-3xl font-bold text-slate-900 mb-1 font-mono">
-            {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}
+            {call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '0:00'}
           </div>
           <div className="text-sm font-medium text-slate-500">Duration</div>
         </div>
@@ -301,7 +301,7 @@ const CallDetails = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-600">{call.qualityMetrics.aiFactors.customer_tone_score || 0}/10</div>
+                    <div className="text-2xl font-bold text-blue-600">{call.qualityMetrics.aiFactors.customer_tone_score || 0}/25</div>
                   </div>
                 </div>
 
@@ -338,7 +338,7 @@ const CallDetails = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-purple-600">{call.qualityMetrics.aiFactors.agent_professionalism_score || 0}/10</div>
+                    <div className="text-2xl font-bold text-purple-600">{call.qualityMetrics.aiFactors.agent_professionalism_score || 0}/25</div>
                   </div>
                 </div>
 
@@ -354,7 +354,7 @@ const CallDetails = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-orange-600">{call.qualityMetrics.aiFactors.customer_communication_score || 0}/10</div>
+                    <div className="text-2xl font-bold text-orange-600">{call.qualityMetrics.aiFactors.customer_communication_score || 0}/20</div>
                   </div>
                 </div>
 
