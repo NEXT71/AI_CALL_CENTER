@@ -124,21 +124,61 @@ const Dashboard = () => {
   };
 
   const handleActivateSubscription = async (payment) => {
-    const paymentMethod = prompt('Enter payment method (e.g., Bank Transfer, PayPal, Payoneer):', 'Bank Transfer');
+    // Plan prices for validation
+    const planPrices = {
+      starter: { monthly: 99, yearly: 950 },
+      professional: { monthly: 299, yearly: 2870 },
+      enterprise: { monthly: 999, yearly: 9590 }
+    };
+
+    const planType = payment.requestedPlan || 'starter';
+    
+    // Billing cycle
+    const billingCycle = prompt('Billing Cycle (monthly/yearly):', 'monthly');
+    if (!billingCycle || !['monthly', 'yearly'].includes(billingCycle.toLowerCase())) {
+      alert('Invalid billing cycle. Must be "monthly" or "yearly".');
+      return;
+    }
+
+    // Payment amount
+    const expectedAmount = planPrices[planType]?.[billingCycle.toLowerCase()] || 0;
+    const paymentAmountStr = prompt(`Payment Amount (Expected: $${expectedAmount} for ${planType} ${billingCycle}):`, expectedAmount.toString());
+    if (!paymentAmountStr) return;
+    
+    const paymentAmount = parseFloat(paymentAmountStr);
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      alert('Invalid payment amount. Must be a positive number.');
+      return;
+    }
+
+    // Payment method
+    const paymentMethod = prompt('Payment Method (bank_transfer/cash/check/other):', 'bank_transfer');
     if (!paymentMethod) return;
 
-    const notes = prompt('Add any notes about this payment (optional):', '');
+    // Payment reference (required)
+    const paymentReference = prompt('Payment Reference/Receipt Number (REQUIRED):', '');
+    if (!paymentReference || paymentReference.trim() === '') {
+      alert('Payment reference is required!');
+      return;
+    }
+
+    // Transaction ID (optional)
+    const transactionId = prompt('Bank Transaction ID (optional, press Cancel to skip):', '');
 
     try {
+      setLoading(true);
       const response = await apiService.adminActivateSubscription(
         payment.userId,
-        payment.requestedPlan,
-        paymentMethod,
-        notes
+        planType,
+        billingCycle.toLowerCase(),
+        paymentAmount,
+        paymentMethod.toLowerCase(),
+        paymentReference,
+        transactionId || null
       );
 
       if (response.success) {
-        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.userName}\nEmail: ${response.data.userEmail}\nPlan: ${response.data.plan}\nStatus: ${response.data.status}`);
+        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.user?.name || 'N/A'}\nEmail: ${response.data.user?.email || 'N/A'}\nPlan: ${response.data.subscription?.plan || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nPeriod End: ${response.data.subscription?.currentPeriodEnd ? new Date(response.data.subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`);
 
         // Refresh pending payments
         const refreshResponse = await apiService.getPendingPayments();
@@ -149,7 +189,71 @@ const Dashboard = () => {
         alert('Error activating subscription: ' + response.message);
       }
     } catch (error) {
-      alert('Error activating subscription. Please try again.');
+      console.error('Error activating subscription:', error);
+      alert('Error activating subscription: ' + (error.response?.data?.message || error.message || 'Please try again.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprovePayment = async (payment) => {
+    const notes = prompt('Add approval notes (optional):', 'Payment verified and approved');
+    
+    if (confirm(`Approve payment for ${payment.userName} (${payment.userEmail})?\n\nInvoice: ${payment.invoiceNumber}\nPlan: ${payment.planType}\nAmount: $${payment.amount}`)) {
+      try {
+        setLoading(true);
+        const response = await apiService.approvePayment(payment.paymentId, notes);
+        
+        if (response.success) {
+          alert(`✅ Payment approved and subscription activated!\n\nInvoice: ${response.data.payment.invoiceNumber}\nStatus: ${response.data.subscription.plan}`);
+          
+          // Refresh pending payments
+          const refreshResponse = await apiService.getPendingPayments();
+          if (refreshResponse.success) {
+            setPendingPayments(refreshResponse.data);
+          }
+        } else {
+          alert('Error approving payment: ' + response.message);
+        }
+      } catch (error) {
+        console.error('Error approving payment:', error);
+        alert('Error approving payment: ' + (error.response?.data?.message || error.message || 'Please try again.'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleRejectPayment = async (payment) => {
+    const reason = prompt(`Reject payment for ${payment.userName}?\n\nEnter rejection reason (REQUIRED):`, '');
+    
+    if (!reason || reason.trim() === '') {
+      alert('Rejection reason is required!');
+      return;
+    }
+
+    if (confirm(`Reject payment ${payment.invoiceNumber} for ${payment.userName}?`)) {
+      try {
+        setLoading(true);
+        const response = await apiService.rejectPayment(payment.paymentId, reason);
+        
+        if (response.success) {
+          alert(`✅ Payment rejected.\n\nInvoice: ${response.data.invoiceNumber}\nReason: ${reason}`);
+          
+          // Refresh pending payments
+          const refreshResponse = await apiService.getPendingPayments();
+          if (refreshResponse.success) {
+            setPendingPayments(refreshResponse.data);
+          }
+        } else {
+          alert('Error rejecting payment: ' + response.message);
+        }
+      } catch (error) {
+        console.error('Error rejecting payment:', error);
+        alert('Error rejecting payment: ' + (error.response?.data?.message || error.message || 'Please try again.'));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -646,35 +750,79 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-3">
                     {pendingPayments.map((payment) => (
-                      <div key={payment.auditLogId} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                      <div key={payment.paymentId || payment.auditLogId} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <h5 className="font-medium text-slate-900">{payment.userName}</h5>
                             <p className="text-sm text-slate-600">{payment.userEmail}</p>
+                            {payment.companyName && (
+                              <p className="text-xs text-slate-500">{payment.companyName}</p>
+                            )}
+                            {payment.invoiceNumber && (
+                              <p className="text-xs font-mono text-blue-600 mt-1">Invoice: {payment.invoiceNumber}</p>
+                            )}
                           </div>
                           <div className="text-right">
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                              {payment.requestedPlan.toUpperCase()}
+                              {(payment.planType || payment.requestedPlan || 'starter').toUpperCase()}
                             </span>
+                            {payment.amount && (
+                              <p className="text-sm font-semibold text-slate-900 mt-1">
+                                ${payment.amount} {payment.currency || 'USD'}
+                              </p>
+                            )}
                             <p className="text-xs text-slate-500 mt-1">
                               {new Date(payment.requestedAt).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleActivateSubscription(payment)}
-                            className="btn btn-primary text-sm flex items-center gap-2"
-                          >
-                            <CheckCircle size={14} />
-                            Activate
-                          </button>
+                        {payment.paymentMethod && (
+                          <div className="mb-3 p-2 bg-slate-50 rounded text-xs">
+                            <p><strong>Method:</strong> {payment.paymentMethod}</p>
+                            {payment.paymentReference && <p><strong>Reference:</strong> {payment.paymentReference}</p>}
+                            {payment.transactionId && <p><strong>Transaction:</strong> {payment.transactionId}</p>}
+                            {payment.status && <p><strong>Status:</strong> <span className="text-blue-600 font-medium">{payment.status}</span></p>}
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 flex-wrap">
+                          {payment.paymentId && payment.status !== 'approved' ? (
+                            // New payment approval workflow
+                            <>
+                              <button
+                                onClick={() => handleApprovePayment(payment)}
+                                disabled={loading}
+                                className="btn btn-primary text-sm flex items-center gap-2"
+                              >
+                                <CheckCircle size={14} />
+                                Approve & Activate
+                              </button>
+                              <button
+                                onClick={() => handleRejectPayment(payment)}
+                                disabled={loading}
+                                className="btn btn-danger text-sm flex items-center gap-2"
+                              >
+                                <AlertTriangle size={14} />
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            // Legacy activation (for old pending payments without paymentId)
+                            <button
+                              onClick={() => handleActivateSubscription(payment)}
+                              disabled={loading}
+                              className="btn btn-primary text-sm flex items-center gap-2"
+                            >
+                              <CheckCircle size={14} />
+                              Activate (Manual)
+                            </button>
+                          )}
                           <button
                             onClick={() => {
-                              const details = `User: ${payment.userName} (${payment.userEmail})\nPlan: ${payment.requestedPlan}\nRequested: ${new Date(payment.requestedAt).toLocaleDateString()}`;
+                              const details = `User: ${payment.userName} (${payment.userEmail})\n${payment.companyName ? `Company: ${payment.companyName}\n` : ''}Plan: ${payment.planType || payment.requestedPlan}\n${payment.amount ? `Amount: $${payment.amount}\n` : ''}${payment.invoiceNumber ? `Invoice: ${payment.invoiceNumber}\n` : ''}${payment.paymentMethod ? `Method: ${payment.paymentMethod}\n` : ''}${payment.paymentReference ? `Reference: ${payment.paymentReference}\n` : ''}Requested: ${new Date(payment.requestedAt).toLocaleDateString()}`;
                               navigator.clipboard.writeText(details);
-                              alert('User details copied to clipboard');
+                              alert('Payment details copied to clipboard');
                             }}
                             className="btn btn-secondary text-sm"
                           >

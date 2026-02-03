@@ -43,50 +43,10 @@ const SubscriptionSuccess = () => {
     }
   };
 
-  const handleManualActivation = async () => {
-    // Extract plan type from URL or use a default
-    const urlParams = new URLSearchParams(window.location.search);
-    const planType = urlParams.get('plan') || 'starter'; // Default to starter if not specified
-
-    try {
-      setLoading(true);
-      // Try the new endpoint first, fallback to creating a checkout session if it fails
-      try {
-        const response = await apiService.activateSubscription(planType);
-        
-        if (response.success) {
-          setVerified(true);
-          setError(null);
-          // Refresh user data to update subscription status
-          await refreshUser();
-          return;
-        }
-      } catch (activateError) {
-        console.warn('Manual activation endpoint not available, trying alternative method:', activateError);
-        
-        // Fallback: Create a minimal checkout session and immediately verify it
-        // This is a workaround until the server is restarted
-        const checkoutResponse = await apiService.createCheckoutSession(planType);
-        if (checkoutResponse.success && checkoutResponse.data.sessionId) {
-          // Try to verify the session (this might work if webhooks are set up)
-          const verifyResponse = await apiService.verifySubscriptionSession(checkoutResponse.data.sessionId);
-          if (verifyResponse.success) {
-            setVerified(true);
-            setError(null);
-            // Refresh user data to update subscription status
-            await refreshUser();
-            return;
-          }
-        }
-      }
-      
-      setError('Manual activation failed. Please restart your backend server and try again, or contact support.');
-    } catch (err) {
-      console.error('Error activating subscription manually:', err);
-      setError('Manual activation failed. Please restart your backend server and try again, or contact support.');
-    } finally {
-      setLoading(false);
-    }
+  const handleManualActivation = () => {
+    // Redirect user to contact admin since self-activation is now disabled
+    alert('⚠️ Self-activation is disabled for security.\n\nPlease contact an administrator to activate your subscription.\n\nYour payment has been received and is being processed.');
+    navigate('/app/dashboard');
   };
 
   const handleGoToDashboard = () => {
@@ -135,21 +95,20 @@ const SubscriptionSuccess = () => {
             </h1>
 
             <p className="text-slate-600 mb-6 font-medium">
-              {error}
+              Your payment was successful, but subscription activation requires admin approval.
             </p>
 
             <p className="text-sm text-slate-500 mb-8">
-              Your payment was successful, but we're still processing your subscription.
-              You can try manual activation or check your dashboard in a few moments.
+              Due to security measures, an administrator must approve and activate your subscription.
+              This typically takes a few minutes. Please check your dashboard or contact support.
             </p>
 
             <div className="space-y-3">
               <button
                 onClick={handleManualActivation}
-                disabled={loading}
                 className="btn-enhanced btn-primary-enhanced w-full justify-center"
               >
-                {loading ? 'Activating...' : 'Activate Subscription Manually'}
+                Contact Administrator
               </button>
               
               <button

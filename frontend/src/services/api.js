@@ -27,6 +27,25 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle 402 Payment Required (subscription expired/trial ended)
+    if (error.response?.status === 402) {
+      const errorData = error.response.data;
+      
+      // Show user-friendly message
+      if (errorData?.subscriptionExpired || errorData?.trialExpired) {
+        const message = errorData.message || 'Your subscription has expired. Please renew to continue.';
+        
+        // Only show alert once per session
+        if (!sessionStorage.getItem('subscription_expired_alert_shown')) {
+          alert(`⚠️ Subscription Expired\n\n${message}`);
+          sessionStorage.setItem('subscription_expired_alert_shown', 'true');
+        }
+        
+        // Don't redirect, just reject so the component can handle it
+        return Promise.reject(error);
+      }
+    }
+
     // If 401 and not already retried, try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

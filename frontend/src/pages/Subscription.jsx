@@ -274,6 +274,26 @@ const Subscription = () => {
         </div>
       )}
 
+      {/* Cancelled Subscription with Grace Period */}
+      {currentSubscription && currentSubscription.status === 'cancelled' && currentSubscription.currentPeriodEnd && (
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center gap-4">
+            <AlertTriangle className="w-8 h-8 text-orange-600 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-orange-900 mb-2">
+                Subscription Cancelled
+              </h3>
+              <p className="text-orange-800 mb-1 font-medium">
+                You still have access until <span className="font-bold">{new Date(currentSubscription.currentPeriodEnd).toLocaleDateString()}</span>
+              </p>
+              <p className="text-orange-700 text-sm">
+                After this date, your account will be downgraded to the free plan. Reactivate anytime to keep your premium features.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Trial Info - Only show for trial users */}
       {currentSubscription && currentSubscription.status === 'trial' && currentSubscription.trialEndsAt && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 mb-8 shadow-sm">

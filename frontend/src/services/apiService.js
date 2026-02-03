@@ -211,18 +211,35 @@ export const subscriptionService = {
   },
 
   // Admin functions
-  adminActivateSubscription: async (userId, planType, paymentMethod, notes) => {
+  adminActivateSubscription: async (userId, planType, billingCycle, paymentAmount, paymentMethod, paymentReference, transactionId = null) => {
     const response = await api.post('/subscriptions/admin-activate', {
       userId,
       planType,
+      billingCycle,
+      paymentAmount,
       paymentMethod,
-      notes,
+      paymentReference,
+      transactionId,
     });
     return response.data;
   },
 
   getPendingPayments: async () => {
     const response = await api.get('/subscriptions/pending-payments');
+    return response.data;
+  },
+
+  approvePayment: async (paymentId, notes = '') => {
+    const response = await api.post(`/subscriptions/admin-approve-payment/${paymentId}`, {
+      notes,
+    });
+    return response.data;
+  },
+
+  rejectPayment: async (paymentId, reason) => {
+    const response = await api.post(`/subscriptions/admin-reject-payment/${paymentId}`, {
+      reason,
+    });
     return response.data;
   },
 };
