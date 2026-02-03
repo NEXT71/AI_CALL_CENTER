@@ -1365,13 +1365,29 @@ async def calculate_quality_score(request: QualityScoreRequest):
             factors["customer_tone_score"] = 18.0
         
         # Factor 2: Language Selection (10 points)
+        # Map Whisper language codes to full names
+        detected_lang = details["detected_language"].lower()
+        lang_mapping = {
+            "en": "english",
+            "english": "english",
+            "es": "spanish",
+            "spanish": "spanish",
+            "fr": "french",
+            "french": "french",
+            "de": "german",
+            "german": "german"
+        }
+        
+        normalized_lang = lang_mapping.get(detected_lang, detected_lang)
+        
         language_scores = {
             "english": 10.0,
             "spanish": 8.0,
             "french": 8.0,
             "german": 8.0
         }
-        factors["language_score"] = language_scores.get(details["detected_language"], 5.0)
+        factors["language_score"] = language_scores.get(normalized_lang, 5.0)
+        details["detected_language"] = normalized_lang  # Store normalized name
         
         # Factor 3: Agent Professionalism (25 points) - Detect casual language
         casual_phrases = [
@@ -1453,11 +1469,23 @@ async def calculate_quality_score(request: QualityScoreRequest):
             flags["is_dnc_customer"] = True
             factors["dnc_penalty"] = -20.0
         
-        # Calculate overall score (0-100 scale)
-        overall_score = sum(factors.values())
+        # Calculate overall score
+        # Max positive: 25+10+25+20 = 80, Max penalty: -30-20 = -50
+        # Raw range: -50 to +80
+        raw_score = sum(factors.values())
+        
+        # Rescale from 80-point to 100-point scale for better UX
+        # If raw_score >= 0: scale 0-80 to 0-100 (multiply by 1.25)
+        # If raw_score < 0: keep penalty as-is (can go below 0)
+        if raw_score >= 0:
+            overall_score = (raw_score / 80.0) * 100.0
+        else:
+            # Allow negative scores to show serious issues
+            overall_score = raw_score
+        
         overall_score = max(0, min(100, overall_score))  # Clamp to 0-100
         
-        logger.info(f"✅ AI Quality Score: {overall_score:.1f}/100")
+        logger.info(f"✅ AI Quality Score: {overall_score:.1f}/100 (raw: {raw_score:.1f}/80)")
         
         return QualityScoreResponse(
             overall_score=round(overall_score, 2),

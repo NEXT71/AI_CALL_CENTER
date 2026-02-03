@@ -405,7 +405,8 @@ const CallDetails = () => {
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-900">
                   <strong>About AI Scoring:</strong> This call is analyzed using 6 AI-powered factors that evaluate customer satisfaction, 
-                  communication quality, and compliance. Hover over each factor below to learn what it measures.
+                  communication quality, and compliance. Maximum score is 80 points (rescaled to 100 for display). 
+                  Penalties can reduce the score. Hover over each factor below to learn what it measures.
                 </p>
               </div>
               
