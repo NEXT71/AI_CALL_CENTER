@@ -225,9 +225,100 @@ exports.createPortalSession = async (req, res, next) => {
 exports.activateSubscription = async (req, res, next) => {
   return res.status(403).json({
     success: false,
-    message: 'Self-activation is not allowed. Please contact support to activate your subscription after payment.',
+    message: 'Self-activation is not allowed. Please contact an administrator to activate your subscription after payment.',
     requiresAdminApproval: true,
   });
+};
+
+/**
+ * @route   POST /api/subscriptions/request
+ * @desc    Request a subscription - Creates pending payment for admin approval
+ * @access  Private
+ */
+exports.requestSubscription = async (req, res, next) => {
+  try {
+    const { planType, billingCycle, paymentMethod, paymentAmount, paymentReference, transactionId, notes } = req.body;
+    const userId = req.user._id;
+
+    // Validate required fields
+    if (!planType || !billingCycle) {
+      return res.status(400).json({
+        success: false,
+        message: 'Plan type and billing cycle are required',
+      });
+    }
+
+    // Validate plan type
+    const validPlans = ['starter', 'professional', 'enterprise'];
+    if (!validPlans.includes(planType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan type',
+      });
+    }
+
+    // Validate billing cycle
+    if (!['monthly', 'yearly'].includes(billingCycle)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Billing cycle must be monthly or yearly',
+      });
+    }
+
+    // Get plan pricing
+    const planPricing = {
+      starter: { monthly: 99, yearly: 950 },
+      professional: { monthly: 299, yearly: 2870 },
+      enterprise: { monthly: 999, yearly: 9590 },
+    };
+
+    const expectedAmount = planPricing[planType][billingCycle];
+
+    // Create pending payment record
+    const payment = await Payment.create({
+      userId,
+      planType,
+      billingCycle,
+      amount: paymentAmount || expectedAmount,
+      currency: 'USD',
+      paymentMethod: paymentMethod || 'pending',
+      paymentReference: paymentReference || 'User request - awaiting payment',
+      transactionId: transactionId || null,
+      status: 'pending',
+      notes: notes || `User requested ${planType} ${billingCycle} subscription`,
+    });
+
+    // Log the request
+    await AuditLog.create({
+      userId,
+      performedBy: userId,
+      action: 'SUBSCRIPTION_REQUEST_CREATED',
+      details: {
+        planType,
+        billingCycle,
+        expectedAmount,
+        paymentId: payment._id,
+        invoiceNumber: payment.invoiceNumber,
+      },
+      ipAddress: req.ip,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Subscription request submitted successfully. An administrator will review and activate your subscription after payment verification.',
+      data: {
+        paymentId: payment._id,
+        invoiceNumber: payment.invoiceNumber,
+        planType,
+        billingCycle,
+        amount: payment.amount,
+        status: 'pending',
+      },
+    });
+  } catch (error) {
+    logger.error('Error creating subscription request:', error);
+    next(error);
+  }
 };
 
 /**

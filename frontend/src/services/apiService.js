@@ -242,6 +242,19 @@ export const subscriptionService = {
     });
     return response.data;
   },
+
+  requestSubscription: async (planType, billingCycle, paymentDetails = {}) => {
+    const response = await api.post('/subscriptions/request', {
+      planType,
+      billingCycle,
+      paymentMethod: paymentDetails.paymentMethod || 'pending',
+      paymentAmount: paymentDetails.paymentAmount || null,
+      paymentReference: paymentDetails.paymentReference || null,
+      transactionId: paymentDetails.transactionId || null,
+      notes: paymentDetails.notes || null,
+    });
+    return response.data;
+  },
 };
 
 const apiService = {

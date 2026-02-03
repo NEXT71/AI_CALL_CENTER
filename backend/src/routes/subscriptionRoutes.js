@@ -23,6 +23,7 @@ router.use(protect);
 router.post('/create-checkout-session', subscriptionController.createCheckoutSession);
 router.get('/verify-session/:sessionId', subscriptionController.verifySession);
 router.post('/activate', subscriptionController.activateSubscription);
+router.post('/request', subscriptionController.requestSubscription); // New: User subscription request
 router.post('/create-portal-session', subscriptionController.createPortalSession);
 router.get('/current', subscriptionController.getCurrentSubscription);
 router.post('/cancel', subscriptionController.cancelSubscription);

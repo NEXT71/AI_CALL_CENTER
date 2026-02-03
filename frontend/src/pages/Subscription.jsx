@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard, Star, Shield, Zap, Mail, AlertTriangle } from 'lucide-react';
+import { Check, Loader2, CreditCard, ArrowLeft, Home, LayoutDashboard, Star, Shield, Zap, Mail, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/apiService';
 
@@ -145,11 +145,15 @@ const Subscription = () => {
       setProcessingPlan(selectedPlan.id);
       setShowPaymentModal(false);
 
-      const response = await apiService.createCheckoutSession(selectedPlan.id);
+      // Prompt for billing cycle
+      const billingCycle = confirm('Click OK for Monthly billing, Cancel for Yearly billing') ? 'monthly' : 'yearly';
+
+      // Create subscription request (creates pending payment for admin approval)
+      const response = await apiService.requestSubscription(selectedPlan.id, billingCycle);
 
       if (response.success) {
         await fetchData();
-        alert('✅ Subscription request submitted! Our team will contact you to complete the payment.');
+        alert(`✅ Subscription Request Submitted!\n\nInvoice: ${response.data.invoiceNumber}\nPlan: ${response.data.planType} (${response.data.billingCycle})\nAmount: $${response.data.amount}\n\nOur team will contact you to complete the payment. You'll receive access once payment is verified.`);
         setSelectedPlan(null);
       } else {
         alert('❌ Error submitting request. Please contact support.');
@@ -420,7 +424,7 @@ const Subscription = () => {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-slate-900">Complete Your Payment</h3>
+                <h3 className="text-xl font-bold text-slate-900">Request Subscription</h3>
                 <button
                   onClick={() => setShowPaymentModal(false)}
                   className="text-slate-400 hover:text-slate-600"
@@ -442,14 +446,18 @@ const Subscription = () => {
               </div>
 
               <div className="space-y-4 mb-6">
-                <h4 className="font-semibold text-slate-900">Payment Instructions</h4>
+                <h4 className="font-semibold text-slate-900">How It Works</h4>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-amber-800">
-                      <p className="font-medium mb-1">Manual Payment Required</p>
-                      <p>Contact our support team to complete your subscription activation.</p>
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-green-800">
+                      <p className="font-medium mb-1">3-Step Activation Process</p>
+                      <ol className="list-decimal list-inside space-y-1 mt-2">
+                        <li>Submit subscription request (generates invoice)</li>
+                        <li>Our team contacts you with payment details</li>
+                        <li>Account activated after payment verification</li>
+                      </ol>
                     </div>
                   </div>
                 </div>
@@ -458,27 +466,26 @@ const Subscription = () => {
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                     <Mail className="w-5 h-5 text-slate-600" />
                     <div>
-                      <p className="font-medium text-slate-900">Email Support</p>
-                      <p className="text-sm text-slate-600">support@yourcompany.com</p>
+                      <p className="font-medium text-slate-900">We'll Contact You</p>
+                      <p className="text-sm text-slate-600">Typically within 1-2 business hours</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                     <CreditCard className="w-5 h-5 text-slate-600" />
                     <div>
-                      <p className="font-medium text-slate-900">Reference</p>
-                      <p className="text-sm text-slate-600">Plan: {selectedPlan.name}</p>
+                      <p className="font-medium text-slate-900">Flexible Payment</p>
+                      <p className="text-sm text-slate-600">Bank transfer, PayPal, Payoneer, or other</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t pt-4">
-                  <h5 className="font-medium text-slate-900 mb-2">Payment Methods</h5>
+                  <h5 className="font-medium text-slate-900 mb-2">Billing Cycle</h5>
+                  <p className="text-sm text-slate-600 mb-2">You'll choose monthly or yearly billing in the next step.</p>
                   <ul className="text-sm text-slate-600 space-y-1">
-                    <li>• Bank Transfer</li>
-                    <li>• PayPal</li>
-                    <li>• Payoneer</li>
-                    <li>• Other (contact support)</li>
+                    <li>• Monthly: Pay month-to-month</li>
+                    <li>• Yearly: Save ~20% with annual billing</li>
                   </ul>
                 </div>
               </div>
