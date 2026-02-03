@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-navy text-cool-white antialiased;
   }
   
   /* Custom Scrollbar */
@@ -14,21 +14,21 @@
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100;
+    @apply bg-slate-blue-dark;
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+    @apply bg-slate-blue rounded-full hover:bg-slate-blue-light transition-colors;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-electric-blue text-cool-white rounded-lg hover:bg-electric-blue-dark active:bg-electric-blue-dark transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
-    @apply px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-slate-blue text-cool-white border border-slate-blue-light rounded-lg hover:bg-slate-blue-light hover:text-cool-white transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-error {
@@ -36,11 +36,11 @@
   }
 
   .card {
-    @apply bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply bg-slate-blue rounded-xl border border-slate-blue-light shadow-sm hover:shadow-md transition-shadow duration-200;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all duration-200 bg-white;
+    @apply w-full px-4 py-2 rounded-lg border border-slate-blue-light focus:ring-2 focus:ring-electric-blue focus:border-electric-blue outline-none transition-all duration-200 bg-slate-blue text-cool-white;
   }
 
   .glass-panel {
@@ -49,15 +49,15 @@
 
   /* Enhanced Dashboard Styles */
   .page-header-enhanced {
-    @apply bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-6;
+    @apply bg-slate-blue rounded-xl p-6 shadow-sm border border-slate-blue-light mb-6;
   }
 
   .filter-panel-enhanced {
-    @apply bg-slate-50 rounded-lg p-1 border border-slate-200;
+    @apply bg-slate-blue rounded-lg p-1 border border-slate-blue-light;
   }
 
   .input-enhanced {
-    @apply px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all;
+    @apply px-3 py-2 bg-slate-blue border border-slate-blue-light rounded-md text-sm text-cool-white focus:ring-2 focus:ring-electric-blue focus:border-electric-blue outline-none transition-all placeholder-cool-white/50;
   }
 
   .select-enhanced {
@@ -69,15 +69,15 @@
   }
 
   .kpi-card-enhanced {
-    @apply bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 relative overflow-hidden;
+    @apply bg-slate-blue rounded-xl p-6 shadow-sm border border-slate-blue-light hover:shadow-lg transition-all duration-300 relative overflow-hidden;
   }
 
   .kpi-label-enhanced {
-    @apply text-sm font-medium text-slate-500 mb-1;
+    @apply text-sm font-medium text-cool-white/70 mb-1;
   }
 
   .kpi-value-enhanced {
-    @apply text-3xl font-bold text-slate-900 tracking-tight;
+    @apply text-3xl font-bold text-cool-white tracking-tight;
   }
 
   .kpi-change-enhanced {
@@ -100,20 +100,20 @@
     @apply p-3 rounded-xl transition-colors duration-200;
   }
 
-  .kpi-icon-blue { @apply bg-blue-50 text-blue-600; }
-  .kpi-icon-green { @apply bg-green-50 text-green-600; }
-  .kpi-icon-purple { @apply bg-purple-50 text-purple-600; }
-  .kpi-icon-orange { @apply bg-orange-50 text-orange-600; }
+  .kpi-icon-blue { @apply bg-electric-blue/20 text-electric-blue; }
+  .kpi-icon-green { @apply bg-green-500/20 text-green-400; }
+  .kpi-icon-purple { @apply bg-purple-500/20 text-purple-400; }
+  .kpi-icon-orange { @apply bg-orange-500/20 text-orange-400; }
 
   .kpi-progress-bar {
-    @apply h-1.5 w-full bg-slate-100 rounded-full overflow-hidden;
+    @apply h-1.5 w-full bg-slate-blue-dark rounded-full overflow-hidden;
   }
 
   .kpi-progress-fill {
     @apply h-full rounded-full transition-all duration-500 ease-out;
   }
 
-  .kpi-progress-blue { @apply bg-blue-500; }
+  .kpi-progress-blue { @apply bg-electric-blue; }
   .kpi-progress-green { @apply bg-green-500; }
   .kpi-progress-purple { @apply bg-purple-500; }
   .kpi-progress-orange { @apply bg-orange-500; }
@@ -123,15 +123,15 @@
   }
 
   .empty-state-icon {
-    @apply w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4;
+    @apply w-20 h-20 bg-slate-blue-dark rounded-full flex items-center justify-center mb-4;
   }
 
   .empty-state-title {
-    @apply text-lg font-semibold text-slate-900 mb-2;
+    @apply text-lg font-semibold text-cool-white mb-2;
   }
 
   .empty-state-description {
-    @apply text-slate-500 max-w-sm mx-auto;
+    @apply text-cool-white/60 max-w-sm mx-auto;
   }
 
   .table-container-enhanced-compact {
@@ -160,27 +160,27 @@
 
   /* Typography */
   .heading-1 {
-    @apply text-4xl font-bold text-slate-900 tracking-tight;
+    @apply text-4xl font-bold text-cool-white tracking-tight;
   }
   
   .heading-2 {
-    @apply text-3xl font-bold text-slate-900 tracking-tight;
+    @apply text-3xl font-bold text-cool-white tracking-tight;
   }
   
   .heading-3 {
-    @apply text-2xl font-bold text-slate-900;
+    @apply text-2xl font-bold text-cool-white;
   }
   
   .heading-4 {
-    @apply text-xl font-bold text-slate-900;
+    @apply text-xl font-bold text-cool-white;
   }
   
   .body-text {
-    @apply text-base text-slate-600 leading-relaxed;
+    @apply text-base text-cool-white/80 leading-relaxed;
   }
   
   .caption-text {
-    @apply text-sm text-slate-500;
+    @apply text-sm text-cool-white/60;
   }
 }
 
@@ -231,57 +231,57 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #1E293B;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #475569;
   border-radius: 10px;
   transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
 }
 
 /* Enterprise SaaS Design System - Call Center QA Platform */
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-navy text-cool-white antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply text-slate-900 font-semibold tracking-tight;
+    @apply text-cool-white font-semibold tracking-tight;
   }
 }
 
 @layer components {
   /* Typography Scale */
   .heading-1 {
-    @apply text-3xl font-semibold text-slate-900 tracking-tight;
+    @apply text-3xl font-semibold text-cool-white tracking-tight;
   }
   
   .heading-2 {
-    @apply text-2xl font-semibold text-slate-900 tracking-tight;
+    @apply text-2xl font-semibold text-cool-white tracking-tight;
   }
   
   .heading-3 {
-    @apply text-xl font-semibold text-slate-900;
+    @apply text-xl font-semibold text-cool-white;
   }
   
   .heading-4 {
-    @apply text-lg font-semibold text-slate-900;
+    @apply text-lg font-semibold text-cool-white;
   }
   
   .body-text {
-    @apply text-sm text-slate-700 leading-relaxed;
+    @apply text-sm text-cool-white/80 leading-relaxed;
   }
   
   .caption-text {
-    @apply text-xs text-slate-500 leading-normal;
+    @apply text-xs text-cool-white/60 leading-normal;
   }
   
   /* Page Layout */
@@ -303,7 +303,7 @@ html {
   
   /* Cards */
   .card {
-    @apply bg-white rounded-xl border border-slate-200 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg;
+    @apply bg-slate-blue rounded-xl border border-slate-blue-light p-6 shadow-md transition-shadow duration-300 hover:shadow-lg;
   }
   
   .card:hover {
@@ -311,23 +311,23 @@ html {
   }
   
   .card-compact {
-    @apply bg-white rounded-lg border border-slate-200 p-4 shadow-sm;
+    @apply bg-slate-blue rounded-lg border border-slate-blue-light p-4 shadow-sm;
   }
   
   .stat-card {
-    @apply bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all duration-200;
+    @apply bg-slate-blue rounded-lg border border-slate-blue-light p-6 shadow-sm hover:shadow-md transition-all duration-200;
   }
   
   .kpi-card {
-    @apply bg-white rounded-lg border border-slate-200 p-6 shadow-sm;
+    @apply bg-slate-blue rounded-lg border border-slate-blue-light p-6 shadow-sm;
   }
   
   .kpi-value {
-    @apply text-3xl font-bold text-slate-900 mt-2;
+    @apply text-3xl font-bold text-cool-white mt-2;
   }
   
   .kpi-label {
-    @apply text-xs font-medium text-slate-600 uppercase tracking-wide;
+    @apply text-xs font-medium text-cool-white/70 uppercase tracking-wide;
   }
   
   .kpi-change {
@@ -428,57 +428,57 @@ html {
 
   /* Enhanced Cards */
   .card-enhanced {
-    @apply bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6 backdrop-blur-sm;
+    @apply bg-slate-blue rounded-2xl shadow-lg border border-slate-blue-light p-6 backdrop-blur-sm;
   }
 
   .section-header-enhanced {
-    @apply text-xl font-bold text-slate-900 mb-1;
+    @apply text-xl font-bold text-cool-white mb-1;
   }
 
   .btn-enhanced {
-    @apply px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 inline-flex items-center justify-center gap-2 border focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
+    @apply px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 inline-flex items-center justify-center gap-2 border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-navy disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
   }
 
   .btn-primary-enhanced {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 hover:from-blue-700 hover:to-blue-800 hover:border-blue-700 active:from-blue-800 active:to-blue-900 shadow-md hover:shadow-lg focus:ring-blue-500;
+    @apply bg-electric-blue text-cool-white border-electric-blue hover:bg-electric-blue-dark hover:border-electric-blue-dark active:bg-electric-blue-dark shadow-md hover:shadow-lg focus:ring-electric-blue;
   }
 
   /* Compact Enhanced Table */
   .table-container-enhanced-compact {
-    @apply bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm;
+    @apply bg-slate-blue rounded-xl border border-slate-blue-light overflow-hidden shadow-sm;
   }
 
   .table-enhanced-compact {
-    @apply w-full divide-y divide-slate-200;
+    @apply w-full divide-y divide-slate-blue-light;
     min-width: 1000px;
   }
 
   .table-enhanced-compact thead {
-    @apply bg-gradient-to-r from-slate-50 to-slate-100;
+    @apply bg-slate-blue-dark;
   }
 
   .table-enhanced-compact th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider whitespace-nowrap;
+    @apply px-4 py-3 text-left text-xs font-semibold text-cool-white/90 uppercase tracking-wider whitespace-nowrap;
   }
 
   .table-enhanced-compact th.sticky.right-0 {
-    @apply bg-gradient-to-l from-white via-white to-transparent;
+    @apply bg-gradient-to-l from-slate-blue via-slate-blue to-transparent;
     right: 0;
     z-index: 20;
   }
 
   .table-enhanced-compact td {
-    @apply px-4 py-3 text-sm whitespace-nowrap;
+    @apply px-4 py-3 text-sm text-cool-white/90 whitespace-nowrap;
   }
 
   .table-enhanced-compact td.sticky.right-0 {
-    @apply bg-gradient-to-l from-white via-white to-transparent;
+    @apply bg-gradient-to-l from-slate-blue via-slate-blue to-transparent;
     right: 0;
     z-index: 5;
   }
 
   .table-enhanced-compact tbody tr {
-    @apply border-b border-slate-100 hover:bg-blue-50/30 transition-all duration-200;
+    @apply border-b border-slate-blue-light hover:bg-slate-blue-dark transition-all duration-200;
   }
 
   .table-enhanced-compact tbody tr:last-child {
@@ -509,27 +509,27 @@ html {
   
   /* Buttons */
   .btn {
-    @apply px-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 inline-flex items-center justify-center gap-2 border focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
+    @apply px-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 inline-flex items-center justify-center gap-2 border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-navy disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
   }
   
   .btn-primary {
-    @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 shadow-md hover:shadow-lg focus:ring-blue-500;
+    @apply bg-electric-blue text-cool-white border-electric-blue hover:bg-electric-blue-dark hover:border-electric-blue-dark active:bg-electric-blue-dark shadow-md hover:shadow-lg focus:ring-electric-blue;
   }
   
   .btn-secondary {
-    @apply bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow-md focus:ring-slate-400;
+    @apply bg-slate-blue text-cool-white border-slate-blue-light hover:bg-slate-blue-light hover:border-slate-blue-light shadow-sm hover:shadow-md focus:ring-slate-blue-light;
   }
   
   .btn-danger {
-    @apply bg-red-600 text-white border-red-600 hover:bg-red-700 hover:border-red-700 shadow-sm focus:ring-red-500;
+    @apply bg-red-600 text-cool-white border-red-600 hover:bg-red-700 hover:border-red-700 shadow-sm focus:ring-red-500;
   }
   
   .btn-success {
-    @apply bg-green-600 text-white border-green-600 hover:bg-green-700 hover:border-green-700 shadow-sm focus:ring-green-500;
+    @apply bg-green-600 text-cool-white border-green-600 hover:bg-green-700 hover:border-green-700 shadow-sm focus:ring-green-500;
   }
   
   .btn-ghost {
-    @apply bg-transparent text-slate-700 border-transparent hover:bg-slate-100 focus:ring-slate-400;
+    @apply bg-transparent text-cool-white border-transparent hover:bg-slate-blue focus:ring-slate-blue-light;
   }
   
   .btn-sm {
@@ -542,11 +542,11 @@ html {
   
   /* Form Elements */
   .input {
-    @apply w-full px-4 py-3 text-sm border-2 border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:bg-slate-50 disabled:text-slate-500 hover:border-slate-400;
+    @apply w-full px-4 py-3 text-sm border-2 border-slate-blue-light rounded-lg bg-slate-blue text-cool-white placeholder-cool-white/50 focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-electric-blue transition-all disabled:bg-slate-blue-dark disabled:text-cool-white/50 hover:border-slate-blue-light;
   }
   
   .input-label {
-    @apply block text-sm font-medium text-slate-700 mb-2;
+    @apply block text-sm font-medium text-cool-white/90 mb-2;
   }
   
   .input-error {
@@ -607,27 +607,27 @@ html {
   
   /* Tables */
   .table-container {
-    @apply bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm;
+    @apply bg-slate-blue rounded-lg border border-slate-blue-light overflow-hidden shadow-sm;
   }
   
   .table {
-    @apply w-full divide-y divide-slate-200;
+    @apply w-full divide-y divide-slate-blue-light;
   }
   
   .table thead {
-    @apply bg-slate-50;
+    @apply bg-slate-blue-dark;
   }
   
   .table th {
-    @apply px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider;
+    @apply px-6 py-3.5 text-left text-xs font-semibold text-cool-white/90 uppercase tracking-wider;
   }
   
   .table td {
-    @apply px-6 py-4 text-sm text-slate-900 whitespace-nowrap;
+    @apply px-6 py-4 text-sm text-cool-white/90 whitespace-nowrap;
   }
   
   .table tbody tr {
-    @apply border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150;
+    @apply border-b border-slate-blue-light hover:bg-slate-blue-dark transition-colors duration-150;
   }
   
   .table tbody tr:last-child {
@@ -636,43 +636,43 @@ html {
 
   /* Enhanced Tables */
   .table-container-enhanced {
-    @apply bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm;
+    @apply bg-slate-blue rounded-lg border border-slate-blue-light overflow-hidden shadow-sm;
   }
 
   .table-enhanced {
-    @apply w-full divide-y divide-slate-200;
+    @apply w-full divide-y divide-slate-blue-light;
     min-width: 1200px; /* Ensure minimum width for horizontal scrolling */
   }
 
   .table-enhanced thead {
-    @apply bg-gradient-to-r from-slate-50 to-slate-100;
+    @apply bg-slate-blue-dark;
   }
 
   .table-enhanced th {
-    @apply px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider whitespace-nowrap;
+    @apply px-6 py-4 text-left text-xs font-semibold text-cool-white/90 uppercase tracking-wider whitespace-nowrap;
     position: sticky;
     top: 0;
     z-index: 10;
   }
 
   .table-enhanced th.sticky.right-0 {
-    @apply bg-gradient-to-l from-white via-white to-transparent;
+    @apply bg-gradient-to-l from-slate-blue via-slate-blue to-transparent;
     right: 0;
     z-index: 20;
   }
 
   .table-enhanced td {
-    @apply px-6 py-4 text-sm whitespace-nowrap;
+    @apply px-6 py-4 text-sm text-cool-white/90 whitespace-nowrap;
   }
 
   .table-enhanced td.sticky.right-0 {
-    @apply bg-gradient-to-l from-white via-white to-transparent;
+    @apply bg-gradient-to-l from-slate-blue via-slate-blue to-transparent;
     right: 0;
     z-index: 5;
   }
 
   .table-enhanced tbody tr {
-    @apply border-b border-slate-100 hover:bg-blue-50/30 transition-all duration-200;
+    @apply border-b border-slate-blue-light hover:bg-slate-blue-dark transition-all duration-200;
   }
 
   .table-enhanced tbody tr:last-child {
@@ -779,7 +779,7 @@ html {
   
   /* Modal */
   .modal-overlay {
-    @apply fixed inset-0 bg-slate-900 bg-opacity-50 z-40 transition-opacity;
+    @apply fixed inset-0 bg-navy bg-opacity-90 z-40 transition-opacity;
   }
   
   .modal {
@@ -787,11 +787,11 @@ html {
   }
   
   .modal-content {
-    @apply bg-white rounded-lg shadow-xl max-w-2xl mx-auto my-8 p-6;
+    @apply bg-slate-blue rounded-lg shadow-xl max-w-2xl mx-auto my-8 p-6 border border-slate-blue-light;
   }
   
   .modal-header {
-    @apply flex items-center justify-between mb-4 pb-4 border-b border-slate-200;
+    @apply flex items-center justify-between mb-4 pb-4 border-b border-slate-blue-light;
   }
   
   .modal-title {

@@ -13,7 +13,7 @@ export default {
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
-          500: '#3b82f6',
+          500: '#3b82f6', // Electric Blue
           600: '#2563eb',
           700: '#1d4ed8',
           800: '#1e40af',
@@ -32,6 +32,26 @@ export default {
           800: '#5b21b6',
           900: '#4c1d95',
           950: '#2e1065',
+        },
+        // Deep Tech Color Palette
+        navy: {
+          DEFAULT: '#0F172A', // Deep Navy - Primary Background
+          light: '#1E293B',
+          dark: '#020617',
+        },
+        'slate-blue': {
+          DEFAULT: '#334155', // Slate Blue - Cards & Secondary
+          light: '#475569',
+          dark: '#1E293B',
+        },
+        'electric-blue': {
+          DEFAULT: '#3B82F6', // Electric Blue - Accents
+          light: '#60A5FA',
+          dark: '#2563EB',
+        },
+        'cool-white': {
+          DEFAULT: '#F8FAFC', // Cool White - Text
+          secondary: '#E2E8F0',
         },
         slate: {
           850: '#151f32',
