@@ -208,15 +208,18 @@ const CallDetails = () => {
               <MessageSquare size={24} />
             </div>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-              call.sentiment === 'positive' ? 'bg-green-100 text-green-800 border-green-200' :
-              call.sentiment === 'negative' ? 'bg-red-100 text-red-800 border-red-200' :
-              'bg-blue-100 text-blue-800 border-blue-200'
+              call.qualityScore >= 80 ? 'bg-green-100 text-green-800 border-green-200' :
+              call.qualityScore >= 60 ? 'bg-blue-100 text-blue-800 border-blue-200' :
+              'bg-red-100 text-red-800 border-red-200'
             }`}>
-              {call.sentiment}
+              {call.qualityScore >= 80 ? 'positive' : call.qualityScore >= 60 ? 'neutral' : 'negative'}
             </span>
           </div>
-          <div className="text-3xl font-bold text-slate-900 mb-1 capitalize">{call.sentiment}</div>
+          <div className="text-3xl font-bold text-slate-900 mb-1 capitalize">
+            {call.qualityScore >= 80 ? 'Positive' : call.qualityScore >= 60 ? 'Neutral' : 'Negative'}
+          </div>
           <div className="text-sm font-medium text-slate-500">Overall Sentiment</div>
+          <div className="text-xs text-slate-400 mt-1">Based on quality score</div>
         </div>
 
         <div className="kpi-card-enhanced group">

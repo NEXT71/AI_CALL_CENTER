@@ -264,7 +264,7 @@ exports.isConfigured = () => {
  * @param {number} maxWaitMinutes - Maximum time to wait in minutes
  * @param {number} checkIntervalSeconds - How often to check status
  */
-exports.waitForPodReady = async (maxWaitMinutes = 5, checkIntervalSeconds = 10) => {
+exports.waitForPodReady = async (maxWaitMinutes = 0.5, checkIntervalSeconds = 10) => {
   const maxAttempts = (maxWaitMinutes * 60) / checkIntervalSeconds;
   let attempts = 0;
 
@@ -321,7 +321,7 @@ exports.ensurePodRunning = async () => {
       
       // Wait for pod to be ready
       logger.info('Waiting for pod to be ready...');
-      await exports.waitForPodReady(2, 10); // Wait up to 2 minutes
+      await exports.waitForPodReady(0.5, 10); // Wait up to 30 seconds
       
       return true;
     }
@@ -329,7 +329,7 @@ exports.ensurePodRunning = async () => {
     // If starting, wait for it
     if (pod.desiredStatus === 'RUNNING' && !pod.runtime) {
       logger.info('Pod is starting, waiting...');
-      await exports.waitForPodReady(2, 10);
+      await exports.waitForPodReady(0.5, 10);
       return true;
     }
 
