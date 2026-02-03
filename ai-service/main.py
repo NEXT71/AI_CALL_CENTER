@@ -843,6 +843,135 @@ async def analyze_sentiment(request: SentimentRequest):
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
 
+class PerSpeakerSentimentRequest(BaseModel):
+    speaker_labeled_transcript: str
+
+
+class PerSpeakerSentimentResponse(BaseModel):
+    agent_sentiment: str
+    customer_sentiment: str
+    agent_score: float
+    customer_score: float
+
+
+@app.post("/analyze-per-speaker-sentiment", response_model=PerSpeakerSentimentResponse)
+async def analyze_per_speaker_sentiment(request: PerSpeakerSentimentRequest):
+    """
+    Analyze sentiment separately for agent and customer from speaker-labeled transcript.
+    Expects format with [Agent:] and [Customer:] or [Speaker 1:] and [Speaker 2:] labels.
+    """
+    import gc
+    try:
+        analyzer = load_sentiment_model()
+        if analyzer is None:
+            raise HTTPException(status_code=503, detail="Sentiment analyzer failed to load")
+
+        if not request.speaker_labeled_transcript or len(request.speaker_labeled_transcript.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Speaker labeled transcript cannot be empty")
+
+        logger.info(f"🔍 Per-speaker sentiment analysis: {len(request.speaker_labeled_transcript)} chars")
+        
+        # Extract agent and customer text
+        lines = request.speaker_labeled_transcript.split('\n')
+        agent_lines = []
+        customer_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check for different label formats
+            if line.startswith('[Agent:') or line.startswith('Agent:'):
+                text = line.split(':', 1)[1].strip() if ':' in line else line
+                agent_lines.append(text)
+            elif line.startswith('[Customer:') or line.startswith('Customer:'):
+                text = line.split(':', 1)[1].strip() if ':' in line else line
+                customer_lines.append(text)
+            elif line.startswith('[Speaker 1]') or line.startswith('Speaker 1:'):
+                # Assume Speaker 1 is agent
+                text = line.split(']', 1)[1].strip() if ']' in line else line.split(':', 1)[1].strip()
+                agent_lines.append(text)
+            elif line.startswith('[Speaker 2]') or line.startswith('Speaker 2:'):
+                # Assume Speaker 2 is customer
+                text = line.split(']', 1)[1].strip() if ']' in line else line.split(':', 1)[1].strip()
+                customer_lines.append(text)
+        
+        agent_text = ' '.join(agent_lines)
+        customer_text = ' '.join(customer_lines)
+        
+        logger.info(f"Agent text: {len(agent_text)} chars, Customer text: {len(customer_text)} chars")
+        
+        # Define helper function for blocking sentiment analysis
+        def run_sentiment_analysis(analyzer_func, text):
+            if not text or len(text.strip()) < 5:
+                return {"label": "NEUTRAL", "score": 0.5}
+            # Truncate if too long
+            text = text[:2000]
+            return analyzer_func(text, truncation=True, max_length=512)[0]
+        
+        import asyncio
+        loop = asyncio.get_event_loop()
+        
+        # Analyze agent sentiment
+        agent_result = {"label": "NEUTRAL", "score": 0.5}
+        if agent_text and len(agent_text) > 5:
+            try:
+                agent_result = await loop.run_in_executor(
+                    executor,
+                    run_sentiment_analysis,
+                    analyzer,
+                    agent_text
+                )
+            except Exception as e:
+                logger.warning(f"Agent sentiment failed: {e}")
+        
+        # Analyze customer sentiment
+        customer_result = {"label": "NEUTRAL", "score": 0.5}
+        if customer_text and len(customer_text) > 5:
+            try:
+                customer_result = await loop.run_in_executor(
+                    executor,
+                    run_sentiment_analysis,
+                    analyzer,
+                    customer_text
+                )
+            except Exception as e:
+                logger.warning(f"Customer sentiment failed: {e}")
+        
+        # Map labels
+        label_map = {
+            "POSITIVE": "positive",
+            "NEGATIVE": "negative",
+            "NEUTRAL": "neutral"
+        }
+        
+        agent_sentiment = label_map.get(agent_result["label"].upper(), "neutral")
+        customer_sentiment = label_map.get(customer_result["label"].upper(), "neutral")
+        
+        logger.info(f"✅ Agent: {agent_sentiment} ({agent_result['score']:.2f}), Customer: {customer_sentiment} ({customer_result['score']:.2f})")
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        return PerSpeakerSentimentResponse(
+            agent_sentiment=agent_sentiment,
+            customer_sentiment=customer_sentiment,
+            agent_score=round(agent_result["score"], 4),
+            customer_score=round(customer_result["score"], 4)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Per-speaker sentiment error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Per-speaker sentiment analysis failed: {str(e)}")
+
+
 @app.post("/extract-entities", response_model=EntityResponse)
 async def extract_entities(request: EntityRequest):
     """Extract entities using spaCy with improved long-text handling"""
@@ -1356,32 +1485,43 @@ def load_diarization_model():
         return diarization_pipeline
 
     try:
+        # Check for required dependencies
+        try:
+            import matplotlib
+        except ImportError:
+            logger.error("❌ Missing required dependency: matplotlib")
+            logger.error("Install with: pip install matplotlib>=3.6.0")
+            models_available["diarization"] = False
+            return None
+
         from pyannote.audio import Pipeline
-        
+
         # Requires HuggingFace token for pyannote models
         hf_token = os.getenv("HUGGINGFACE_TOKEN")
         if not hf_token:
             logger.warning("⚠️ HUGGINGFACE_TOKEN not set - diarization will fail")
             logger.warning("Get token from: https://huggingface.co/settings/tokens")
+            models_available["diarization"] = False
             return None
-        
+
         logger.info("Loading diarization model...")
         diarization_pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
             use_auth_token=hf_token
         )
-        
+
         # Move to GPU if available
         if CUDA_AVAILABLE:
             diarization_pipeline.to(torch.device("cuda"))
             logger.info("✅ Diarization model loaded on GPU")
         else:
             logger.info("✅ Diarization model loaded on CPU")
-        
+
         models_available["diarization"] = True
         return diarization_pipeline
     except Exception as e:
         logger.error(f"❌ Failed to load diarization model: {e}")
+        logger.error("This may be due to missing dependencies or invalid HuggingFace token")
         models_available["diarization"] = False
         return None
 

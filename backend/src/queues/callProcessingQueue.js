@@ -314,22 +314,76 @@ async function processCall(job) {
       transcription.text,
       callData.campaign
     );
-    await job.progress(85);
+    await job.progress(75);
 
-    // Step 7: Quality scoring
-    const qualityResult = scoringService.calculateQualityScore({
-      transcription: transcription.text,
-      sentiment: diarizationData.agentSentiment || sentiment.sentiment,
-      duration: callData.duration,
-      hasGreeting: complianceResult.hasGreeting,
-      hasProperClosing: complianceResult.hasProperClosing,
-      agentTalkTime: diarizationData.agentTalkTime || 0,
-      customerTalkTime: diarizationData.customerTalkTime || 0,
-      deadAirTotal: diarizationData.deadAirTotal || 0,
-    });
+    // Step 7: AI Quality scoring (NEW - uses 6 AI factors instead of traditional metrics)
+    let qualityResult = {
+      overall_score: 0,
+      factors: {},
+      details: {},
+      flags: {},
+    };
+    
+    try {
+      qualityResult = await aiService.calculateQualityScore(
+        transcription.text,
+        transcription.speaker_labeled_text,
+        transcription.language || 'english'
+      );
+      logger.info('AI quality scoring completed', {
+        callId,
+        overallScore: qualityResult.overall_score,
+        factors: qualityResult.factors,
+      });
+    } catch (error) {
+      logger.warn('AI quality scoring failed, using fallback', {
+        callId,
+        error: error.message,
+      });
+      // Fallback to traditional scoring if AI service fails
+      const fallbackQuality = scoringService.calculateQualityScore({
+        transcript: transcription.text,
+        sentiment: sentiment.sentiment,
+        complianceScore: complianceResult.score,
+        duration: callData.duration,
+        talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio || '',
+        deadAirTotal: diarizationData.dead_air_total || diarizationData.deadAirTotal || 0,
+      });
+      qualityResult = {
+        overall_score: fallbackQuality.score,
+        factors: {},
+        details: {},
+        flags: {},
+      };
+    }
+    await job.progress(90);
+
+    // Step 8: Per-speaker sentiment analysis (NEW)
+    let agentSentimentResult = sentiment.sentiment || 'neutral';
+    let customerSentimentResult = 'neutral';
+    
+    if (transcription.speaker_labeled_text) {
+      try {
+        const perSpeakerSentiment = await aiService.analyzePerSpeakerSentiment(
+          transcription.speaker_labeled_text
+        );
+        agentSentimentResult = perSpeakerSentiment.agent_sentiment || sentiment.sentiment || 'neutral';
+        customerSentimentResult = perSpeakerSentiment.customer_sentiment || 'neutral';
+        logger.info('Per-speaker sentiment completed', {
+          callId,
+          agentSentiment: agentSentimentResult,
+          customerSentiment: customerSentimentResult,
+        });
+      } catch (error) {
+        logger.warn('Per-speaker sentiment failed, using defaults', {
+          callId,
+          error: error.message,
+        });
+      }
+    }
     await job.progress(95);
 
-    // Update call with all results
+    // Update call with all results (including AI quality metrics)
     const updatedCall = await Call.findByIdAndUpdate(
       callId,
       {
@@ -343,8 +397,8 @@ async function processCall(job) {
         talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio || '',
         deadAirTotal: diarizationData.dead_air_total || diarizationData.deadAirTotal || 0,
         deadAirSegments: diarizationData.dead_air_segments || diarizationData.deadAirSegments || [],
-        agentSentiment: diarizationData.agentSentiment || sentiment.label || sentiment.sentiment || 'neutral',
-        customerSentiment: diarizationData.customerSentiment || '',
+        agentSentiment: agentSentimentResult,
+        customerSentiment: customerSentimentResult,
         sentiment: sentiment.label || sentiment.sentiment || 'neutral',
         sentimentScore: sentiment.score || 0.5,
         entities,
@@ -353,8 +407,20 @@ async function processCall(job) {
         complianceScore: complianceResult.score,
         missingMandatoryPhrases: complianceResult.missingMandatory,
         detectedForbiddenPhrases: complianceResult.detectedForbidden,
-        qualityScore: qualityResult.score,
-        qualityMetrics: qualityResult.metrics,
+        // AI Quality Scoring (NEW)
+        qualityScore: Math.round(qualityResult.overall_score || 0),
+        qualityMetrics: {
+          // Keep traditional metrics for backward compatibility
+          hasGreeting: complianceResult.hasGreeting || false,
+          hasProperClosing: complianceResult.hasProperClosing || false,
+          complianceLinesSpoken: complianceResult.score >= 90,
+          agentInterruptionCount: 0,
+          avgSpeechRate: transcription.text ? Math.round((transcription.text.split(/\s+/).length / (callData.duration / 60))) : 0,
+          // AI-based quality factors (6 factors)
+          aiFactors: qualityResult.factors || {},
+          aiDetails: qualityResult.details || {},
+          aiFlags: qualityResult.flags || {},
+        },
         status: 'completed',
         processedAt: new Date(),
         processingDuration: Date.now() - startTime,
@@ -369,8 +435,10 @@ async function processCall(job) {
       callId,
       jobId: job.id,
       duration: `${duration}s`,
-      qualityScore: qualityResult.score,
+      qualityScore: Math.round(qualityResult.overall_score || 0),
       complianceScore: complianceResult.score,
+      agentSentiment: agentSentimentResult,
+      customerSentiment: customerSentimentResult,
     });
 
     return updatedCall;

@@ -515,11 +515,15 @@ const CallsList = () => {
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                               call.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                               call.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                              call.status === 'queued' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
                               call.status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
                               'bg-slate-50 text-slate-700 border-slate-100'
-                            }`}>
-                              {call.status === 'processing' && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse mr-1.5"></div>}
-                              {call.status.charAt(0).toUpperCase() + call.status.slice(1)}
+                            }`} title={call.status === 'failed' ? call.processingError : ''}>
+                              {(call.status === 'processing' || call.status === 'queued') && (
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse mr-1.5"></div>
+                              )}
+                              {call.status === 'failed' && '❌ '}
+                              {call.status === 'queued' ? 'Queued' : call.status.charAt(0).toUpperCase() + call.status.slice(1)}
                             </span>
                           </td>
                           <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-4">

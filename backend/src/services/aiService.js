@@ -373,6 +373,45 @@ exports.calculateQualityScore = async (transcript, speakerLabeledTranscript = nu
 };
 
 /**
+ * Analyze sentiment separately for agent and customer
+ * NEW: Per-speaker sentiment analysis
+ */
+exports.analyzePerSpeakerSentiment = async (speakerLabeledTranscript) => {
+  try {
+    // Validate input
+    if (!speakerLabeledTranscript || speakerLabeledTranscript.trim().length === 0) {
+      throw new Error('Speaker labeled transcript cannot be empty');
+    }
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/analyze-per-speaker-sentiment`,
+      { speaker_labeled_transcript: speakerLabeledTranscript },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000, // 1 minute timeout
+        validateStatus: function (status) {
+          return status < 500;
+        },
+      }
+    );
+
+    if (response.status !== 200) {
+      throw new Error(`Per-speaker sentiment analysis failed with status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    logger.error('AI Service per-speaker sentiment analysis error', { error: error.message });
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Per-speaker sentiment analysis timeout');
+    }
+    
+    throw new Error(`Per-speaker sentiment analysis failed: ${error.response?.data?.detail || error.message}`);
+  }
+};
+
+/**
  * Health check for AI service
  */
 exports.healthCheck = async () => {
