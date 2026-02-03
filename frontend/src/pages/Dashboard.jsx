@@ -314,7 +314,7 @@ const Dashboard = () => {
       <div className="page-header-enhanced animate-fade-in">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-slate-900 tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-cool-white tracking-tight">
               Dashboard
             </h1>
             <p className="text-lg text-slate-600 font-medium">
@@ -334,7 +334,7 @@ const Dashboard = () => {
           <div className="filter-panel-enhanced">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-slate-700 whitespace-nowrap">From:</label>
+                <label className="text-sm font-medium text-cool-white/90 whitespace-nowrap">From:</label>
                 <input
                   type="date"
                   value={dateRange.startDate}
@@ -343,7 +343,7 @@ const Dashboard = () => {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-slate-700 whitespace-nowrap">To:</label>
+                <label className="text-sm font-medium text-cool-white/90 whitespace-nowrap">To:</label>
                 <input
                   type="date"
                   value={dateRange.endDate}
@@ -753,7 +753,7 @@ const Dashboard = () => {
                       <div key={payment.paymentId || payment.auditLogId} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <h5 className="font-medium text-slate-900">{payment.userName}</h5>
+                            <h5 className="font-medium text-cool-white">{payment.userName}</h5>
                             <p className="text-sm text-slate-600">{payment.userEmail}</p>
                             {payment.companyName && (
                               <p className="text-xs text-slate-500">{payment.companyName}</p>
