@@ -169,7 +169,7 @@ def load_whisper_model():
         
         # Choose model based on GPU availability
         if CUDA_AVAILABLE:
-            model_size = os.getenv("WHISPER_MODEL", "medium")  # medium or large-v2 for GPU
+            model_size = os.getenv("WHISPER_MODEL", "small")  # small for speed (2x faster than medium)
             logger.info(f"🚀 Loading Whisper model on GPU: {model_size}")
         else:
             model_size = os.getenv("WHISPER_MODEL", "base")
@@ -286,7 +286,7 @@ def load_spacy_model():
         return None
 
 # Configuration
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "medium" if CUDA_AVAILABLE else "base")
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small" if CUDA_AVAILABLE else "base")
 SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
 SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
 SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
@@ -360,11 +360,11 @@ class TranscribeWithSpeakersResponse(BaseModel):
     word_count: Optional[int] = None
 
 
-def chunk_audio_file(audio_path: str, chunk_length_ms: int = 600000, overlap_ms: int = 5000):
+def chunk_audio_file(audio_path: str, chunk_length_ms: int = 300000, overlap_ms: int = 3000):
     """
     Split audio file into chunks for processing long recordings
-    chunk_length_ms: chunk length in milliseconds (default 10 minutes)
-    overlap_ms: overlap between chunks in milliseconds (default 5 seconds) to prevent word splitting
+    chunk_length_ms: chunk length in milliseconds (default 5 minutes for faster parallel processing)
+    overlap_ms: overlap between chunks in milliseconds (default 3 seconds) to prevent word splitting
     """
     try:
         from pydub import AudioSegment
@@ -455,7 +455,9 @@ def transcribe_chunk(model, chunk_path, chunk_info):
                 temperature=0.0,  # Deterministic output
                 compression_ratio_threshold=2.4,  # Reject bad transcriptions
                 no_speech_threshold=0.6,  # Detect silence
-                condition_on_previous_text=False  # Prevent hallucination
+                condition_on_previous_text=False,  # Prevent hallucination
+                beam_size=1,  # Fast mode: single best guess (30% faster)
+                best_of=1  # Don't generate alternatives
             )
             
             # Clear GPU cache after processing
@@ -564,16 +566,16 @@ async def transcribe_audio(audio: UploadFile = File(...)):
         logger.info(f"⏱️  Duration: {duration:.1f}s ({duration/60:.1f} minutes)")
         
         # Process based on duration
-        if duration > 600:  # 10+ minutes
+        if duration > 480:  # 8+ minutes
             logger.info(f"📦 Long audio detected - using chunked processing")
             
-            # Split into chunks
-            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=600000)
+            # Split into chunks (5-minute chunks for faster parallel processing)
+            chunks, total_duration = chunk_audio_file(temp_path, chunk_length_ms=300000)
             if not chunks:
                 raise HTTPException(status_code=500, detail="Failed to chunk audio")
             
             chunk_files = [chunk["path"] for chunk in chunks]
-            logger.info(f"✅ Split into {len(chunks)} chunks (10 min each)")
+            logger.info(f"✅ Split into {len(chunks)} chunks (5 min each for faster processing)")
             
             # Process chunks in parallel
             import time
@@ -637,7 +639,9 @@ async def transcribe_audio(audio: UploadFile = File(...)):
                 temp_path,
                 verbose=False,
                 fp16=use_fp16,
-                language=None
+                language=None,
+                beam_size=1,  # Fast mode
+                best_of=1
             )
             
             processing_time = time.time() - start_time

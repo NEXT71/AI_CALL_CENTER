@@ -278,8 +278,10 @@ async function processCall(job) {
     }
     await job.progress(55);
 
-    // Step 4: Entity extraction
+    // Step 4: Entity extraction (DISABLED for speed - rarely used in QA)
     let entities = [];
+    // Uncomment below to enable entity extraction (adds 10-15 seconds)
+    /*
     try {
       const entityData = await aiService.extractEntities(transcription.text);
       entities = entityData.entities || [];
@@ -289,6 +291,7 @@ async function processCall(job) {
         error: error.message 
       });
     }
+    */
     await job.progress(65);
 
     // Step 5: Summarization (if text is long enough)
