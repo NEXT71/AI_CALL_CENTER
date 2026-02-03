@@ -274,6 +274,34 @@ exports.requestSubscription = async (req, res, next) => {
 
     const expectedAmount = planPricing[planType][billingCycle];
 
+    // Validate payment amount if provided
+    if (paymentAmount && paymentAmount < expectedAmount * 0.95) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount ($${paymentAmount}) is significantly less than expected amount ($${expectedAmount}) for ${planType} ${billingCycle} plan`,
+        expectedAmount,
+      });
+    }
+
+    // Check for existing pending payment to prevent duplicates
+    const existingPendingPayment = await Payment.findOne({
+      userId,
+      status: 'pending',
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+    });
+
+    if (existingPendingPayment) {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a pending subscription request. Please wait for admin approval or contact support.',
+        existingRequest: {
+          invoiceNumber: existingPendingPayment.invoiceNumber,
+          planType: existingPendingPayment.planType,
+          createdAt: existingPendingPayment.createdAt,
+        },
+      });
+    }
+
     // Create pending payment record
     const payment = await Payment.create({
       userId,
@@ -526,7 +554,8 @@ exports.adminActivateSubscription = async (req, res, next) => {
   try {
     const { 
       userId, 
-      planType, 
+      planType,
+      billingCycle,
       paymentMethod, 
       paymentAmount,
       paymentReference,
@@ -544,10 +573,10 @@ exports.adminActivateSubscription = async (req, res, next) => {
     }
 
     // Validate required fields including payment proof
-    if (!userId || !planType) {
+    if (!userId || !planType || !billingCycle) {
       return res.status(400).json({
         success: false,
-        message: 'User ID and plan type are required',
+        message: 'User ID, plan type, and billing cycle are required',
       });
     }
 
@@ -556,6 +585,14 @@ exports.adminActivateSubscription = async (req, res, next) => {
         success: false,
         message: 'Payment proof required: paymentMethod, paymentAmount, and paymentReference are mandatory',
         requiredFields: ['paymentMethod', 'paymentAmount', 'paymentReference'],
+      });
+    }
+
+    // Validate billing cycle
+    if (!['monthly', 'yearly'].includes(billingCycle)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Billing cycle must be monthly or yearly',
       });
     }
 
@@ -590,10 +627,16 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
+    // Calculate subscription duration based on billing cycle
+    const subscriptionDuration = billingCycle === 'monthly' ? 30 : 365; // days
+    const periodStart = new Date();
+    const periodEnd = new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000);
+
     // Create payment record
     const payment = new Payment({
       userId: user._id,
       planType,
+      billingCycle,
       amount: paymentAmount,
       paymentMethod,
       paymentReference,
@@ -602,8 +645,8 @@ exports.adminActivateSubscription = async (req, res, next) => {
       status: 'approved',
       approvedBy: req.user._id,
       approvedAt: new Date(),
-      subscriptionPeriodStart: new Date(),
-      subscriptionPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      subscriptionPeriodStart: periodStart,
+      subscriptionPeriodEnd: periodEnd,
       adminNotes: notes || '',
     });
 
@@ -612,8 +655,10 @@ exports.adminActivateSubscription = async (req, res, next) => {
     // Update subscription to active
     user.subscription.plan = planType;
     user.subscription.status = 'active';
-    user.subscription.currentPeriodStart = payment.subscriptionPeriodStart;
-    user.subscription.currentPeriodEnd = payment.subscriptionPeriodEnd;
+    user.subscription.billingCycle = billingCycle;
+    user.subscription.currentPeriodStart = periodStart;
+    user.subscription.currentPeriodEnd = periodEnd;
+    user.subscription.autoRenew = false;
 
     await user.save();
 
@@ -803,12 +848,14 @@ exports.approvePayment = async (req, res, next) => {
     // Activate the user's subscription
     const user = payment.userId;
     const subscriptionDuration = payment.billingCycle === 'monthly' ? 30 : 365; // days
+    const periodStart = new Date();
+    const periodEnd = new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000);
     
     user.subscription = {
       status: 'active',
       plan: payment.planType,
-      startDate: new Date(),
-      currentPeriodEnd: new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000),
+      currentPeriodStart: periodStart,
+      currentPeriodEnd: periodEnd,
       billingCycle: payment.billingCycle,
       autoRenew: false, // Manual payments don't auto-renew
     };

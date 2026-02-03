@@ -92,14 +92,42 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
-// Generate invoice number before saving
+// Generate invoice number before saving with retry logic for race conditions
 paymentSchema.pre('save', async function(next) {
   if (this.isNew && !this.invoiceNumber) {
-    const count = await mongoose.model('Payment').countDocuments();
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    this.invoiceNumber = `INV-${year}${month}-${String(count + 1).padStart(5, '0')}`;
-    this.invoiceDate = new Date();
+    const prefix = `INV-${year}${month}-`;
+    
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    while (attempts < maxAttempts) {
+      try {
+        // Find the highest invoice number for this month
+        const lastInvoice = await mongoose.model('Payment')
+          .findOne({ invoiceNumber: new RegExp(`^${prefix}`) })
+          .sort({ invoiceNumber: -1 })
+          .select('invoiceNumber');
+        
+        let nextNumber = 1;
+        if (lastInvoice && lastInvoice.invoiceNumber) {
+          const lastNumber = parseInt(lastInvoice.invoiceNumber.split('-')[2]);
+          nextNumber = lastNumber + 1;
+        }
+        
+        this.invoiceNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+        this.invoiceDate = new Date();
+        break;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          return next(new Error('Failed to generate unique invoice number after multiple attempts'));
+        }
+        // Wait a bit before retry
+        await new Promise(resolve => setTimeout(resolve, 100 * attempts));
+      }
+    }
   }
   next();
 });

@@ -66,6 +66,10 @@ const userSchema = new mongoose.Schema(
         enum: ['free', 'trial', 'active', 'expired', 'cancelled'],
         default: 'free',
       },
+      billingCycle: {
+        type: String,
+        enum: ['monthly', 'yearly'],
+      },
       trialEndsAt: {
         type: Date,
         default: function() {
@@ -75,6 +79,10 @@ const userSchema = new mongoose.Schema(
       },
       currentPeriodStart: Date,
       currentPeriodEnd: Date,
+      autoRenew: {
+        type: Boolean,
+        default: false,
+      },
       stripeCustomerId: String,
       stripeSubscriptionId: String,
     },
