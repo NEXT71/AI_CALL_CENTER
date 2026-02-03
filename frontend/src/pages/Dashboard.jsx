@@ -765,6 +765,7 @@ const Dashboard = () => {
                           <div className="text-right">
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
                               {(payment.planType || payment.requestedPlan || 'starter').toUpperCase()}
+                              {payment.billingCycle && ` - ${payment.billingCycle}`}
                             </span>
                             {payment.amount && (
                               <p className="text-sm font-semibold text-slate-900 mt-1">

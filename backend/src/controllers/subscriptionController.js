@@ -281,11 +281,11 @@ exports.requestSubscription = async (req, res, next) => {
       billingCycle,
       amount: paymentAmount || expectedAmount,
       currency: 'USD',
-      paymentMethod: paymentMethod || 'pending',
-      paymentReference: paymentReference || 'User request - awaiting payment',
+      paymentMethod: paymentMethod || 'other',
+      paymentReference: paymentReference || 'User request - awaiting payment proof',
       transactionId: transactionId || null,
       status: 'pending',
-      notes: notes || `User requested ${planType} ${billingCycle} subscription`,
+      userNotes: notes || `User requested ${planType} ${billingCycle} subscription`,
     });
 
     // Log the request
@@ -694,6 +694,7 @@ exports.getPendingPayments = async (req, res, next) => {
       userEmail: payment.userId.email,
       companyName: payment.userId.companyName,
       planType: payment.planType,
+      billingCycle: payment.billingCycle,
       amount: payment.amount,
       currency: payment.currency,
       paymentMethod: payment.paymentMethod,
@@ -703,7 +704,7 @@ exports.getPendingPayments = async (req, res, next) => {
       status: payment.status,
       requestedAt: payment.createdAt,
       updatedAt: payment.updatedAt,
-      notes: payment.notes,
+      notes: payment.userNotes || payment.adminNotes,
     }));
 
     res.status(200).json({

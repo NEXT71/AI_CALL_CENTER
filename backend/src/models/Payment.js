@@ -13,6 +13,11 @@ const paymentSchema = new mongoose.Schema(
       enum: ['starter', 'professional', 'enterprise'],
       required: true,
     },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'yearly'],
+      default: 'monthly',
+    },
     amount: {
       type: Number,
       required: true,
@@ -32,7 +37,7 @@ const paymentSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ['bank_transfer', 'check', 'wire_transfer', 'cash', 'other'],
-      required: true,
+      default: 'other',
     },
     paymentDate: {
       type: Date,
@@ -89,7 +94,7 @@ const paymentSchema = new mongoose.Schema(
 
 // Generate invoice number before saving
 paymentSchema.pre('save', async function(next) {
-  if (this.isNew && this.status === 'approved' && !this.invoiceNumber) {
+  if (this.isNew && !this.invoiceNumber) {
     const count = await mongoose.model('Payment').countDocuments();
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');

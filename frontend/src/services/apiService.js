@@ -247,7 +247,7 @@ export const subscriptionService = {
     const response = await api.post('/subscriptions/request', {
       planType,
       billingCycle,
-      paymentMethod: paymentDetails.paymentMethod || 'pending',
+      paymentMethod: paymentDetails.paymentMethod || null,
       paymentAmount: paymentDetails.paymentAmount || null,
       paymentReference: paymentDetails.paymentReference || null,
       transactionId: paymentDetails.transactionId || null,
