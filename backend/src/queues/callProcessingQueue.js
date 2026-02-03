@@ -340,10 +340,22 @@ async function processCall(job) {
         callId,
         error: error.message,
       });
-      // Fallback to traditional scoring if AI service fails
+      
+      // Analyze per-speaker sentiment for fallback scoring
+      let fallbackAgentSentiment = sentiment.sentiment || 'neutral';
+      try {
+        if (transcription.speaker_labeled_text) {
+          const perSpeakerSentiment = await aiService.analyzePerSpeakerSentiment(transcription.speaker_labeled_text);
+          fallbackAgentSentiment = perSpeakerSentiment.agent_sentiment || sentiment.sentiment || 'neutral';
+        }
+      } catch (sentError) {
+        logger.warn('Per-speaker sentiment failed in fallback, using overall sentiment', { error: sentError.message });
+      }
+      
+      // Fallback to traditional scoring if AI service fails (using agent sentiment, not overall)
       const fallbackQuality = scoringService.calculateQualityScore({
         transcript: transcription.text,
-        sentiment: sentiment.sentiment,
+        sentiment: fallbackAgentSentiment,
         complianceScore: complianceResult.score,
         duration: callData.duration,
         talkTimeRatio: diarizationData.agent_customer_ratio || diarizationData.talkTimeRatio || '',
@@ -399,7 +411,8 @@ async function processCall(job) {
         deadAirSegments: diarizationData.dead_air_segments || diarizationData.deadAirSegments || [],
         agentSentiment: agentSentimentResult,
         customerSentiment: customerSentimentResult,
-        sentiment: sentiment.label || sentiment.sentiment || 'neutral',
+        // Use agent sentiment for main sentiment field (we're evaluating agent performance)
+        sentiment: agentSentimentResult,
         sentimentScore: sentiment.score || 0.5,
         entities,
         summary,

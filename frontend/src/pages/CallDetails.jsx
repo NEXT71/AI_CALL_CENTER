@@ -200,31 +200,6 @@ const CallDetails = () => {
         </div>
       )}
 
-      {/* Processing Status Banner */}
-      {(call.status === 'processing' || call.status === 'queued') && (
-        <div className="card-enhanced p-6 border-l-4 border-l-blue-500 bg-blue-50">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-blue-900 mb-2">
-                {call.status === 'queued' ? 'Queued for Processing' : 'Processing in Progress'}
-              </h3>
-              <p className="text-blue-800 mb-3">
-                {call.status === 'queued' 
-                  ? 'This call is in the processing queue. It will be analyzed shortly.' 
-                  : 'AI analysis is currently running. This may take 2-10 minutes depending on call length.'}
-              </p>
-              <div className="flex items-center gap-2 text-sm text-blue-700">
-                <Clock size={16} />
-                <span>Started: {call.processingStartedAt ? new Date(call.processingStartedAt).toLocaleTimeString() : 'Pending'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Quality Score Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="kpi-card-enhanced group">

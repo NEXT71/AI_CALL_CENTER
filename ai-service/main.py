@@ -1333,18 +1333,50 @@ async def calculate_quality_score(request: QualityScoreRequest):
             "customer_frustrated": False
         }
         
-        # Factor 1: Customer Tone (25 points) - Sentiment analysis
+        # Extract agent and customer text from speaker-labeled transcript
+        agent_text = ""
+        customer_text = ""
+        
         if request.speaker_labeled_transcript:
-            # Extract customer lines only (assuming speaker 1 is agent, speaker 2 is customer)
-            customer_lines = [line for line in request.speaker_labeled_transcript.split('\n') 
-                            if line.strip().startswith('[Speaker 2]')]
-            customer_text = ' '.join([line.split(']', 1)[1].strip() if ']' in line else '' 
-                                     for line in customer_lines])
+            lines = request.speaker_labeled_transcript.split('\n')
+            agent_lines = []
+            customer_lines = []
             
-            if customer_text and len(customer_text) > 10:
-                try:
-                    # Use sentiment analyzer
-                    sentiment_result = sentiment_analyzer(customer_text[:512])[0]
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Check for different label formats (same as per-speaker sentiment endpoint)
+                if line.startswith('[Agent:') or line.startswith('Agent:'):
+                    text = line.split(':', 1)[1].strip() if ':' in line else line
+                    agent_lines.append(text)
+                elif line.startswith('[Customer:') or line.startswith('Customer:'):
+                    text = line.split(':', 1)[1].strip() if ':' in line else line
+                    customer_lines.append(text)
+                elif line.startswith('[Speaker 1]') or line.startswith('Speaker 1:'):
+                    # Assume Speaker 1 is agent
+                    text = line.split(']', 1)[1].strip() if ']' in line else line.split(':', 1)[1].strip()
+                    agent_lines.append(text)
+                elif line.startswith('[Speaker 2]') or line.startswith('Speaker 2:'):
+                    # Assume Speaker 2 is customer
+                    text = line.split(']', 1)[1].strip() if ']' in line else line.split(':', 1)[1].strip()
+                    customer_lines.append(text)
+            
+            agent_text = ' '.join(agent_lines)
+            customer_text = ' '.join(customer_lines)
+        
+        # Factor 1: Customer Tone (25 points) - Sentiment analysis on customer speech only
+        if customer_text and len(customer_text) > 10:
+            try:
+                # Load sentiment analyzer
+                analyzer = load_sentiment_model()
+                if analyzer is None:
+                    logger.warning("Sentiment analyzer not available, using default score")
+                    factors["customer_tone_score"] = 18.0
+                else:
+                    # Analyze customer sentiment
+                    sentiment_result = analyzer(customer_text[:512], truncation=True, max_length=512)[0]
                     sentiment_label = sentiment_result['label']
                     
                     if sentiment_label == 'POSITIVE':
@@ -1357,11 +1389,11 @@ async def calculate_quality_score(request: QualityScoreRequest):
                     else:
                         factors["customer_tone_score"] = 18.0
                         details["customer_tone"] = "neutral"
-                except Exception as e:
-                    logger.warning(f"Sentiment analysis failed: {e}")
-                    factors["customer_tone_score"] = 18.0
+            except Exception as e:
+                logger.warning(f"Sentiment analysis failed: {e}")
+                factors["customer_tone_score"] = 18.0
         else:
-            # Fallback to whole transcript sentiment
+            # Fallback if no customer text
             factors["customer_tone_score"] = 18.0
         
         # Factor 2: Language Selection (10 points)
@@ -1389,15 +1421,18 @@ async def calculate_quality_score(request: QualityScoreRequest):
         factors["language_score"] = language_scores.get(normalized_lang, 5.0)
         details["detected_language"] = normalized_lang  # Store normalized name
         
-        # Factor 3: Agent Professionalism (25 points) - Detect casual language
+        # Factor 3: Agent Professionalism (25 points) - Detect casual language in agent speech only
         casual_phrases = [
             "yeah", "yep", "nope", "gonna", "wanna", "gotta", "kinda", "sorta",
             "umm", "uh", "like i said", "you know", "basically", "actually"
         ]
         
+        # Use agent text if available, otherwise fall back to full transcript
+        text_to_check = agent_text.lower() if agent_text else transcript_lower
+        
         found_casual = []
         for phrase in casual_phrases:
-            if phrase in transcript_lower:
+            if phrase in text_to_check:
                 found_casual.append(phrase)
         
         details["agent_casual_phrases"] = found_casual
@@ -1409,12 +1444,15 @@ async def calculate_quality_score(request: QualityScoreRequest):
         if len(found_casual) >= 3:
             flags["agent_too_casual"] = True
         
-        # Factor 4: Customer Communication Style (20 points)
+        # Factor 4: Customer Communication Style (20 points) - Check customer speech only
         polite_words = ["please", "thank you", "thanks", "appreciate", "grateful"]
         aggressive_words = ["ridiculous", "unacceptable", "terrible", "awful", "horrible", "disgusting"]
         
-        polite_count = sum(1 for word in polite_words if word in transcript_lower)
-        aggressive_count = sum(1 for word in aggressive_words if word in transcript_lower)
+        # Use customer text if available, otherwise fall back to full transcript
+        customer_text_to_check = customer_text.lower() if customer_text else transcript_lower
+        
+        polite_count = sum(1 for word in polite_words if word in customer_text_to_check)
+        aggressive_count = sum(1 for word in aggressive_words if word in customer_text_to_check)
         
         if aggressive_count >= 2:
             factors["customer_communication_score"] = 8.0
