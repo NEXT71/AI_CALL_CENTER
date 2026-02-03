@@ -291,8 +291,10 @@ exports.requestSubscription = async (req, res, next) => {
     // Log the request
     await AuditLog.create({
       userId,
-      performedBy: userId,
+      userName: req.user.name,
+      userRole: req.user.role,
       action: 'SUBSCRIPTION_REQUEST_CREATED',
+      resourceType: 'Subscription',
       details: {
         planType,
         billingCycle,
