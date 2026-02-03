@@ -29,6 +29,11 @@ const CallDetails = () => {
 
       setCall(callResponse.data);
       setReport(reportResponse?.data);
+      
+      // Debug: Log quality metrics structure
+      console.log('Call Quality Metrics:', callResponse.data.qualityMetrics);
+      console.log('Has aiFactors?', !!callResponse.data.qualityMetrics?.aiFactors);
+      console.log('aiFactors:', callResponse.data.qualityMetrics?.aiFactors);
     } catch (error) {
       console.error('Error fetching call details:', error);
     } finally {
@@ -383,7 +388,7 @@ const CallDetails = () => {
           )}
 
           {/* AI Quality Analysis - New Format */}
-          {call.qualityMetrics?.aiFactors && (
+          {call.qualityMetrics?.aiFactors && Object.keys(call.qualityMetrics.aiFactors).length > 0 && (
             <div className="card-enhanced p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -576,7 +581,7 @@ const CallDetails = () => {
           )}
 
           {/* Quality Overview - Legacy Format (for old calls) */}
-          {call.qualityScore > 0 && !call.qualityMetrics?.aiFactors && (
+          {call.qualityScore > 0 && (!call.qualityMetrics?.aiFactors || Object.keys(call.qualityMetrics.aiFactors).length === 0) && (
             <div className="card-enhanced p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
