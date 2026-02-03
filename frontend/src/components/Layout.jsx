@@ -66,7 +66,7 @@ const Layout = () => {
   const filteredNavigation = navigation.filter(item => hasRole(item.roles));
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <div className="app-layout min-h-screen bg-slate-50 flex font-sans">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 

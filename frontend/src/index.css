@@ -188,48 +188,50 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-600;
   }
-  
-  /* Deep Tech Theme - Override dark text colors for visibility */
-  .text-slate-900 {
-    @apply text-cool-white !important;
-  }
-  
-  .text-slate-800 {
-    @apply text-cool-white/95 !important;
-  }
-  
-  .text-slate-700 {
-    @apply text-cool-white/90 !important;
-  }
-  
-  .text-slate-600 {
-    @apply text-cool-white/80 !important;
-  }
-  
-  .text-gray-900 {
-    @apply text-cool-white !important;
-  }
-  
-  .text-gray-800 {
-    @apply text-cool-white/95 !important;
-  }
-  
-  .text-gray-700 {
-    @apply text-cool-white/90 !important;
-  }
-  
-  /* Override light backgrounds to dark theme */
-  .bg-white {
-    @apply bg-slate-blue !important;
-  }
-  
-  .bg-slate-50 {
-    @apply bg-navy !important;
-  }
-  
-  .bg-slate-100 {
-    @apply bg-slate-blue-dark !important;
-  }
+}
+
+/* Deep Tech Theme - Scoped to authenticated app pages only */
+.app-layout .text-slate-900,
+.app-layout .text-slate-800,
+.app-layout .text-slate-700,
+.app-layout .text-slate-600,
+.app-layout .text-gray-900,
+.app-layout .text-gray-800,
+.app-layout .text-gray-700 {
+  color: #F8FAFC !important; /* Cool White */
+}
+
+.app-layout .text-slate-800 {
+  color: rgba(248, 250, 252, 0.95) !important;
+}
+
+.app-layout .text-slate-700 {
+  color: rgba(248, 250, 252, 0.9) !important;
+}
+
+.app-layout .text-slate-600 {
+  color: rgba(248, 250, 252, 0.8) !important;
+}
+
+/* Override light backgrounds within app layout */
+.app-layout .bg-white {
+  background-color: #334155 !important; /* Slate Blue */
+}
+
+.app-layout .bg-slate-50 {
+  background-color: #0F172A !important; /* Deep Navy */
+}
+
+.app-layout .bg-slate-100 {
+  background-color: #1E293B !important; /* Slate Blue Dark */
+}
+
+.app-layout .hover\:bg-slate-50:hover {
+  background-color: rgba(71, 85, 105, 0.3) !important;
+}
+
+.app-layout .hover\:bg-slate-100:hover {
+  background-color: rgba(71, 85, 105, 0.5) !important;
 }
 
 @keyframes scaleIn {
