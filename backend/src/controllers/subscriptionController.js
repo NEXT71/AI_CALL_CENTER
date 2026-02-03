@@ -823,8 +823,10 @@ exports.approvePayment = async (req, res, next) => {
     // Log the activation
     await AuditLog.create({
       userId: user._id,
-      performedBy: req.user._id,
+      userName: user.name,
+      userRole: user.role,
       action: 'SUBSCRIPTION_ACTIVATED_MANUAL',
+      resourceType: 'Subscription',
       details: {
         planType: payment.planType,
         billingCycle: payment.billingCycle,
@@ -923,8 +925,10 @@ exports.rejectPayment = async (req, res, next) => {
     // Log the rejection
     await AuditLog.create({
       userId: payment.userId._id,
-      performedBy: req.user._id,
+      userName: payment.userId.name,
+      userRole: payment.userId.role,
       action: 'SUBSCRIPTION_PAYMENT_REJECTED',
+      resourceType: 'Subscription',
       details: {
         planType: payment.planType,
         paymentId: payment._id,
