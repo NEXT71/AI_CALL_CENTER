@@ -80,20 +80,61 @@ exports.authorize = (...roles) => {
 exports.checkTrialExpiration = async (req, res, next) => {
   try {
     const user = req.user;
+    const now = new Date();
 
     // Allow free tier users unlimited access with limited features
     if (user.subscription?.status === 'free') {
       return next();
     }
 
-    // Skip check if user has active subscription
-    if (user.subscription?.status === 'active') {
+    // Check for cancelled subscriptions that have passed their period end
+    if (user.subscription?.status === 'cancelled') {
+      const periodEnd = new Date(user.subscription.currentPeriodEnd);
+      if (now > periodEnd) {
+        // Downgrade to free tier
+        user.subscription.status = 'free';
+        user.subscription.plan = 'free';
+        user.subscription.cancelledAt = null;
+        await user.save();
+
+        return res.status(402).json({
+          success: false,
+          message: 'Your subscription has been cancelled and access period has ended. You have been moved to the free plan.',
+          subscriptionExpired: true,
+          downgradedToFree: true,
+        });
+      }
+      // If period hasn't ended yet, allow access
+      return next();
+    }
+
+    // Check for active paid subscriptions that have expired
+    if (user.subscription?.status === 'active' && user.subscription?.plan !== 'free') {
+      const periodEnd = new Date(user.subscription.currentPeriodEnd);
+      if (now > periodEnd) {
+        // Downgrade to free tier
+        user.subscription.status = 'free';
+        user.subscription.plan = 'free';
+        await user.save();
+
+        return res.status(402).json({
+          success: false,
+          message: 'Your paid subscription has expired. You have been moved to the free plan with limited features.',
+          subscriptionExpired: true,
+          downgradedToFree: true,
+        });
+      }
+      // Active and not expired
+      return next();
+    }
+
+    // Allow free tier active subscriptions
+    if (user.subscription?.status === 'active' && user.subscription?.plan === 'free') {
       return next();
     }
 
     // Check if trial has expired
     if (user.subscription?.status === 'trial') {
-      const now = new Date();
       const trialEndsAt = new Date(user.subscription.trialEndsAt);
 
       if (now > trialEndsAt) {
@@ -102,13 +143,15 @@ exports.checkTrialExpiration = async (req, res, next) => {
         user.subscription.plan = 'free';
         await user.save();
 
-        return res.status(200).json({
-          success: true,
+        return res.status(402).json({
+          success: false,
           message: 'Your trial has ended. You have been moved to the free plan with limited features.',
           trialExpired: true,
           downgradedToFree: true,
         });
       }
+      // Trial still active
+      return next();
     }
 
     // If trial is already expired, move to free tier

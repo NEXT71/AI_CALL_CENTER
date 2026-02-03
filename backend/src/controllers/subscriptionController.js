@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const Payment = require('../models/Payment');
 // const stripeService = require('../services/stripeService'); // Commented out for manual payments
 const auditService = require('../services/auditService');
 const { getUsageStats } = require('../middleware/usageLimits');
@@ -218,59 +219,15 @@ exports.createPortalSession = async (req, res, next) => {
 
 /**
  * @route   POST /api/subscriptions/activate
- * @desc    Manually activate subscription (for testing or webhook fallback)
+ * @desc    DISABLED - Users cannot self-activate. Use admin activation instead.
  * @access  Private
  */
 exports.activateSubscription = async (req, res, next) => {
-  try {
-    const { planType } = req.body;
-    
-    logger.info('Manual activation requested:', { userId: req.user._id, planType });
-    
-    if (!planType || !['starter', 'professional', 'enterprise'].includes(planType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid plan type',
-      });
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    // Update subscription to active
-    const wasTrial = user.subscription.status === 'trial';
-    user.subscription.plan = planType;
-    user.subscription.status = 'active';
-    
-    // Set trial end to past date if it was in trial
-    if (wasTrial) {
-      user.subscription.trialEndsAt = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
-    }
-
-    await user.save();
-
-    logger.info('Subscription manually activated:', {
-      userId: user._id,
-      planType,
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Subscription activated successfully',
-      data: {
-        plan: user.subscription.plan,
-        status: user.subscription.status,
-      },
-    });
-  } catch (error) {
-    logger.error('Error activating subscription:', error);
-    next(error);
-  }
+  return res.status(403).json({
+    success: false,
+    message: 'Self-activation is not allowed. Please contact support to activate your subscription after payment.',
+    requiresAdminApproval: true,
+  });
 };
 
 /**
@@ -331,29 +288,53 @@ exports.cancelSubscription = async (req, res, next) => {
       });
     }
 
-    // For manual payments, cancellation is handled by admin
-    // Log the cancellation request
+    // Mark subscription as cancelled
+    const previousPlan = user.subscription.plan;
+    user.subscription.status = 'cancelled';
+    
+    // Keep access until current period ends
+    if (!user.subscription.currentPeriodEnd) {
+      // If no period end, cancel immediately
+      user.subscription.plan = 'free';
+      user.subscription.currentPeriodEnd = new Date();
+    }
+    // Otherwise user keeps access until currentPeriodEnd
+
+    await user.save();
+
+    // Log the cancellation
     await auditService.createAuditLog({
       userId: user._id,
       userName: user.name,
       userRole: user.role,
-      action: 'SUBSCRIPTION_CANCEL_REQUEST',
+      action: 'SUBSCRIPTION_CANCELLED',
       resourceType: 'Subscription',
       details: {
-        planType: user.subscription.plan,
+        previousPlan,
         currentPeriodEnd: user.subscription.currentPeriodEnd,
+        cancelledAt: new Date(),
       },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'pending',
+      status: 'success',
+    });
+
+    logger.info('Subscription cancelled', {
+      userId: user._id,
+      plan: previousPlan,
+      accessUntil: user.subscription.currentPeriodEnd,
     });
 
     res.status(200).json({
       success: true,
-      message: 'Cancellation request submitted. An admin will process your request.',
+      message: 'Subscription cancelled successfully',
       data: {
-        status: 'pending_admin_review',
-        message: 'Your subscription will remain active until an admin processes your cancellation request.',
+        status: 'cancelled',
+        plan: previousPlan,
+        accessUntil: user.subscription.currentPeriodEnd,
+        message: user.subscription.currentPeriodEnd 
+          ? `You will have access to ${previousPlan} features until ${new Date(user.subscription.currentPeriodEnd).toLocaleDateString()}`
+          : 'Your subscription has been cancelled immediately',
       },
     });
   } catch (error) {
@@ -450,7 +431,16 @@ exports.getInvoices = async (req, res, next) => {
  */
 exports.adminActivateSubscription = async (req, res, next) => {
   try {
-    const { userId, planType, paymentMethod, notes } = req.body;
+    const { 
+      userId, 
+      planType, 
+      paymentMethod, 
+      paymentAmount,
+      paymentReference,
+      transactionId,
+      paymentDate,
+      notes 
+    } = req.body;
 
     // Check if requester is admin
     if (req.user.role !== 'Admin') {
@@ -460,10 +450,19 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
+    // Validate required fields including payment proof
     if (!userId || !planType) {
       return res.status(400).json({
         success: false,
         message: 'User ID and plan type are required',
+      });
+    }
+
+    if (!paymentMethod || !paymentAmount || !paymentReference) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment proof required: paymentMethod, paymentAmount, and paymentReference are mandatory',
+        requiredFields: ['paymentMethod', 'paymentAmount', 'paymentReference'],
       });
     }
 
@@ -482,11 +481,46 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
+    // Get plan pricing
+    const planPricing = {
+      starter: 14900,
+      professional: 24900,
+      enterprise: 39900,
+    };
+
+    // Verify payment amount matches plan
+    const expectedAmount = planPricing[planType] / 100; // Convert cents to dollars
+    if (paymentAmount < expectedAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount ($${paymentAmount}) is less than required amount ($${expectedAmount}) for ${planType} plan`,
+      });
+    }
+
+    // Create payment record
+    const payment = new Payment({
+      userId: user._id,
+      planType,
+      amount: paymentAmount,
+      paymentMethod,
+      paymentReference,
+      transactionId: transactionId || null,
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      status: 'approved',
+      approvedBy: req.user._id,
+      approvedAt: new Date(),
+      subscriptionPeriodStart: new Date(),
+      subscriptionPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      adminNotes: notes || '',
+    });
+
+    await payment.save();
+
     // Update subscription to active
     user.subscription.plan = planType;
     user.subscription.status = 'active';
-    user.subscription.currentPeriodStart = new Date();
-    user.subscription.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+    user.subscription.currentPeriodStart = payment.subscriptionPeriodStart;
+    user.subscription.currentPeriodEnd = payment.subscriptionPeriodEnd;
 
     await user.save();
 
@@ -516,7 +550,7 @@ exports.adminActivateSubscription = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Subscription activated successfully',
+      message: 'Subscription activated successfully with payment record',
       data: {
         userId: user._id,
         userName: user.name,
@@ -524,6 +558,12 @@ exports.adminActivateSubscription = async (req, res, next) => {
         plan: user.subscription.plan,
         status: user.subscription.status,
         activatedAt: new Date(),
+        payment: {
+          id: payment._id,
+          invoiceNumber: payment.invoiceNumber,
+          amount: payment.amount,
+          paymentReference: payment.paymentReference,
+        },
       },
     });
   } catch (error) {
@@ -547,30 +587,38 @@ exports.getPendingPayments = async (req, res, next) => {
       });
     }
 
-    // Find users with pending payments by checking audit logs
-    const auditLogs = await AuditLog.find({
-      action: 'SUBSCRIPTION_MANUAL_PAYMENT_REQUEST',
-      'details.requestStatus': 'pending',
-    }).sort({ createdAt: -1 });
+    // Find payments that are pending or verified (awaiting admin approval)
+    const pendingPayments = await Payment.find({
+      status: { $in: ['pending', 'verified'] }
+    })
+      .populate('userId', 'name email companyName')
+      .sort({ createdAt: -1 });
 
-    const pendingUsers = [];
-    for (const log of auditLogs) {
-      const user = await User.findById(log.userId);
-      if (user && user.subscription.status !== 'active') {
-        pendingUsers.push({
-          userId: user._id,
-          userName: user.name,
-          userEmail: user.email,
-          requestedPlan: log.details.planType,
-          requestedAt: log.createdAt,
-          auditLogId: log._id,
-        });
-      }
-    }
+    // Format the response
+    const formattedPayments = pendingPayments.map(payment => ({
+      paymentId: payment._id,
+      invoiceNumber: payment.invoiceNumber,
+      userId: payment.userId._id,
+      userName: payment.userId.name,
+      userEmail: payment.userId.email,
+      companyName: payment.userId.companyName,
+      planType: payment.planType,
+      amount: payment.amount,
+      currency: payment.currency,
+      paymentMethod: payment.paymentMethod,
+      paymentReference: payment.paymentReference,
+      transactionId: payment.transactionId,
+      proofDocuments: payment.proofDocuments,
+      status: payment.status,
+      requestedAt: payment.createdAt,
+      updatedAt: payment.updatedAt,
+      notes: payment.notes,
+    }));
 
     res.status(200).json({
       success: true,
-      data: pendingUsers,
+      count: formattedPayments.length,
+      data: formattedPayments,
     });
   } catch (error) {
     logger.error('Error fetching pending payments:', error);
@@ -603,6 +651,215 @@ exports.getUsage = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('Error fetching usage stats:', error);
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/subscriptions/admin-approve-payment/:paymentId
+ * @desc    Admin approves a payment and activates subscription
+ * @access  Admin only
+ */
+exports.approvePayment = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    const { notes } = req.body;
+
+    // Check if requester is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.',
+      });
+    }
+
+    // Find the payment
+    const payment = await Payment.findById(paymentId).populate('userId');
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found',
+      });
+    }
+
+    // Check if payment is in a state that can be approved
+    if (payment.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment has already been approved',
+      });
+    }
+
+    if (payment.status === 'rejected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot approve a rejected payment',
+      });
+    }
+
+    // Update payment status
+    payment.status = 'approved';
+    payment.approvedBy = req.user._id;
+    payment.approvedAt = new Date();
+    if (notes) {
+      payment.notes = notes;
+    }
+    await payment.save();
+
+    // Activate the user's subscription
+    const user = payment.userId;
+    const subscriptionDuration = payment.billingCycle === 'monthly' ? 30 : 365; // days
+    
+    user.subscription = {
+      status: 'active',
+      plan: payment.planType,
+      startDate: new Date(),
+      currentPeriodEnd: new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000),
+      billingCycle: payment.billingCycle,
+      autoRenew: false, // Manual payments don't auto-renew
+    };
+
+    // Clear trial if exists
+    if (user.trial) {
+      user.trial = undefined;
+    }
+
+    await user.save();
+
+    // Log the activation
+    await AuditLog.create({
+      userId: user._id,
+      performedBy: req.user._id,
+      action: 'SUBSCRIPTION_ACTIVATED_MANUAL',
+      details: {
+        planType: payment.planType,
+        billingCycle: payment.billingCycle,
+        paymentId: payment._id,
+        invoiceNumber: payment.invoiceNumber,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod,
+        approvedBy: req.user.email,
+      },
+      ipAddress: req.ip,
+    });
+
+    // TODO: Send confirmation email to user
+    // await emailService.sendSubscriptionActivatedEmail(user.email, {
+    //   planType: payment.planType,
+    //   invoiceNumber: payment.invoiceNumber,
+    // });
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment approved and subscription activated',
+      data: {
+        payment: {
+          id: payment._id,
+          invoiceNumber: payment.invoiceNumber,
+          status: payment.status,
+          approvedAt: payment.approvedAt,
+        },
+        subscription: {
+          status: user.subscription.status,
+          plan: user.subscription.plan,
+          currentPeriodEnd: user.subscription.currentPeriodEnd,
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Error approving payment:', error);
+    next(error);
+  }
+};
+
+/**
+ * @route   POST /api/subscriptions/admin-reject-payment/:paymentId
+ * @desc    Admin rejects a payment
+ * @access  Admin only
+ */
+exports.rejectPayment = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    const { reason } = req.body;
+
+    // Check if requester is admin
+    if (req.user.role !== 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.',
+      });
+    }
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required',
+      });
+    }
+
+    // Find the payment
+    const payment = await Payment.findById(paymentId).populate('userId');
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found',
+      });
+    }
+
+    // Check if payment is in a state that can be rejected
+    if (payment.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot reject an approved payment',
+      });
+    }
+
+    if (payment.status === 'rejected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment has already been rejected',
+      });
+    }
+
+    // Update payment status
+    payment.status = 'rejected';
+    payment.notes = reason;
+    await payment.save();
+
+    // Log the rejection
+    await AuditLog.create({
+      userId: payment.userId._id,
+      performedBy: req.user._id,
+      action: 'SUBSCRIPTION_PAYMENT_REJECTED',
+      details: {
+        planType: payment.planType,
+        paymentId: payment._id,
+        invoiceNumber: payment.invoiceNumber,
+        amount: payment.amount,
+        reason: reason,
+        rejectedBy: req.user.email,
+      },
+      ipAddress: req.ip,
+    });
+
+    // TODO: Send rejection email to user
+    // await emailService.sendPaymentRejectedEmail(payment.userId.email, {
+    //   invoiceNumber: payment.invoiceNumber,
+    //   reason: reason,
+    // });
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment rejected',
+      data: {
+        paymentId: payment._id,
+        invoiceNumber: payment.invoiceNumber,
+        status: payment.status,
+        reason: reason,
+      },
+    });
+  } catch (error) {
+    logger.error('Error rejecting payment:', error);
     next(error);
   }
 };

@@ -57,6 +57,7 @@ console.log('🔍 DEBUG: runpodRoutes.stack:', runpodRoutes.stack ? 'has routes'
 
 // Import jobs
 // const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
+const subscriptionExpiration = require('./jobs/subscriptionExpiration');
 
 console.log('🔍 DEBUG: Starting environment validation...');
 
@@ -307,6 +308,14 @@ const server = app.listen(PORT, () => {
   
   // Start scheduled jobs
   // fileCleanupJob.start(); // Temporarily disabled
+  
+  // Initialize subscription management cron jobs
+  try {
+    subscriptionExpiration.initSubscriptionJobs();
+    logger.info('Subscription expiration cron jobs initialized');
+  } catch (error) {
+    logger.error('Failed to initialize subscription cron jobs', { error: error.message });
+  }
 });
 
 // Graceful shutdown handler

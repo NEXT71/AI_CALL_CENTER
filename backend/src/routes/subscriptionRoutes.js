@@ -32,5 +32,7 @@ router.get('/invoices', subscriptionController.getInvoices);
 // Admin routes (with proper middleware)
 router.post('/admin-activate', requireAdmin, subscriptionController.adminActivateSubscription);
 router.get('/pending-payments', requireAdmin, subscriptionController.getPendingPayments);
+router.post('/admin-approve-payment/:paymentId', requireAdmin, subscriptionController.approvePayment);
+router.post('/admin-reject-payment/:paymentId', requireAdmin, subscriptionController.rejectPayment);
 
 module.exports = router;

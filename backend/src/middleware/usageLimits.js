@@ -35,8 +35,43 @@ const PLAN_LIMITS = {
 exports.checkCallLimit = async (req, res, next) => {
   try {
     const user = req.user;
-    const plan = user.subscription?.plan || 'free';
+    const subscription = user.subscription || {};
+    const plan = subscription.plan || 'free';
     const limits = PLAN_LIMITS[plan];
+
+    // Check subscription validity first
+    const now = new Date();
+    
+    // Check if subscription expired
+    if (subscription.status === 'active' && subscription.currentPeriodEnd) {
+      if (now > new Date(subscription.currentPeriodEnd)) {
+        return res.status(402).json({
+          success: false,
+          message: 'Your subscription has expired. Please renew to continue.',
+          subscriptionExpired: true,
+        });
+      }
+    }
+
+    // Check if trial expired
+    if (subscription.status === 'trial' && subscription.trialEndsAt) {
+      if (now > new Date(subscription.trialEndsAt)) {
+        return res.status(402).json({
+          success: false,
+          message: 'Your trial has expired. Please upgrade to continue.',
+          trialExpired: true,
+        });
+      }
+    }
+
+    // Check if subscription is in invalid state
+    if (['expired', 'cancelled'].includes(subscription.status) && plan !== 'free') {
+      return res.status(402).json({
+        success: false,
+        message: `Your subscription is ${subscription.status}. Please renew to continue.`,
+        subscriptionStatus: subscription.status,
+      });
+    }
 
     // If unlimited (enterprise), skip check
     if (limits.callsPerMonth === -1) {
@@ -44,7 +79,6 @@ exports.checkCallLimit = async (req, res, next) => {
     }
 
     // Get start of current month
-    const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Count calls uploaded this month by this user
