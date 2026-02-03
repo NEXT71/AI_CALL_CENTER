@@ -382,7 +382,7 @@ const CallDetails = () => {
             </div>
           )}
 
-          {/* AI Quality Analysis */}
+          {/* AI Quality Analysis - New Format */}
           {call.qualityMetrics?.aiFactors && (
             <div className="card-enhanced p-6">
               <div className="flex items-center justify-between mb-6">
@@ -567,6 +567,115 @@ const CallDetails = () => {
                         <strong>Do Not Call Penalty (-20 pts):</strong> Detects when customer requests not to be called again. 
                         Phrases like &quot;don&apos;t call me&quot;, &quot;remove from list&quot;, etc. trigger this penalty.
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quality Overview - Legacy Format (for old calls) */}
+          {call.qualityScore > 0 && !call.qualityMetrics?.aiFactors && (
+            <div className="card-enhanced p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Award size={20} className="text-purple-600" />
+                  Quality Score
+                </h2>
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold">
+                    {call.qualityScore}/100
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-900">
+                  <strong>Note:</strong> This call was processed with the legacy scoring system. 
+                  New calls will show detailed AI-powered quality factors.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Overall Quality */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Award size={18} className="text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Overall Quality</div>
+                      <div className="text-sm text-slate-600">
+                        {call.qualityScore >= 90 ? 'Excellent' :
+                         call.qualityScore >= 70 ? 'Good' :
+                         call.qualityScore >= 50 ? 'Fair' : 'Needs Improvement'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-purple-600">{call.qualityScore}/100</div>
+                  </div>
+                </div>
+
+                {/* Sentiment */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <MessageSquare size={18} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">Sentiment</div>
+                      <div className="text-sm text-slate-600 capitalize">{call.sentiment || 'neutral'}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                      call.sentiment === 'positive' ? 'bg-green-100 text-green-800 border-green-200' :
+                      call.sentiment === 'negative' ? 'bg-red-100 text-red-800 border-red-200' :
+                      'bg-blue-100 text-blue-800 border-blue-200'
+                    }`}>
+                      {call.sentiment || 'neutral'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Traditional Metrics */}
+                {call.qualityMetrics?.hasGreeting !== undefined && (
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        {call.qualityMetrics.hasGreeting ? (
+                          <CheckCircle size={18} className="text-green-600" />
+                        ) : (
+                          <XCircle size={18} className="text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">Greeting</div>
+                        <div className="text-sm text-slate-600">
+                          {call.qualityMetrics.hasGreeting ? 'Present' : 'Missing'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {call.qualityMetrics?.hasProperClosing !== undefined && (
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        {call.qualityMetrics.hasProperClosing ? (
+                          <CheckCircle size={18} className="text-orange-600" />
+                        ) : (
+                          <XCircle size={18} className="text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">Proper Closing</div>
+                        <div className="text-sm text-slate-600">
+                          {call.qualityMetrics.hasProperClosing ? 'Present' : 'Missing'}
+                        </div>
                       </div>
                     </div>
                   </div>
