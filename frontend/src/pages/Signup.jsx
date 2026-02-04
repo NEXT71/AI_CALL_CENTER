@@ -176,9 +176,9 @@ const Signup = () => {
 
   if (step === 3) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-4">
         <div className="max-w-md w-full">
-          <div className="card-enhanced text-center p-8 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-200/60 text-center animate-fade-in">
             <div className="mb-6">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <Check className="text-green-600" size={40} />
@@ -232,7 +232,7 @@ const Signup = () => {
 
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-slate-50 py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 py-12 px-4">
         <div className="max-w-6xl mx-auto animate-fade-in">
           <div className="text-center mb-12">
             <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors">
@@ -249,7 +249,7 @@ const Signup = () => {
             {Object.entries(plans).map(([key, plan]) => (
               <div
                 key={key}
-                className={`card-enhanced relative transition-all duration-300 hover:-translate-y-1 ${
+                className={`bg-white rounded-2xl shadow-lg border border-slate-200/60 p-6 relative transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${
                   plan.popular ? 'border-2 border-blue-600 shadow-xl' : ''
                 } ${formData.plan === key ? 'ring-2 ring-blue-500' : ''}`}
               >
@@ -286,8 +286,8 @@ const Signup = () => {
 
                 <button
                   onClick={() => handlePlanSelect(key)}
-                  className={`w-full btn-enhanced py-3 ${
-                    plan.popular || formData.plan === key ? 'btn-primary-enhanced' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  className={`w-full px-4 py-3 rounded-xl font-semibold text-base transition-all duration-200 ${
+                    plan.popular || formData.plan === key ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-md hover:shadow-lg'
                   }`}
                 >
                   {formData.plan === key ? 'Selected' : 'Select Plan'}
@@ -301,7 +301,7 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 py-12 px-4">
       <div className="max-w-2xl mx-auto animate-fade-in">
         <div className="text-center mb-8">
           <button
@@ -311,7 +311,7 @@ const Signup = () => {
             <ArrowLeft size={20} />
             Change Plan
           </button>
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl mb-6">
             <UserPlus className="text-white" size={32} />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h1>
@@ -320,7 +320,7 @@ const Signup = () => {
           </p>
         </div>
 
-        <div className="card-enhanced p-8">
+        <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-200/60">
           {/* Trial Banner */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 mb-8">
             <div className="flex items-start gap-4">
@@ -359,7 +359,7 @@ const Signup = () => {
                 <input
                   type="text"
                   required
-                  className="input-enhanced w-full"
+                  className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="John Doe"
@@ -373,7 +373,7 @@ const Signup = () => {
                 <input
                   type="text"
                   required
-                  className="input-enhanced w-full"
+                  className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                   placeholder="Acme Inc."
@@ -388,7 +388,7 @@ const Signup = () => {
               <input
                 type="email"
                 required
-                className="input-enhanced w-full"
+                className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="john@company.com"
@@ -399,7 +399,7 @@ const Signup = () => {
               <label className="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
               <input
                 type="tel"
-                className="input-enhanced w-full"
+                className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+1 (555) 123-4567"
@@ -414,7 +414,7 @@ const Signup = () => {
                 <input
                   type="password"
                   required
-                  className="input-enhanced w-full"
+                  className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Min. 6 characters"
@@ -428,7 +428,7 @@ const Signup = () => {
                 <input
                   type="password"
                   required
-                  className="input-enhanced w-full"
+                  className="w-full px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="Re-enter password"
@@ -468,7 +468,7 @@ const Signup = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-enhanced btn-primary-enhanced py-4 text-base font-semibold shadow-lg shadow-blue-500/20"
+              className="w-full px-4 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-base transition-all duration-200 inline-flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">

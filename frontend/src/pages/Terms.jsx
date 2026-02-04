@@ -3,7 +3,7 @@ import { ArrowLeft, FileText, Shield, Scale, Lock, AlertCircle, HelpCircle } fro
 
 const Terms = () => {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
       {/* Header */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,7 +45,7 @@ const Terms = () => {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20 pb-20">
-        <div className="card-enhanced p-8 md:p-12 shadow-xl">
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200/60 p-8 md:p-12 shadow-xl">
           <div className="space-y-12">
             <section className="relative pl-8 border-l-2 border-blue-100">
               <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-600 ring-4 ring-white"></div>
