@@ -2,11 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Performance Optimizations */
 @layer base {
+  /* Enable hardware acceleration for animations */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Optimize for 60fps animations */
+  @media (prefers-reduced-motion: no-preference) {
+    * {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Optimize rendering performance */
+  img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Improve text rendering */
   body {
     @apply bg-navy text-cool-white antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
+  /* Optimize animations with will-change */
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-in-right {
+    will-change: opacity, transform;
+  }
+
+  .animate-spin {
+    will-change: transform;
+  }
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
@@ -18,33 +66,75 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-blue rounded-full hover:bg-slate-blue-light transition-colors;
+    @apply bg-slate-blue rounded-full hover:bg-slate-blue-light;
+    transition: background-color 0.2s ease;
   }
 }
 
 @layer components {
+  /* Optimized button with GPU acceleration */
   .btn-primary {
-    @apply px-4 py-2 bg-electric-blue text-cool-white rounded-lg hover:bg-electric-blue-dark active:bg-electric-blue-dark transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-electric-blue text-cool-white rounded-lg inline-flex items-center justify-center font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-electric-blue-dark shadow-md;
+    transform: translateY(-1px) translateZ(0);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    @apply bg-electric-blue-dark;
+    transform: translateY(0) translateZ(0);
   }
   
   .btn-secondary {
-    @apply px-4 py-2 bg-slate-blue text-cool-white border border-slate-blue-light rounded-lg hover:bg-slate-blue-light hover:text-cool-white transition-all duration-200 inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-slate-blue text-cool-white border border-slate-blue-light rounded-lg inline-flex items-center justify-center font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-slate-blue-light shadow-md;
+    transform: translateY(-1px) translateZ(0);
   }
 
   .btn-error {
-    @apply px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center justify-center font-medium shadow-sm hover:shadow-md;
+    @apply px-4 py-2 bg-red-600 text-white rounded-lg inline-flex items-center justify-center font-medium shadow-sm;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
+  .btn-error:hover {
+    @apply bg-red-700 shadow-md;
+    transform: translateY(-1px) translateZ(0);
+  }
+
+  /* Optimized card with GPU acceleration */
   .card {
-    @apply bg-slate-blue rounded-xl border border-slate-blue-light shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply bg-slate-blue rounded-xl border border-slate-blue-light shadow-sm;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .card:hover {
+    @apply shadow-md;
+    transform: translateY(-2px) translateZ(0);
   }
 
   .input-field {
-    @apply w-full px-4 py-2 rounded-lg border border-slate-blue-light focus:ring-2 focus:ring-electric-blue focus:border-electric-blue outline-none transition-all duration-200 bg-slate-blue text-cool-white;
+    @apply w-full px-4 py-2 rounded-lg border border-slate-blue-light focus:ring-2 focus:ring-electric-blue focus:border-electric-blue outline-none bg-slate-blue text-cool-white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .glass-panel {
     @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
+    backface-visibility: hidden;
   }
 
   /* Enhanced Dashboard Styles */

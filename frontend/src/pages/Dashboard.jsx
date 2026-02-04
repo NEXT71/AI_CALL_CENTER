@@ -1,10 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/apiService';
+import { useDebounce } from '../hooks/usePerformance';
 import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
 import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard, RefreshCw } from 'lucide-react';
+
+// Memoized stat card component
+const StatCard = memo(({ icon: Icon, label, value, change, changeType, color, loading }) => {
+  if (loading) {
+    return (
+      <div className="kpi-card-enhanced animate-pulse">
+        <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
+        <div className="h-8 bg-slate-200 rounded w-32"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="kpi-card-enhanced group">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="kpi-label-enhanced">{label}</p>
+          <p className="kpi-value-enhanced">{value}</p>
+          {change && (
+            <div className={`kpi-change-enhanced flex items-center gap-1 mt-2 ${
+              changeType === 'positive' ? 'text-green-600' : changeType === 'negative' ? 'text-red-600' : 'text-slate-600'
+            }`}>
+              {changeType === 'positive' ? <ArrowUp size={14} /> : changeType === 'negative' ? <ArrowDown size={14} /> : null}
+              <span>{change}</span>
+            </div>
+          )}
+        </div>
+        <div className={`kpi-icon-enhanced ${color}`}>
+          <Icon size={24} />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+StatCard.displayName = 'StatCard';
+
+// Memoized recent call row
+const RecentCallRow = memo(({ call, formatDate, getScoreBadge }) => (
+  <tr key={call._id}>
+    <td className="px-6 py-4">
+      <div className="font-medium text-cool-white">{call.agentName || 'Unknown'}</div>
+      <div className="text-xs text-cool-white/60">{call.campaign || 'N/A'}</div>
+    </td>
+    <td className="px-6 py-4 text-cool-white/80">{formatDate(call.callDate)}</td>
+    <td className="px-6 py-4">
+      <span className={`badge-compact ${getScoreBadge(call.qualityScore)}`}>
+        {call.qualityScore ? `${call.qualityScore}%` : 'N/A'}
+      </span>
+    </td>
+    <td className="px-6 py-4">
+      <Link to={`/app/calls/${call._id}`} className="text-electric-blue hover:text-electric-blue-light inline-flex items-center gap-1 transition-colors">
+        <Eye size={16} />
+        View
+      </Link>
+    </td>
+  </tr>
+));
+
+RecentCallRow.displayName = 'RecentCallRow';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -20,13 +81,64 @@ const Dashboard = () => {
     endDate: new Date().toISOString().split('T')[0],
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [dateRange, campaign, user]);
+  // Debounce campaign filter to avoid excessive API calls
+  const debouncedCampaign = useDebounce(campaign, 500);
 
-  const fetchDashboardData = async () => {
+  // Memoize utility functions
+  const getScoreBadge = useCallback((score) => {
+    if (!score) return 'badge-neutral';
+    if (score >= 90) return 'badge-score-high';
+    if (score >= 75) return 'badge-score-medium';
+    if (score >= 60) return 'badge-score-low';
+    return 'badge-score-critical';
+  }, []);
+
+  const formatDate = useCallback((date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, []);
+
+  const formatTime = useCallback((date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, []);
+
+  const getPlanDisplayName = useCallback((plan) => {
+    const planNames = {
+      'starter': 'Starter Plan',
+      'professional': 'Professional Plan',
+      'enterprise': 'Enterprise Plan'
+    };
+    return planNames[plan] || 'Free Trial';
+  }, []);
+
+  const getStatusColor = useCallback((status) => {
+    switch (status) {
+      case 'active': return 'text-green-600 bg-green-100';
+      case 'trial': return 'text-blue-600 bg-blue-100';
+      case 'expired': return 'text-red-600 bg-red-100';
+      case 'cancelled': return 'text-gray-600 bg-gray-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  }, []);
+
+  const getStatusText = useCallback((status) => {
+    switch (status) {
+      case 'active': return 'Active';
+      case 'trial': return 'Trial';
+      case 'expired': return 'Expired';
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
+    }
+  }, []);
+
+  const fetchDashboardData = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -39,15 +151,15 @@ const Dashboard = () => {
       // Only fetch call data for non-admin users
       if (user.role !== 'Admin') {
         promises.push(
-          apiService.getCalls({ limit: 10, status: 'completed', campaign })
+          apiService.getCalls({ limit: 10, status: 'completed', campaign: debouncedCampaign })
         );
       } else {
         promises.push(Promise.resolve({ data: [] })); // Empty array for admin
       }
 
       promises.push(
-        apiService.getAnalyticsSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
-        apiService.getSalesSummary({ ...dateRange, campaign }).catch(() => ({ data: null })),
+        apiService.getAnalyticsSummary({ ...dateRange, campaign: debouncedCampaign }).catch(() => ({ data: null })),
+        apiService.getSalesSummary({ ...dateRange, campaign: debouncedCampaign }).catch(() => ({ data: null })),
         apiService.getCurrentSubscription().catch(() => ({ success: false })),
         apiService.getPendingPayments().catch(() => ({ success: false, data: [] })),
       );
@@ -68,60 +180,13 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, dateRange, debouncedCampaign]);
 
-  const getScoreBadge = (score) => {
-    if (!score) return 'badge-neutral';
-    if (score >= 90) return 'badge-score-high';
-    if (score >= 75) return 'badge-score-medium';
-    if (score >= 60) return 'badge-score-low';
-    return 'badge-score-critical';
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getPlanDisplayName = (plan) => {
-    const planNames = {
-      'starter': 'Starter Plan',
-      'professional': 'Professional Plan',
-      'enterprise': 'Enterprise Plan'
-    };
-    return planNames[plan] || 'Free Trial';
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'text-green-600 bg-green-100';
-      case 'trial': return 'text-blue-600 bg-blue-100';
-      case 'expired': return 'text-red-600 bg-red-100';
-      case 'cancelled': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
     }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'active': return 'Active';
-      case 'trial': return 'Trial';
-      case 'expired': return 'Expired';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Unknown';
-    }
-  };
+  }, [fetchDashboardData, user]);
 
   const handleActivateSubscription = async (payment) => {
     // Plan prices for validation

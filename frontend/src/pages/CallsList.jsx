@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { callService } from '../services/apiService';
+import { useDebounce } from '../hooks/usePerformance';
 import {
   Search,
   Filter,
@@ -19,6 +20,44 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+
+// Memoized call row component
+const CallRow = memo(({ call, formatDate, getScoreBadge }) => (
+  <tr className="hover:bg-slate-blue-light/20 transition-colors">
+    <td className="px-6 py-4">
+      <div className="font-medium text-cool-white">{call.agentName || 'Unknown'}</div>
+      <div className="text-xs text-cool-white/60">{call.campaign || 'N/A'}</div>
+    </td>
+    <td className="px-6 py-4 text-cool-white/80">
+      {formatDate(call.callDate)}
+    </td>
+    <td className="px-6 py-4">
+      <span className={`badge-compact ${getScoreBadge(call.qualityScore)}`}>
+        {call.qualityScore ? `${call.qualityScore}%` : 'N/A'}
+      </span>
+    </td>
+    <td className="px-6 py-4">
+      <span className={`badge-compact ${
+        call.status === 'completed' ? 'badge-success' : 
+        call.status === 'processing' ? 'badge-warning' : 
+        'badge-danger'
+      }`}>
+        {call.status}
+      </span>
+    </td>
+    <td className="px-6 py-4">
+      <Link 
+        to={`/app/calls/${call._id}`} 
+        className="text-electric-blue hover:text-electric-blue-light inline-flex items-center gap-1 transition-colors"
+      >
+        <Eye size={16} />
+        View
+      </Link>
+    </td>
+  </tr>
+));
+
+CallRow.displayName = 'CallRow';
 
 const CallsList = () => {
   const { user } = useAuth();
@@ -45,13 +84,36 @@ const CallsList = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchCalls();
-    }
-  }, [filters, user, sortField, sortDirection]);
+  // Debounce filter inputs to reduce API calls
+  const debouncedCampaign = useDebounce(filters.campaign, 500);
+  const debouncedAgentName = useDebounce(filters.agentName, 500);
 
-  const fetchCalls = async (isRefresh = false) => {
+  // Memoize utility functions
+  const getScoreBadge = useCallback((score) => {
+    if (!score) return 'badge-neutral';
+    if (score >= 90) return 'badge-score-high';
+    if (score >= 75) return 'badge-score-medium';
+    if (score >= 60) return 'badge-score-low';
+    return 'badge-score-critical';
+  }, []);
+
+  const formatDate = useCallback((date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, []);
+
+  const formatTime = useCallback((date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, []);
+
+  const fetchCalls = useCallback(async (isRefresh = false) => {
     if (!user) {
       setLoading(false);
       return;
@@ -61,42 +123,19 @@ const CallsList = () => {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(true);
-      }
-
-      const response = await callService.getCalls({
-        ...filters,
-        sort: sortField,
-        order: sortDirection
-      });
-
-      setCalls(response.data);
-      setPagination({
-        total: response.total,
-        totalPages: response.totalPages,
-        currentPage: response.currentPage,
-      });
-    } catch (error) {
-      console.error('Error fetching calls:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const handleSort = (field) => {
+        setLoading(truseCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-    setFilters({ ...filters, page: 1 });
-  };
+    setFilters(prev => ({ ...prev, page: 1 }));
+  }, [sortField, sortDirection]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchCalls(true);
-  };
+  }, [fetchCalls]);
 
   const getScoreBadge = (score) => {
     if (!score) return 'badge-neutral';
@@ -104,6 +143,37 @@ const CallsList = () => {
     if (score >= 75) return 'badge-score-medium';
     if (score >= 60) return 'badge-score-low';
     return 'badge-score-critical';
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const resetFilters = useCallback(() => {
+    setFilters({
+      campaign: '',
+      agentName: '',
+      status: '',
+      minQuality: '',
+      maxQuality: '',
+      startDate: '',
+      endDate: '',
+      page: 1,
+      limit: 20,
+    });
+  }, []) return 'badge-score-critical';
   };
 
   const formatDate = (date) => {

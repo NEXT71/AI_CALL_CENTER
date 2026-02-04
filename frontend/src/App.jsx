@@ -1,44 +1,62 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+
+// Eager load critical components
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleGuard from './components/RoleGuard';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import CallsList from './pages/CallsList';
-import CallDetails from './pages/CallDetails';
-import UploadCall from './pages/UploadCall';
-import ComplianceRules from './pages/ComplianceRules';
-import Analytics from './pages/Analytics';
-import Subscription from './pages/Subscription';
-import SubscriptionSuccess from './pages/SubscriptionSuccess';
-import SubscriptionCancelled from './pages/SubscriptionCancelled';
-import ViewSales from './pages/ViewSales';
-import AddSales from './pages/AddSales';
-import SalesReports from './pages/SalesReports';
-import UserManagement from './pages/UserManagement';
-import SystemReports from './pages/SystemReports';
-import Landing from './pages/Landing';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
-import About from './pages/About';
-import Contact from './pages/Contact';
+
+// Lazy load public pages
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const About = lazy(() => import('./pages/About'));
+const Contact = lazy(() => import('./pages/Contact'));
+
+// Lazy load authenticated pages
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const CallsList = lazy(() => import('./pages/CallsList'));
+const CallDetails = lazy(() => import('./pages/CallDetails'));
+const UploadCall = lazy(() => import('./pages/UploadCall'));
+const ComplianceRules = lazy(() => import('./pages/ComplianceRules'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const SubscriptionSuccess = lazy(() => import('./pages/SubscriptionSuccess'));
+const SubscriptionCancelled = lazy(() => import('./pages/SubscriptionCancelled'));
+const ViewSales = lazy(() => import('./pages/ViewSales'));
+const AddSales = lazy(() => import('./pages/AddSales'));
+const SalesReports = lazy(() => import('./pages/SalesReports'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
+const SystemReports = lazy(() => import('./pages/SystemReports'));
+
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+      <p className="text-slate-600 font-medium">Loading...</p>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          {/* Public Marketing Pages */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Marketing Pages */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
           
           {/* Auth */}
           <Route path="/login" element={<Login />} />
@@ -67,8 +85,9 @@ function App() {
             <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><UserManagement /></RoleGuard>} />
             <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><SystemReports /></RoleGuard>} />
           </Route>
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
