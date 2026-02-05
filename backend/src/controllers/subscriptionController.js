@@ -3,7 +3,7 @@ const AuditLog = require('../models/AuditLog');
 const Payment = require('../models/Payment');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs').promises;
+const fs = require('fs');
 // const stripeService = require('../services/stripeService'); // Commented out for manual payments
 const auditService = require('../services/auditService');
 const { getUsageStats } = require('../middleware/usageLimits');
@@ -12,14 +12,16 @@ const logger = require('../config/logger');
 
 // Configure multer for payment proof uploads with security restrictions
 const paymentProofStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
+  destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, '../../uploads/payment-proofs');
-    try {
-      await fs.mkdir(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    } catch (error) {
-      cb(error);
-    }
+    // Create directory if it doesn't exist
+    fs.mkdir(uploadPath, { recursive: true }, (err) => {
+      if (err) {
+        cb(err);
+      } else {
+        cb(null, uploadPath);
+      }
+    });
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
@@ -645,8 +647,10 @@ exports.adminActivateSubscription = (req, res, next) => {
       // SECURITY: Payment details are REQUIRED
       if (!paymentMethod || !paymentAmount || !paymentReference) {
         // Clean up uploaded files since validation failed
-        for (const file of req.files) {
-          await fs.unlink(file.path).catch(() => {});
+        if (req.files && req.files.length > 0) {
+          req.files.forEach(file => {
+            fs.unlink(file.path, () => {});
+          });
         }
         return res.status(400).json({
           success: false,
@@ -658,8 +662,10 @@ exports.adminActivateSubscription = (req, res, next) => {
       // Validate payment reference is not empty
       if (!paymentReference.trim()) {
         // Clean up uploaded files
-        for (const file of req.files) {
-          await fs.unlink(file.path).catch(() => {});
+        if (req.files && req.files.length > 0) {
+          req.files.forEach(file => {
+            fs.unlink(file.path, () => {});
+          });
         }
         return res.status(400).json({
           success: false,
@@ -800,9 +806,9 @@ exports.adminActivateSubscription = (req, res, next) => {
     } catch (error) {
       // Clean up uploaded files on error
       if (req.files && req.files.length > 0) {
-        for (const file of req.files) {
-          await fs.unlink(file.path).catch(() => {});
-        }
+        req.files.forEach(file => {
+          fs.unlink(file.path, () => {});
+        });
       }
       logger.error('Error activating subscription:', error);
       return res.status(500).json({
