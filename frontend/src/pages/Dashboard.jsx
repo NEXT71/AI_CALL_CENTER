@@ -228,19 +228,22 @@ const Dashboard = () => {
       return;
     }
 
-    // Payment method
-    const paymentMethod = prompt('Payment Method (bank_transfer/cash/check/other):', 'bank_transfer');
-    if (!paymentMethod) return;
-
-    // Payment reference (required)
-    const paymentReference = prompt('Payment Reference/Receipt Number (REQUIRED):', '');
-    if (!paymentReference || paymentReference.trim() === '') {
-      alert('Payment reference is required!');
+    // Payment method - REQUIRED
+    const paymentMethod = prompt('Payment Method (REQUIRED - bank_transfer/cash/check/card/other):', 'bank_transfer');
+    if (!paymentMethod || !paymentMethod.trim()) {
+      alert('Payment method is REQUIRED for security and audit compliance!');
       return;
     }
 
-    // Transaction ID (optional)
-    const transactionId = prompt('Bank Transaction ID (optional, press Cancel to skip):', '');
+    // Payment reference - REQUIRED
+    const paymentReference = prompt('Payment Reference/Receipt Number (REQUIRED for audit):', '');
+    if (!paymentReference || !paymentReference.trim()) {
+      alert('Payment reference is REQUIRED! Please provide a valid receipt/transaction number.');
+      return;
+    }
+
+    // Transaction ID (optional but recommended)
+    const transactionId = prompt('Bank Transaction ID (optional but recommended):', '');
 
     try {
       setLoading(true);

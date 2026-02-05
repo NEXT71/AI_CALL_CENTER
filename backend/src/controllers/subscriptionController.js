@@ -572,7 +572,7 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
-    // Validate required fields including payment proof
+    // Validate required fields - Payment proof is MANDATORY for security and audit compliance
     if (!userId || !planType || !billingCycle) {
       return res.status(400).json({
         success: false,
@@ -580,11 +580,21 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
+    // SECURITY: Payment proof is REQUIRED to prevent fraud
     if (!paymentMethod || !paymentAmount || !paymentReference) {
       return res.status(400).json({
         success: false,
-        message: 'Payment proof required: paymentMethod, paymentAmount, and paymentReference are mandatory',
+        message: 'Payment proof required: paymentMethod, paymentAmount, and paymentReference are mandatory for audit compliance',
         requiredFields: ['paymentMethod', 'paymentAmount', 'paymentReference'],
+        reason: 'Payment verification is required to prevent unauthorized subscription activations',
+      });
+    }
+
+    // Validate payment reference is not empty
+    if (!paymentReference.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment reference cannot be empty. Please provide a valid receipt/transaction number.',
       });
     }
 
@@ -611,19 +621,23 @@ exports.adminActivateSubscription = async (req, res, next) => {
       });
     }
 
-    // Get plan pricing
+    // Get plan pricing and validate payment
     const planPricing = {
-      starter: 14900,
-      professional: 24900,
-      enterprise: 39900,
+      starter: { monthly: 149, yearly: 1490 },
+      professional: { monthly: 249, yearly: 2490 },
+      enterprise: { monthly: 399, yearly: 3990 },
     };
 
-    // Verify payment amount matches plan
-    const expectedAmount = planPricing[planType] / 100; // Convert cents to dollars
-    if (paymentAmount < expectedAmount) {
+    const expectedAmount = planPricing[planType][billingCycle];
+
+    // SECURITY: Verify payment amount matches expected amount (with small tolerance for fees)
+    if (paymentAmount < expectedAmount * 0.95) {
       return res.status(400).json({
         success: false,
-        message: `Payment amount ($${paymentAmount}) is less than required amount ($${expectedAmount}) for ${planType} plan`,
+        message: `Payment amount ($${paymentAmount}) is less than the required amount ($${expectedAmount}) for ${planType} ${billingCycle} plan`,
+        expectedAmount,
+        providedAmount: paymentAmount,
+        minimumRequired: expectedAmount * 0.95,
       });
     }
 
@@ -632,22 +646,22 @@ exports.adminActivateSubscription = async (req, res, next) => {
     const periodStart = new Date();
     const periodEnd = new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000);
 
-    // Create payment record
+    // Create payment record with VERIFIED payment details
     const payment = new Payment({
       userId: user._id,
       planType,
       billingCycle,
       amount: paymentAmount,
-      paymentMethod,
-      paymentReference,
-      transactionId: transactionId || null,
+      paymentMethod: paymentMethod.toLowerCase(),
+      paymentReference: paymentReference.trim(),
+      transactionId: transactionId ? transactionId.trim() : null,
       paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
       status: 'approved',
       approvedBy: req.user._id,
       approvedAt: new Date(),
       subscriptionPeriodStart: periodStart,
       subscriptionPeriodEnd: periodEnd,
-      adminNotes: notes || '',
+      adminNotes: notes || 'Subscription activated by admin with payment verification',
     });
 
     await payment.save();
