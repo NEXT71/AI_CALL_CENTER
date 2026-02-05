@@ -211,47 +211,33 @@ const Dashboard = () => {
     const planType = payment.requestedPlan || 'starter';
     
     // STEP 1: FILE UPLOAD FIRST (must be triggered immediately from user click)
-    // Create file input FIRST before any dialogs
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.multiple = true;
-    fileInput.accept = 'image/jpeg,image/png,application/pdf,.doc,.docx';
-    fileInput.style.position = 'fixed';
-    fileInput.style.top = '-100px';
-    document.body.appendChild(fileInput);
-    
-    // Show info and trigger immediately
-    const proceed = confirm('⚠️ PAYMENT PROOF REQUIRED\n\nYou must upload payment proof documents to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nClick OK to select files now...');
-    
-    if (!proceed) {
-      document.body.removeChild(fileInput);
+    if (!confirm('⚠️ PAYMENT PROOF REQUIRED FIRST\n\nYou must upload payment proof documents to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nClick OK to select files now...')) {
       alert('Subscription activation cancelled.');
       return;
     }
     
-    // Trigger file picker immediately after confirm
+    // Create and trigger file input immediately (while still in user gesture)
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/jpeg,image/png,application/pdf,.doc,.docx';
+    
+    // Trigger file picker synchronously
     fileInput.click();
     
     // Wait for file selection
     const files = await new Promise((resolve) => {
-      let resolved = false;
-      
       fileInput.onchange = (e) => {
-        if (!resolved) {
-          resolved = true;
-          document.body.removeChild(fileInput);
-          resolve(e.target.files);
-        }
+        resolve(e.target.files);
       };
-      
-      // Timeout fallback
-      setTimeout(() => {
-        if (!resolved && (!fileInput.files || fileInput.files.length === 0)) {
-          resolved = true;
-          document.body.removeChild(fileInput);
-          resolve(null);
-        }
-      }, 300000); // 5 minute timeout
+      // Handle cancel/close
+      window.addEventListener('focus', () => {
+        setTimeout(() => {
+          if (!fileInput.files || fileInput.files.length === 0) {
+            resolve(null);
+          }
+        }, 500);
+      }, { once: true });
     });
 
     if (!files || files.length === 0) {
