@@ -298,7 +298,7 @@ const Dashboard = () => {
       );
 
       if (response.success) {
-        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.user?.name || 'N/A'}\nEmail: ${response.data.user?.email || 'N/A'}\nPlan: ${response.data.subscription?.plan || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nPeriod End: ${response.data.subscription?.currentPeriodEnd ? new Date(response.data.subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`);
+        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.userName || 'N/A'}\nEmail: ${response.data.userEmail || 'N/A'}\nPlan: ${response.data.plan || 'N/A'}\nStatus: ${response.data.status || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nProof Files: ${response.data.payment?.proofDocumentsCount || 0}`);
 
         // Refresh pending payments
         const refreshResponse = await apiService.getPendingPayments();
