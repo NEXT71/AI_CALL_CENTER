@@ -210,6 +210,60 @@ const Dashboard = () => {
 
     const planType = payment.requestedPlan || 'starter';
     
+    // STEP 1: FILE UPLOAD FIRST (must be triggered immediately from user click)
+    if (!confirm('⚠️ PAYMENT PROOF REQUIRED FIRST\n\nYou must upload payment proof documents to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nClick OK to select files now...')) {
+      alert('Subscription activation cancelled.');
+      return;
+    }
+    
+    // Create and trigger file input immediately (while still in user gesture)
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/jpeg,image/png,application/pdf,.doc,.docx';
+    
+    // Trigger file picker synchronously
+    fileInput.click();
+    
+    // Wait for file selection
+    const files = await new Promise((resolve) => {
+      fileInput.onchange = (e) => {
+        resolve(e.target.files);
+      };
+      // Handle cancel/close
+      window.addEventListener('focus', () => {
+        setTimeout(() => {
+          if (!fileInput.files || fileInput.files.length === 0) {
+            resolve(null);
+          }
+        }, 500);
+      }, { once: true });
+    });
+
+    if (!files || files.length === 0) {
+      alert('❌ PAYMENT PROOF FILES ARE MANDATORY!\n\nYou must upload at least one document:\n- Payment receipt\n- Bank statement\n- Invoice\n- Transaction screenshot\n\nSubscription activation cancelled.');
+      return;
+    }
+
+    // Validate file types and size
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    for (let i = 0; i < files.length; i++) {
+      if (!allowedTypes.includes(files[i].type)) {
+        alert(`❌ File "${files[i].name}" is not allowed.\n\nOnly these formats are accepted:\n- JPEG, PNG (images)\n- PDF (documents)\n- DOC, DOCX (Word documents)`);
+        return;
+      }
+      if (files[i].size > maxSize) {
+        alert(`❌ File "${files[i].name}" is too large (${(files[i].size / 1024 / 1024).toFixed(2)}MB).\n\nMaximum file size: 10MB per file`);
+        return;
+      }
+    }
+
+    const fileNames = Array.from(files).map(f => f.name).join(', ');
+    alert(`✅ ${files.length} file(s) selected:\n${fileNames}\n\nNow entering payment details...`);
+    
+    // STEP 2: Now collect payment details
     // Billing cycle
     const billingCycle = prompt('Billing Cycle (monthly/yearly):', 'monthly');
     if (!billingCycle || !['monthly', 'yearly'].includes(billingCycle.toLowerCase())) {
@@ -245,55 +299,8 @@ const Dashboard = () => {
     // Transaction ID (optional but recommended)
     const transactionId = prompt('Bank Transaction ID (optional but recommended):', '');
 
-    // CRITICAL SECURITY: Payment proof FILE UPLOAD - MANDATORY
-    if (!confirm('⚠️ PAYMENT PROOF REQUIRED\n\nYou must now upload payment proof document(s) to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement, or payment screenshot\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nThis is mandatory to prevent fraud.\n\nClick OK to select files...')) {
-      alert('Subscription activation cancelled.');
-      return;
-    }
-    
-    // Create and trigger file input immediately after user confirms
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.multiple = true;
-    fileInput.accept = '.jpg,.jpeg,.png,.pdf,.doc,.docx';
-    fileInput.style.display = 'none';
-    document.body.appendChild(fileInput);
-    
-    const files = await new Promise((resolve) => {
-      fileInput.onchange = (e) => {
-        document.body.removeChild(fileInput);
-        resolve(e.target.files);
-      };
-      fileInput.oncancel = () => {
-        document.body.removeChild(fileInput);
-        resolve(null);
-      };
-      // Trigger click immediately
-      setTimeout(() => fileInput.click(), 100);
-    });
-
-    if (!files || files.length === 0) {
-      alert('❌ PAYMENT PROOF FILE IS MANDATORY!\n\nYou must upload at least one document:\n- Payment receipt\n- Bank statement\n- Invoice\n- Transaction screenshot\n\nSubscription activation cancelled.');
-      return;
-    }
-
-    // Validate file types and size
-    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    for (let i = 0; i < files.length; i++) {
-      if (!allowedTypes.includes(files[i].type)) {
-        alert(`❌ File "${files[i].name}" is not allowed.\n\nOnly these formats are accepted:\n- JPEG, PNG (images)\n- PDF (documents)\n- DOC, DOCX (Word documents)`);
-        return;
-      }
-      if (files[i].size > maxSize) {
-        alert(`❌ File "${files[i].name}" is too large (${(files[i].size / 1024 / 1024).toFixed(2)}MB).\n\nMaximum file size: 10MB per file`);
-        return;
-      }
-    }
-
-    const fileNames = Array.from(files).map(f => f.name).join(', ');
-    if (!confirm(`Activate subscription with ${files.length} payment proof file(s)?\n\nFiles: ${fileNames}\n\nUser: ${payment.userEmail}\nPlan: ${planType}\nAmount: $${paymentAmount}`)) {
+    // Final confirmation
+    if (!confirm(`Activate subscription with ${files.length} payment proof file(s)?\n\nFiles: ${fileNames}\n\nUser: ${payment.userEmail}\nPlan: ${planType}\nAmount: $${paymentAmount}\nBilling: ${billingCycle}`)) {
       return;
     }
 
@@ -308,6 +315,7 @@ const Dashboard = () => {
         paymentReference,
         files, // Pass FileList for upload
         transactionId || null
+      );
       );
 
       if (response.success) {
