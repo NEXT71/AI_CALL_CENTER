@@ -85,10 +85,11 @@ function App() {
             <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><UserManagement /></RoleGuard>} />
             <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><SystemReports /></RoleGuard>} />
           </Route>
+            
+            {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Suspense path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );
