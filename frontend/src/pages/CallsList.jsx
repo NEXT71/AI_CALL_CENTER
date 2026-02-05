@@ -123,7 +123,34 @@ const CallsList = () => {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(truseCallback((field) => {
+        setLoading(true);
+      }
+
+      const response = await callService.getCalls({
+        ...filters,
+        campaign: debouncedCampaign,
+        agentName: debouncedAgentName,
+        sortBy: sortField,
+        sortOrder: sortDirection,
+      });
+
+      if (response.success) {
+        setCalls(response.data.calls || []);
+        setPagination({
+          total: response.data.total || 0,
+          totalPages: response.data.totalPages || 0,
+          currentPage: response.data.currentPage || 1,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching calls:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user, filters, debouncedCampaign, debouncedAgentName, sortField, sortDirection]);
+
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -137,30 +164,6 @@ const CallsList = () => {
     fetchCalls(true);
   }, [fetchCalls]);
 
-  const getScoreBadge = (score) => {
-    if (!score) return 'badge-neutral';
-    if (score >= 90) return 'badge-score-high';
-    if (score >= 75) return 'badge-score-medium';
-    if (score >= 60) return 'badge-score-low';
-    return 'badge-score-critical';
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const resetFilters = useCallback(() => {
     setFilters({
       campaign: '',
@@ -173,38 +176,12 @@ const CallsList = () => {
       page: 1,
       limit: 20,
     });
-  }, []) return 'badge-score-critical';
-  };
+  }, []);
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      campaign: '',
-      agentName: '',
-      status: '',
-      minQuality: '',
-      maxQuality: '',
-      startDate: '',
-      endDate: '',
-      page: 1,
-      limit: 20,
-    });
-  };
+  // Fetch calls on mount and when filters change
+  useEffect(() => {
+    fetchCalls();
+  }, [fetchCalls]);
 
   return (
     <div className="space-y-6 animate-fade-in">
