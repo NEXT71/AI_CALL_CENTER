@@ -714,8 +714,8 @@ exports.adminActivateSubscription = (req, res, next) => {
         providedAmount: paymentAmount,
         minimumRequired: expectedAmount * 0.95,
       });
-    } - AUDIT TRAIL
-      adminNotes: notes || `Subscription activated with ${req.files.length} payment proof file(s) uploaded
+    }
+
     // Calculate subscription duration based on billing cycle
     const subscriptionDuration = billingCycle === 'monthly' ? 30 : 365; // days
     const periodStart = new Date();
@@ -743,7 +743,7 @@ exports.adminActivateSubscription = (req, res, next) => {
       approvedAt: new Date(),
       subscriptionPeriodStart: periodStart,
       subscriptionPeriodEnd: periodEnd,
-      proofDocuments: proofDocuments, // Store uploaded file references
+      proofDocuments: proofDocuments, // Store uploaded file references - AUDIT TRAIL
       adminNotes: notes || `Subscription activated by admin with ${req.files.length} payment proof file(s)`,
     });
 
