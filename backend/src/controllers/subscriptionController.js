@@ -819,8 +819,6 @@ exports.adminActivateSubscription = (req, res, next) => {
     }
   });
 };
-  }
-};
 
 /**
  * @route   GET /api/subscriptions/pending-payments
