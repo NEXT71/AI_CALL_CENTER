@@ -166,7 +166,8 @@ const Dashboard = () => {
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
-      setRecentCalls(callsResponse.data);
+      // Handle new response structure where calls are nested in data.calls
+      setRecentCalls(callsResponse.data?.calls || callsResponse.data || []);
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
       setCurrentSubscription(subscriptionResponse.success ? subscriptionResponse.data : null);

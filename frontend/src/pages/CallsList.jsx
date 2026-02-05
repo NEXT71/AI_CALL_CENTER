@@ -126,6 +126,14 @@ const CallsList = () => {
         setLoading(true);
       }
 
+      console.log('Fetching calls with params:', {
+        ...filters,
+        campaign: debouncedCampaign,
+        agentName: debouncedAgentName,
+        sortBy: sortField,
+        sortOrder: sortDirection,
+      });
+
       const response = await callService.getCalls({
         ...filters,
         campaign: debouncedCampaign,
@@ -134,16 +142,27 @@ const CallsList = () => {
         sortOrder: sortDirection,
       });
 
+      console.log('API Response:', response);
+
       if (response.success) {
-        setCalls(response.data.calls || []);
+        const callsData = response.data.calls || response.data || [];
+        const totalData = response.data.total || response.total || 0;
+        const totalPagesData = response.data.totalPages || response.totalPages || 0;
+        const currentPageData = response.data.currentPage || response.currentPage || 1;
+        
+        console.log('Setting calls:', callsData);
+        setCalls(callsData);
         setPagination({
-          total: response.data.total || 0,
-          totalPages: response.data.totalPages || 0,
-          currentPage: response.data.currentPage || 1,
+          total: totalData,
+          totalPages: totalPagesData,
+          currentPage: currentPageData,
         });
+      } else {
+        console.error('API returned success: false');
       }
     } catch (error) {
       console.error('Error fetching calls:', error);
+      console.error('Error response:', error.response?.data);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -362,12 +381,13 @@ const CallsList = () => {
                 <Search className="text-slate-400" size={40} />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No calls found</h3>
-              <p className="text-slate-500 mb-6 max-w-md mx-auto">
+              <p className="text-slate-500 mb-2 max-w-md mx-auto">
                 {Object.values(filters).some(v => v && v !== '') 
                   ? 'We couldn\'t find any calls matching your current filters. Try adjusting them or search for something else.' 
                   : 'No calls have been uploaded yet. Get started by uploading your first call recording.'
                 }
               </p>
+              <p className="text-xs text-slate-400 mb-6">Debug: calls array length = {calls.length}, total = {pagination.total}</p>
               <div className="flex gap-3 justify-center">
                 {Object.values(filters).some(v => v && v !== '') && (
                   <button onClick={resetFilters} className="btn-enhanced btn-secondary-enhanced">
