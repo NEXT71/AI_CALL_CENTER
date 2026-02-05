@@ -472,18 +472,22 @@ exports.getCalls = async (req, res, next) => {
       limit = 20,
       campaign,
       agentId,
+      agentName,
       status,
       startDate,
       endDate,
-      minQualityScore,
-      maxQualityScore,
+      minQuality,
+      maxQuality,
+      sortBy = 'callDate',
+      sortOrder = 'desc',
     } = req.query;
 
     // Build query
     const query = {};
 
-    if (campaign) query.campaign = campaign;
+    if (campaign) query.campaign = { $regex: campaign, $options: 'i' };
     if (agentId) query.agentId = agentId;
+    if (agentName) query.agentName = { $regex: agentName, $options: 'i' };
     if (status) query.status = status;
 
     if (startDate || endDate) {
@@ -492,10 +496,10 @@ exports.getCalls = async (req, res, next) => {
       if (endDate) query.callDate.$lte = new Date(endDate);
     }
 
-    if (minQualityScore || maxQualityScore) {
+    if (minQuality || maxQuality) {
       query.qualityScore = {};
-      if (minQualityScore) query.qualityScore.$gte = parseFloat(minQualityScore);
-      if (maxQualityScore) query.qualityScore.$lte = parseFloat(maxQualityScore);
+      if (minQuality) query.qualityScore.$gte = parseFloat(minQuality);
+      if (maxQuality) query.qualityScore.$lte = parseFloat(maxQuality);
     }
 
     // Role-based access control
@@ -508,11 +512,15 @@ exports.getCalls = async (req, res, next) => {
       }
     }
 
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
     // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
     const calls = await Call.find(query)
-      .sort({ callDate: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(parseInt(limit))
       .populate('agentId', 'name email')
@@ -522,11 +530,12 @@ exports.getCalls = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      count: calls.length,
-      total,
-      totalPages: Math.ceil(total / parseInt(limit)),
-      currentPage: parseInt(page),
-      data: calls,
+      data: {
+        calls,
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+        currentPage: parseInt(page),
+      },
     });
   } catch (error) {
     next(error);
