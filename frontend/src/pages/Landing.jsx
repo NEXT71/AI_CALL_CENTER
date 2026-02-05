@@ -397,7 +397,7 @@ const Landing = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, idx) => (
-              <div key={idx} className="card-enhanced p-8 hover:translate-y-[-4px] transition-all duration-300 group">
+              <div key={idx} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 hover:translate-y-[-4px] transition-all duration-300 group hover:shadow-xl">
                 <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
                   <feature.icon size={28} />
                 </div>
@@ -510,10 +510,10 @@ const Landing = () => {
             {pricingPlans.map((plan, idx) => (
               <div
                 key={idx}
-                className={`card-enhanced p-8 relative transition-all duration-300 hover:translate-y-[-8px] ${
+                className={`bg-white rounded-2xl shadow-lg border p-8 relative transition-all duration-300 hover:translate-y-[-8px] ${
                   plan.popular 
                     ? 'border-2 border-blue-600 shadow-2xl shadow-blue-900/10 ring-4 ring-blue-50' 
-                    : 'hover:shadow-xl'
+                    : 'border-slate-200 hover:shadow-xl'
                 }`}
               >
                 {plan.popular && (
@@ -579,7 +579,7 @@ const Landing = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, idx) => (
-              <div key={idx} className="card-enhanced p-8 hover:shadow-xl transition-all duration-300 bg-white">
+              <div key={idx} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
                 <div className="flex gap-1 mb-6">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} size={18} className="fill-amber-400 text-amber-400" />

@@ -158,22 +158,6 @@
     @apply flex flex-col items-center justify-center p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer gap-3;
   }
 
-  .kpi-card-enhanced {
-    @apply bg-slate-blue rounded-xl p-6 shadow-sm border border-slate-blue-light hover:shadow-lg transition-all duration-300 relative overflow-hidden;
-  }
-
-  .kpi-label-enhanced {
-    @apply text-sm font-medium text-cool-white/70 mb-1;
-  }
-
-  .kpi-value-enhanced {
-    @apply text-3xl font-bold text-cool-white tracking-tight;
-  }
-
-  .kpi-change-enhanced {
-    @apply text-xs font-medium px-2 py-1 rounded-full inline-flex items-center;
-  }
-
   .kpi-change-positive {
     @apply text-green-700 bg-green-50;
   }
@@ -495,6 +479,8 @@ html {
     background-position: right 0.75rem center;
     background-size: 1.25em 1.25em;
   }
+
+  /* Light theme KPI cards (default for landing/public pages) */
   .kpi-card-enhanced {
     @apply bg-white rounded-2xl border border-slate-200/60 p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 backdrop-blur-sm relative overflow-hidden;
   }
@@ -514,6 +500,27 @@ html {
 
   .kpi-change-enhanced {
     @apply text-sm font-medium;
+  }
+
+  /* Dark theme overrides for app pages */
+  .app-layout .kpi-card-enhanced {
+    @apply bg-slate-blue border-slate-blue-light;
+  }
+
+  .app-layout .kpi-value-enhanced {
+    @apply text-cool-white;
+  }
+
+  .app-layout .kpi-label-enhanced {
+    @apply text-cool-white/70;
+  }
+
+  .app-layout .empty-state-title {
+    @apply text-cool-white;
+  }
+
+  .app-layout .empty-state-description {
+    @apply text-cool-white/70;
   }
 
   .kpi-icon-enhanced {
@@ -560,13 +567,22 @@ html {
     @apply bg-gradient-to-r from-orange-500 to-orange-600;
   }
 
-  /* Enhanced Cards */
+  /* Enhanced Cards - Dark Theme (for app pages) */
   .card-enhanced {
     @apply bg-slate-blue rounded-2xl shadow-lg border border-slate-blue-light p-6 backdrop-blur-sm;
   }
 
+  /* Enhanced Cards - Light Theme (for landing/public pages) */
+  .card-enhanced-light {
+    @apply bg-white rounded-2xl shadow-lg border border-slate-200 p-6;
+  }
+
   .section-header-enhanced {
     @apply text-xl font-bold text-cool-white mb-1;
+  }
+
+  .section-header-enhanced-light {
+    @apply text-xl font-bold text-slate-900 mb-1;
   }
 
   .btn-enhanced {
@@ -575,6 +591,15 @@ html {
 
   .btn-primary-enhanced {
     @apply bg-electric-blue text-cool-white border-electric-blue hover:bg-electric-blue-dark hover:border-electric-blue-dark active:bg-electric-blue-dark shadow-md hover:shadow-lg focus:ring-electric-blue;
+  }
+
+  .btn-secondary-enhanced {
+    @apply bg-slate-blue text-cool-white border-slate-blue-light hover:bg-slate-blue-light hover:border-slate-blue-light shadow-sm hover:shadow-md focus:ring-slate-blue-light;
+  }
+
+  /* Light theme button variants for public pages */
+  .btn-secondary-enhanced-light {
+    @apply bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:border-slate-400 shadow-sm hover:shadow-md focus:ring-slate-300;
   }
 
   /* Compact Enhanced Table */

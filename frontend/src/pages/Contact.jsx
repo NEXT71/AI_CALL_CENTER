@@ -62,7 +62,7 @@ const Contact = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contact Methods */}
           <div className="space-y-6">
-            <div className="card-enhanced p-6 hover:translate-y-[-2px] transition-transform duration-300">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:translate-y-[-2px] transition-transform duration-300">
               <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-4">
                 <Mail size={24} />
               </div>
@@ -76,7 +76,7 @@ const Contact = () => {
               </a>
             </div>
 
-            <div className="card-enhanced p-6 hover:translate-y-[-2px] transition-transform duration-300">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:translate-y-[-2px] transition-transform duration-300">
               <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4">
                 <MessageSquare size={24} />
               </div>
@@ -90,7 +90,7 @@ const Contact = () => {
               </Link>
             </div>
 
-            <div className="card-enhanced p-6 hover:translate-y-[-2px] transition-transform duration-300">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:translate-y-[-2px] transition-transform duration-300">
               <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 mb-4">
                 <Clock size={24} />
               </div>
@@ -111,7 +111,7 @@ const Contact = () => {
               </div>
             </div>
 
-            <div className="card-enhanced p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-lg p-6">
               <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white mb-4">
                 <Users size={24} />
               </div>
@@ -141,7 +141,7 @@ const Contact = () => {
 
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <div className="card-enhanced p-8">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                   <Send size={20} />
@@ -294,7 +294,7 @@ const Contact = () => {
                 a: "Yes, we can discuss custom solutions for enterprise clients with specific needs."
               }
             ].map((faq, idx) => (
-              <div key={idx} className="card-enhanced p-6 hover:shadow-md transition-shadow">
+              <div key={idx} className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-shadow">
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 mt-1">
                     <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
