@@ -316,7 +316,6 @@ const Dashboard = () => {
         files, // Pass FileList for upload
         transactionId || null
       );
-      );
 
       if (response.success) {
         alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.userName || 'N/A'}\nEmail: ${response.data.userEmail || 'N/A'}\nPlan: ${response.data.plan || 'N/A'}\nStatus: ${response.data.status || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nProof Files: ${response.data.payment?.proofDocumentsCount || 0}`);
