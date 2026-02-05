@@ -154,7 +154,7 @@ const Dashboard = () => {
           apiService.getCalls({ limit: 10, status: 'completed', campaign: debouncedCampaign })
         );
       } else {
-        promises.push(Promise.resolve({ data: [] })); // Empty array for admin
+        promises.push(Promise.resolve({ data: { calls: [] } })); // Empty array for admin with proper structure
       }
 
       promises.push(
@@ -167,17 +167,28 @@ const Dashboard = () => {
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
       // Handle new response structure where calls are nested in data.calls
-      setRecentCalls(callsResponse.data?.calls || callsResponse.data || []);
+      console.log('Dashboard callsResponse:', callsResponse);
+      const callsArray = Array.isArray(callsResponse.data?.calls) 
+        ? callsResponse.data.calls 
+        : Array.isArray(callsResponse.data) 
+          ? callsResponse.data 
+          : [];
+      
+      setRecentCalls(callsArray);
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
       setCurrentSubscription(subscriptionResponse.success ? subscriptionResponse.data : null);
       
       // Set pending payments for admin
       if (user.role === 'Admin' && pendingResponse) {
-        setPendingPayments(pendingResponse.success ? pendingResponse.data : []);
+        setPendingPayments(Array.isArray(pendingResponse.data) ? pendingResponse.data : []);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Ensure state is set to empty arrays on error
+      setRecentCalls([]);
+      setStats(null);
+      setSalesData(null);
     } finally {
       setLoading(false);
     }
@@ -956,7 +967,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentCalls.slice(0, 5).map((call, index) => (
+                  {Array.isArray(recentCalls) && recentCalls.slice(0, 5).map((call, index) => (
                     <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
                       <td className="font-mono text-xs font-semibold text-slate-900">
                         <span className="px-2 py-1 bg-slate-100 rounded text-xs">
