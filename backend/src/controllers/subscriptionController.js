@@ -1,11 +1,51 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const Payment = require('../models/Payment');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises;
 // const stripeService = require('../services/stripeService'); // Commented out for manual payments
 const auditService = require('../services/auditService');
 const { getUsageStats } = require('../middleware/usageLimits');
 const logger = require('../config/logger');
 // const Stripe = require('stripe'); // Commented out for manual payments
+
+// Configure multer for payment proof uploads with security restrictions
+const paymentProofStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../../uploads/payment-proofs');
+    try {
+      await fs.mkdir(uploadPath, { recursive: true });
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error);
+    }
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+    cb(null, `payment-proof-${uniqueSuffix}-${sanitizedName}`);
+  },
+});
+
+const uploadPaymentProof = multer({
+  storage: paymentProofStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max per file
+    files: 5, // Max 5 files per upload
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (JPEG, PNG) and documents (PDF, DOC, DOCX) are allowed for payment proof'));
+    }
+  },
+}).array('paymentProofs', 5);
 
 // Local plans configuration for manual payments
 // Pod cost: $0.26/hour = ~$187/month for 24/7 usage
@@ -547,56 +587,85 @@ exports.getInvoices = async (req, res, next) => {
 
 /**
  * @route   POST /api/subscriptions/admin-activate
- * @desc    Admin endpoint to manually activate subscription after payment
+ * @desc    Admin endpoint to manually activate subscription after payment WITH FILE UPLOAD
  * @access  Private (Admin only)
+ * @security Requires payment proof file upload to prevent fraud
  */
-exports.adminActivateSubscription = async (req, res, next) => {
-  try {
-    const { 
-      userId, 
-      planType,
-      billingCycle,
-      paymentMethod, 
-      paymentAmount,
-      paymentReference,
-      transactionId,
-      paymentDate,
-      notes 
-    } = req.body;
-
-    // Check if requester is admin
-    if (req.user.role !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.',
-      });
-    }
-
-    // Validate required fields - Payment proof is MANDATORY for security and audit compliance
-    if (!userId || !planType || !billingCycle) {
+exports.adminActivateSubscription = (req, res, next) => {
+  // Use multer middleware to handle file upload FIRST
+  uploadPaymentProof(req, res, async (uploadErr) => {
+    if (uploadErr) {
       return res.status(400).json({
         success: false,
-        message: 'User ID, plan type, and billing cycle are required',
+        message: `File upload error: ${uploadErr.message}`,
       });
     }
 
-    // SECURITY: Payment proof is REQUIRED to prevent fraud
-    if (!paymentMethod || !paymentAmount || !paymentReference) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment proof required: paymentMethod, paymentAmount, and paymentReference are mandatory for audit compliance',
-        requiredFields: ['paymentMethod', 'paymentAmount', 'paymentReference'],
-        reason: 'Payment verification is required to prevent unauthorized subscription activations',
-      });
-    }
+    try {
+      const { 
+        userId, 
+        planType,
+        billingCycle,
+        paymentMethod, 
+        paymentAmount,
+        paymentReference,
+        transactionId,
+        paymentDate,
+        notes 
+      } = req.body;
 
-    // Validate payment reference is not empty
-    if (!paymentReference.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment reference cannot be empty. Please provide a valid receipt/transaction number.',
-      });
-    }
+      // Check if requester is admin
+      if (req.user.role !== 'Admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Admin privileges required.',
+        });
+      }
+
+      // Validate required fields
+      if (!userId || !planType || !billingCycle) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID, plan type, and billing cycle are required',
+        });
+      }
+
+      // CRITICAL SECURITY: Payment proof FILES are MANDATORY to prevent fraud
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'PAYMENT PROOF FILE UPLOAD IS MANDATORY! Upload at least 1 document.',
+          requiredFiles: 'Receipt, invoice, bank statement, or payment screenshot',
+          acceptedFormats: 'JPEG, PNG, PDF, DOC, DOCX',
+          maxSize: '10MB per file, max 5 files',
+          reason: 'File upload prevents fraudulent activations. Text-only references can be faked.',
+        });
+      }
+
+      // SECURITY: Payment details are REQUIRED
+      if (!paymentMethod || !paymentAmount || !paymentReference) {
+        // Clean up uploaded files since validation failed
+        for (const file of req.files) {
+          await fs.unlink(file.path).catch(() => {});
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'Payment details required: paymentMethod, paymentAmount, and paymentReference',
+          requiredFields: ['paymentMethod', 'paymentAmount', 'paymentReference', 'paymentProofFiles'],
+        });
+      }
+
+      // Validate payment reference is not empty
+      if (!paymentReference.trim()) {
+        // Clean up uploaded files
+        for (const file of req.files) {
+          await fs.unlink(file.path).catch(() => {});
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'Payment reference cannot be empty.',
+        });
+      }
 
     // Validate billing cycle
     if (!['monthly', 'yearly'].includes(billingCycle)) {
@@ -639,14 +708,21 @@ exports.adminActivateSubscription = async (req, res, next) => {
         providedAmount: paymentAmount,
         minimumRequired: expectedAmount * 0.95,
       });
-    }
-
+    } - AUDIT TRAIL
+      adminNotes: notes || `Subscription activated with ${req.files.length} payment proof file(s) uploaded
     // Calculate subscription duration based on billing cycle
     const subscriptionDuration = billingCycle === 'monthly' ? 30 : 365; // days
     const periodStart = new Date();
     const periodEnd = new Date(Date.now() + subscriptionDuration * 24 * 60 * 60 * 1000);
 
-    // Create payment record with VERIFIED payment details
+    // Prepare proof documents array from uploaded files
+    const proofDocuments = req.files.map(file => ({
+      fileName: file.originalname,
+      filePath: file.path,
+      uploadedAt: new Date(),
+    }));
+
+    // Create payment record with VERIFIED payment details and uploaded proof files
     const payment = new Payment({
       userId: user._id,
       planType,
@@ -661,7 +737,8 @@ exports.adminActivateSubscription = async (req, res, next) => {
       approvedAt: new Date(),
       subscriptionPeriodStart: periodStart,
       subscriptionPeriodEnd: periodEnd,
-      adminNotes: notes || 'Subscription activated by admin with payment verification',
+      proofDocuments: proofDocuments, // Store uploaded file references
+      adminNotes: notes || `Subscription activated by admin with ${req.files.length} payment proof file(s)`,
     });
 
     await payment.save();
@@ -698,11 +775,12 @@ exports.adminActivateSubscription = async (req, res, next) => {
       userId: user._id,
       planType,
       activatedBy: req.user._id,
+      proofFilesCount: req.files.length,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'Subscription activated successfully with payment record',
+      message: 'Subscription activated successfully with payment proof verification',
       data: {
         userId: user._id,
         userName: user.name,
@@ -715,12 +793,26 @@ exports.adminActivateSubscription = async (req, res, next) => {
           invoiceNumber: payment.invoiceNumber,
           amount: payment.amount,
           paymentReference: payment.paymentReference,
+          proofDocumentsCount: payment.proofDocuments.length,
         },
       },
     });
-  } catch (error) {
-    logger.error('Error activating subscription:', error);
-    next(error);
+    } catch (error) {
+      // Clean up uploaded files on error
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          await fs.unlink(file.path).catch(() => {});
+        }
+      }
+      logger.error('Error activating subscription:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error activating subscription',
+        error: error.message,
+      });
+    }
+  });
+};
   }
 };
 

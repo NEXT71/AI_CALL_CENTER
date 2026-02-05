@@ -210,16 +210,27 @@ export const subscriptionService = {
     return response.data;
   },
 
-  // Admin functions
-  adminActivateSubscription: async (userId, planType, billingCycle, paymentAmount, paymentMethod, paymentReference, transactionId = null) => {
-    const response = await api.post('/subscriptions/admin-activate', {
-      userId,
-      planType,
-      billingCycle,
-      paymentAmount,
-      paymentMethod,
-      paymentReference,
-      transactionId,
+  // Admin functions - Requires payment proof FILE UPLOAD
+  adminActivateSubscription: async (userId, planType, billingCycle, paymentAmount, paymentMethod, paymentReference, paymentProofFiles, transactionId = null, notes = '') => {
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('planType', planType);
+    formData.append('billingCycle', billingCycle);
+    formData.append('paymentAmount', paymentAmount);
+    formData.append('paymentMethod', paymentMethod);
+    formData.append('paymentReference', paymentReference);
+    if (transactionId) formData.append('transactionId', transactionId);
+    if (notes) formData.append('notes', notes);
+    
+    // Append payment proof files (MANDATORY)
+    for (let i = 0; i < paymentProofFiles.length; i++) {
+      formData.append('paymentProofs', paymentProofFiles[i]);
+    }
+    
+    const response = await api.post('/subscriptions/admin-activate', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
     return response.data;
   },
