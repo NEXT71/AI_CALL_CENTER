@@ -311,7 +311,7 @@ const UserManagement = () => {
                         >
                           <Key className="h-4 w-4" />
                         </button>
-                        {user._id !== currentUser.id && (
+                        {user._id !== currentUser._id && (
                           <button
                             onClick={() => handleDeactivateUser(user._id)}
                             className="p-1 text-slate-400 hover:text-red-600 transition-colors"
