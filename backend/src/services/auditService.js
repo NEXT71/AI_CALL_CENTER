@@ -127,6 +127,47 @@ exports.logUserRegistration = async (admin, newUser, req) => {
 };
 
 /**
+ * Log user deactivation
+ */
+exports.logUserDeactivation = async (admin, deactivatedUser, req) => {
+  return exports.createAuditLog({
+    userId: admin._id,
+    userName: admin.name,
+    userRole: admin.role,
+    action: 'DELETE_USER',
+    resourceType: 'User',
+    resourceId: deactivatedUser._id,
+    details: {
+      deactivatedUserName: deactivatedUser.name,
+      deactivatedUserEmail: deactivatedUser.email,
+      deactivatedUserRole: deactivatedUser.role,
+    },
+    req,
+  });
+};
+
+/**
+ * Log user update
+ */
+exports.logUserUpdate = async (admin, updatedUser, updateData, req) => {
+  return exports.createAuditLog({
+    userId: admin._id,
+    userName: admin.name,
+    userRole: admin.role,
+    action: 'UPDATE_USER',
+    resourceType: 'User',
+    resourceId: updatedUser._id,
+    details: {
+      updatedUserName: updatedUser.name,
+      updatedUserEmail: updatedUser.email,
+      updatedUserRole: updatedUser.role,
+      changes: updateData,
+    },
+    req,
+  });
+};
+
+/**
  * Log logout
  */
 exports.logLogout = async (user, req) => {
@@ -162,16 +203,18 @@ exports.logEmailVerification = async (user, req) => {
 /**
  * Log password reset
  */
-exports.logPasswordReset = async (user, req) => {
+exports.logPasswordReset = async (admin, user, req) => {
   return exports.createAuditLog({
-    userId: user._id,
-    userName: user.name,
-    userRole: user.role,
+    userId: admin._id,
+    userName: admin.name,
+    userRole: admin.role,
     action: 'UPDATE_USER',
     resourceType: 'User',
     resourceId: user._id,
     details: {
       action: 'PASSWORD_RESET',
+      targetUserName: user.name,
+      targetUserEmail: user.email,
     },
     req,
   });

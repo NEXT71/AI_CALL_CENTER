@@ -477,7 +477,7 @@ exports.resetPassword = async (req, res, next) => {
     await user.save();
 
     // Log password reset
-    await auditService.logPasswordReset(user, req);
+    await auditService.logPasswordReset(req.user, user, req);
 
     res.status(200).json({
       success: true,
