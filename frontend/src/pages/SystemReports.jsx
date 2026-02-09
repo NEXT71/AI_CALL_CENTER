@@ -183,7 +183,7 @@ const SystemReports = () => {
                   <p className="text-3xl font-bold text-slate-900">{systemSummary.sales.totalRecords}</p>
                   <p className="text-sm text-green-600 flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
-                    ${systemSummary.sales.totalRevenue.toLocaleString()}
+                    ${(systemSummary.sales.totalRevenue ?? 0).toLocaleString()}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-purple-600" />

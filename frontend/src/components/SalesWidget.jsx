@@ -87,7 +87,7 @@ const SalesWidget = () => {
             trend === 'up' ? 'text-emerald-600' : 
             trend === 'neutral' ? 'text-amber-600' : 'text-rose-600'
           }`}>
-            {avgSuccessRate.toFixed(1)}%
+            {(avgSuccessRate ?? 0).toFixed(1)}%
           </div>
           <div className="text-xs text-slate-400 mt-1">average today</div>
         </div>

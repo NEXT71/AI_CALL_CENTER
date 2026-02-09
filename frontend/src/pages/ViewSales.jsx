@@ -400,16 +400,16 @@ const ViewSales = () => {
                         <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between gap-4">
                             <span className="text-slate-500">Revenue:</span>
-                            <span className="font-bold text-emerald-600">${record.officeRevenue?.toLocaleString()}</span>
+                            <span className="font-bold text-emerald-600">${(record.officeRevenue ?? 0).toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between gap-4">
                             <span className="text-slate-500">Target:</span>
-                            <span className="font-medium text-slate-900">${record.officeTargets?.toLocaleString()}</span>
+                            <span className="font-medium text-slate-900">${(record.officeTargets ?? 0).toLocaleString()}</span>
                           </div>
                           <div className="pt-1 border-t border-slate-100 mt-1">
                             <div className="flex justify-between mb-1">
                               <span className="text-slate-500">Achievement:</span>
-                              <span className="font-bold text-blue-600">{record.officeTargets > 0 ? ((record.officeRevenue / record.officeTargets) * 100).toFixed(1) : 0}%</span>
+                              <span className="font-bold text-blue-600">{record.officeTargets > 0 ? (((record.officeRevenue ?? 0) / record.officeTargets) * 100).toFixed(1) : 0}%</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-1.5">
                               <div 

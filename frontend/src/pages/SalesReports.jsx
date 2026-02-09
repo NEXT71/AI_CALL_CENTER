@@ -113,7 +113,7 @@ const SalesReports = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500">Avg Success Rate</p>
-              <p className="text-3xl font-bold text-slate-900 mt-1">{analytics.summary.avgSuccessRate?.toFixed(1)}%</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">{(analytics.summary.avgSuccessRate ?? 0).toFixed(1)}%</p>
             </div>
             <div className="p-3 bg-purple-50 rounded-xl">
               <Award className="w-6 h-6 text-purple-600" />
@@ -253,7 +253,7 @@ const SalesReports = () => {
                       ${agent.avgSuccessRate >= 70 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
                         agent.avgSuccessRate >= 50 ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 
                         'bg-red-50 text-red-700 border-red-100'}`}>
-                      {agent.avgSuccessRate?.toFixed(1)}%
+                      {(agent.avgSuccessRate ?? 0).toFixed(1)}%
                     </span>
                   </td>
                 </tr>
