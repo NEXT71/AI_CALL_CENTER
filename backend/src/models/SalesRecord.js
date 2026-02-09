@@ -95,7 +95,7 @@ const salesRecordSchema = new mongoose.Schema(
     },
     submittedByRole: {
       type: String,
-      enum: ['Admin', 'QA'],
+      enum: ['Admin', 'User', 'QA'],
       required: true,
     },
     
