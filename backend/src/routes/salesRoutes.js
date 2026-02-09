@@ -17,14 +17,37 @@ router.post(
   '/',
   authorize('Admin', 'User'),
   [
-    body('agentId').isMongoId().withMessage('Invalid agent ID'),
+    body('recordType').optional().isIn(['agent', 'office']).withMessage('Invalid record type'),
+    body('agentId')
+      .if(body('recordType').equals('agent'))
+      .isMongoId().withMessage('Invalid agent ID'),
     body('campaign').trim().notEmpty().withMessage('Campaign is required'),
     body('salesDate').isISO8601().withMessage('Valid date is required'),
-    body('totalCalls').isInt({ min: 0 }).withMessage('Total calls must be a positive number'),
-    body('successfulSales').isInt({ min: 0 }).withMessage('Successful sales must be a positive number'),
-    body('failedSales').isInt({ min: 0 }).withMessage('Failed sales must be a positive number'),
-    body('warmTransfers').optional().isInt({ min: 0 }).withMessage('Warm transfers must be a positive number'),
-    body('callbacksScheduled').optional().isInt({ min: 0 }).withMessage('Callbacks must be a positive number'),
+    // Agent-specific fields
+    body('totalCalls')
+      .if(body('recordType').equals('agent'))
+      .isInt({ min: 0 }).withMessage('Total calls must be a positive number'),
+    body('successfulSales')
+      .if(body('recordType').equals('agent'))
+      .isInt({ min: 0 }).withMessage('Successful sales must be a positive number'),
+    body('failedSales')
+      .if(body('recordType').equals('agent'))
+      .isInt({ min: 0 }).withMessage('Failed sales must be a positive number'),
+    body('warmTransfers')
+      .optional()
+      .isInt({ min: 0 }).withMessage('Warm transfers must be a positive number'),
+    body('callbacksScheduled')
+      .optional()
+      .isInt({ min: 0 }).withMessage('Callbacks must be a positive number'),
+    // Office-specific fields
+    body('officeRevenue')
+      .if(body('recordType').equals('office'))
+      .optional()
+      .isFloat({ min: 0 }).withMessage('Office revenue must be a positive number'),
+    body('officeTargets')
+      .if(body('recordType').equals('office'))
+      .optional()
+      .isInt({ min: 0 }).withMessage('Office targets must be a positive number'),
   ],
   handleValidationErrors,
   salesController.createSalesRecord
