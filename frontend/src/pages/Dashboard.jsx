@@ -246,30 +246,17 @@ const Dashboard = () => {
     const transactionId = prompt('Bank Transaction ID (optional but recommended):', '');
 
     // CRITICAL SECURITY: Payment proof FILE UPLOAD - MANDATORY
-    if (!confirm('⚠️ PAYMENT PROOF REQUIRED\n\nYou must now upload payment proof document(s) to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement, or payment screenshot\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nThis is mandatory to prevent fraud.\n\nClick OK to select files...')) {
-      alert('Subscription activation cancelled.');
-      return;
-    }
+    alert('⚠️ PAYMENT PROOF REQUIRED\n\nYou must now upload payment proof document(s) to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement, or payment screenshot\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nThis is mandatory to prevent fraud.');
     
-    // Create and trigger file input immediately after user confirms
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.multiple = true;
     fileInput.accept = '.jpg,.jpeg,.png,.pdf,.doc,.docx';
-    fileInput.style.display = 'none';
-    document.body.appendChild(fileInput);
     
     const files = await new Promise((resolve) => {
-      fileInput.onchange = (e) => {
-        document.body.removeChild(fileInput);
-        resolve(e.target.files);
-      };
-      fileInput.oncancel = () => {
-        document.body.removeChild(fileInput);
-        resolve(null);
-      };
-      // Trigger click immediately
-      setTimeout(() => fileInput.click(), 100);
+      fileInput.onchange = (e) => resolve(e.target.files);
+      fileInput.onerror = () => resolve(null);
+      fileInput.click();
     });
 
     if (!files || files.length === 0) {
