@@ -751,7 +751,7 @@ const Dashboard = () => {
                 <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-slate-500 mb-1">Avg Sale Value</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    ${(salesData.avgSaleAmount ?? 0).toFixed(2)}
+                    ${(salesData?.avgSaleAmount ?? 0).toFixed(2)}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
                     <ArrowUp size={12} />
@@ -762,7 +762,7 @@ const Dashboard = () => {
                 <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-slate-500 mb-1">Quality Score</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {(salesData.avgQualityScore ?? 0).toFixed(1)}
+                    {(salesData?.avgQualityScore ?? 0).toFixed(1)}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-fit">
                     <span>Sale calls avg</span>
