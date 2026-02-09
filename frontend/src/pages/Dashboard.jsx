@@ -678,7 +678,7 @@ const Dashboard = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="kpi-label-enhanced">Total Calls</p>
-                <p className="kpi-value-enhanced">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
+                <p className="kpi-value-enhanced">{(stats?.overview?.totalCalls ?? 0).toLocaleString()}</p>
                 <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
                   <ArrowUp size={14} className="animate-bounce" />
                   <span>12.5% from last period</span>
