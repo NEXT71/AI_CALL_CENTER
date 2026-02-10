@@ -119,6 +119,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global exception handler to prevent crashes
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions to prevent service crashes"""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    
+    # Clean up GPU memory on error
+    if CUDA_AVAILABLE:
+        try:
+            import gc
+            torch.cuda.empty_cache()
+            gc.collect()
+            logger.info("GPU memory cleaned after error")
+        except Exception as cleanup_error:
+            logger.error(f"Failed to cleanup GPU: {cleanup_error}")
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. The service will continue running.",
+            "type": type(exc).__name__
+        }
+    )
+
+# Startup event - initialize critical resources
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources on startup"""
+    logger.info("🚀 AI Service starting up...")
+    logger.info(f"Device: {DEVICE} (GPU: {CUDA_AVAILABLE})")
+    logger.info(f"Max workers: {MAX_WORKERS}")
+    logger.info("✅ Service ready to accept requests")
+    
+    # Test CUDA availability
+    if CUDA_AVAILABLE:
+        try:
+            torch.cuda.synchronize()
+            logger.info("✅ CUDA initialized successfully")
+        except Exception as e:
+            logger.error(f"⚠️ CUDA initialization warning: {e}")
+
+# Shutdown event - cleanup resources
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown"""
+    logger.info("🛑 AI Service shutting down...")
+    
+    # Clear GPU memory
+    if CUDA_AVAILABLE:
+        try:
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            logger.info("✅ GPU memory cleared")
+        except Exception as e:
+            logger.error(f"Error clearing GPU: {e}")
+    
+    # Shutdown thread pool
+    try:
+        executor.shutdown(wait=False)
+        logger.info("✅ Thread pool shutdown")
+    except Exception as e:
+        logger.error(f"Error shutting down thread pool: {e}")
+    
+    # Garbage collection
+    import gc
+    gc.collect()
+    logger.info("✅ Graceful shutdown completed")
+
 # Custom middleware for service availability
 @app.middleware("http")
 async def check_service_availability(request: Request, call_next):
@@ -2150,6 +2219,8 @@ if __name__ == "__main__":
     ║   ✅ Optimized for 30+ minute audio recordings               ║
     ║   ✅ Parallel chunk processing ({MAX_WORKERS} workers)                    ║
     ║   ✅ FP16 precision enabled                                  ║
+    ║   ✅ Auto-restart on crash (use run_production.sh)           ║
+    ║   ✅ Memory leak prevention enabled                          ║
     ║                                                               ║
     ║   Port: {str(port).ljust(58)} ║
     ║   Host: {host.ljust(58)} ║
@@ -2157,4 +2228,14 @@ if __name__ == "__main__":
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    # Production-ready uvicorn configuration
+    uvicorn.run(
+        app, 
+        host=host, 
+        port=port, 
+        log_level="info",
+        timeout_keep_alive=75,  # Keep-alive timeout (prevents hanging connections)
+        limit_concurrency=100,  # Max concurrent connections (prevent overload)
+        limit_max_requests=1000,  # Restart worker after 1000 requests (prevent memory leaks)
+        timeout_graceful_shutdown=30  # Graceful shutdown timeout
+    )

@@ -67,9 +67,260 @@ python -c "import numpy; print(f'NumPy: {numpy.__version__}')"
 python -c "import torch; print(f'CUDA Available: {torch.cuda.is_available()}')"
 ```
 
-### 8. Start the AI Service
+### 8. Start the AI Service (Production-Ready with Auto-Restart)
+
+#### **RECOMMENDED: Production Setup with Auto-Restart & Monitoring**
+
+**Step 1: Create Production Startup Script**
 ```bash
-python main.py
+cat > run_production.sh << 'EOF'
+#!/bin/bash
+
+# Production AI Service Runner with Auto-Restart
+# Handles crashes, memory issues, log rotation
+
+LOG_FILE="ai_service.log"
+MAX_LOG_SIZE=104857600  # 100MB in bytes
+RESTART_DELAY=5
+MAX_CONSECUTIVE_FAILURES=10
+FAILURE_COUNT=0
+LAST_RESTART_TIME=0
+
+# Log rotation - prevents disk full
+rotate_logs() {
+    if [ -f "$LOG_FILE" ]; then
+        LOG_SIZE=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+        if [ "$LOG_SIZE" -gt "$MAX_LOG_SIZE" ]; then
+            mv "$LOG_FILE" "${LOG_FILE}.$(date +%Y%m%d_%H%M%S).old"
+            echo "Log rotated at $(date)" > "$LOG_FILE"
+            # Keep only last 5 old logs
+            ls -t ${LOG_FILE}.*.old 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
+        fi
+    fi
+}
+
+# GPU memory cleanup
+cleanup_gpu() {
+    python3 << PYEOF
+import torch
+import gc
+if torch.cuda.is_available():
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
+gc.collect()
+print("GPU memory cleaned")
+PYEOF
+}
+
+# Health check
+check_service_health() {
+    sleep 10  # Wait for service to start
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo "✓ Service health check passed"
+        return 0
+    else
+        echo "✗ Service health check failed"
+        return 1
+    fi
+}
+
+echo "=== AI Service Production Runner Started at $(date) ==="
+echo "Process ID: $$"
+echo "Log file: $LOG_FILE"
+echo "=============================================="
+
+while true; do
+    CURRENT_TIME=$(date +%s)
+    TIME_SINCE_LAST_RESTART=$((CURRENT_TIME - LAST_RESTART_TIME))
+    
+    # Reset failure count if service ran for more than 5 minutes
+    if [ $TIME_SINCE_LAST_RESTART -gt 300 ]; then
+        FAILURE_COUNT=0
+    fi
+    
+    # Rotate logs before starting
+    rotate_logs
+    
+    echo ""
+    echo "========================================" | tee -a "$LOG_FILE"
+    echo "Starting AI Service at $(date)" | tee -a "$LOG_FILE"
+    echo "Attempt: $((FAILURE_COUNT + 1))" | tee -a "$LOG_FILE"
+    echo "========================================" | tee -a "$LOG_FILE"
+    
+    LAST_RESTART_TIME=$(date +%s)
+    
+    # Run the service
+    python main.py 2>&1 | tee -a "$LOG_FILE"
+    EXIT_CODE=$?
+    
+    echo ""
+    echo "========================================" | tee -a "$LOG_FILE"
+    echo "Service stopped at $(date)" | tee -a "$LOG_FILE"
+    echo "Exit code: $EXIT_CODE" | tee -a "$LOG_FILE"
+    echo "========================================" | tee -a "$LOG_FILE"
+    
+    # Increment failure count
+    FAILURE_COUNT=$((FAILURE_COUNT + 1))
+    
+    # Check for too many consecutive failures
+    if [ $FAILURE_COUNT -ge $MAX_CONSECUTIVE_FAILURES ]; then
+        echo "!!! Too many consecutive failures ($FAILURE_COUNT). Stopping auto-restart." | tee -a "$LOG_FILE"
+        echo "!!! Check logs and restart manually after fixing issues." | tee -a "$LOG_FILE"
+        exit 1
+    fi
+    
+    # Cleanup GPU memory before restart
+    echo "Cleaning up GPU memory..." | tee -a "$LOG_FILE"
+    cleanup_gpu 2>&1 | tee -a "$LOG_FILE"
+    
+    # Wait before restart
+    echo "Restarting in $RESTART_DELAY seconds..." | tee -a "$LOG_FILE"
+    sleep $RESTART_DELAY
+done
+EOF
+
+chmod +x run_production.sh
 ```
-incase some issue occurs
+
+**Step 2: Start Production Service with Screen**
+```bash
+# Install screen and monitoring tools
+apt-get install -y screen htop curl
+
+# Start the production service in a screen session
+screen -S ai_service
+./run_production.sh
+
+# Detach: Press Ctrl+A, then D
+```
+
+**Step 3: Verify Service is Running**
+```bash
+# Reattach to screen session
+screen -r ai_service
+
+# Or check health endpoint
+curl http://localhost:8000/health
+
+# View logs
+tail -f ai_service.log
+```
+
+---
+
+#### **Alternative Options (Less Robust)**
+
+#### Option A: Using nohup (Simple background running)
+```bash
+nohup python main.py > ai_service.log 2>&1 &
+```
+⚠️ **Warning:** No auto-restart on crash
+
+#### Option B: Using screen (Manual restart)
+```bash
+apt-get install -y screen
+screen -S ai_service
+python main.py
+# Detach: Ctrl+A, then D
+```
+⚠️ **Warning:** No auto-restart on crash
+
+#### Option C: Using tmux (Manual restart)
+```bash
+apt-get install -y tmux
+tmux new -s ai_service
+python main.py
+# Detach: Ctrl+B, then D
+```
+⚠️ **Warning:** No auto-restart on crash
+
+---
+
+#### **Monitoring & Troubleshooting Commands**
+
+```bash
+# Check if service is running and healthy
+curl http://localhost:8000/health
+
+# Reattach to screen session
+screen -r ai_service
+
+# View real-time logs
+tail -f ai_service.log
+
+# Monitor GPU usage
+nvidia-smi -l 1
+
+# Monitor CPU/RAM usage
+htop
+
+# Check running Python processes
+ps aux | grep python
+
+# Check disk space (prevent disk full)
+df -h
+
+# Find and kill service process
+pkill -f "python main.py"
+
+# Manual restart (if needed)
+screen -X -S ai_service quit
+screen -S ai_service
+./run_production.sh
+```
+
+---
+
+#### **Common Issues & Solutions**
+
+**Issue 1: Out of Memory (OOM)**
+```bash
+# Clear GPU cache
+python3 -c "import torch; torch.cuda.empty_cache(); print('GPU cleared')"
+
+# Reduce MAX_WORKERS in .env
+sed -i 's/MAX_WORKERS=4/MAX_WORKERS=2/' .env
+```
+
+**Issue 2: NumPy Compatibility Error**
+```bash
 pip install --force-reinstall "numpy<2.0,>=1.26.4"
+```
+
+**Issue 3: CUDA Out of Memory**
+```bash
+# Use smaller Whisper model
+sed -i 's/WHISPER_MODEL=base/WHISPER_MODEL=tiny/' .env
+```
+
+**Issue 4: Disk Full (Logs)**
+```bash
+# Clear old logs
+rm -f ai_service.log.*.old
+
+# Limit log size manually
+truncate -s 0 ai_service.log
+```
+
+**Issue 5: Port Already in Use**
+```bash
+# Find and kill process using port 8000
+lsof -ti:8000 | xargs kill -9
+
+# Or change port in .env
+sed -i 's/PORT=8000/PORT=8001/' .env
+```
+
+---
+
+#### **Production Checklist**
+
+✅ Use `run_production.sh` for auto-restart  
+✅ Run inside `screen` session to survive SSH disconnects  
+✅ Monitor logs regularly: `tail -f ai_service.log`  
+✅ Check disk space weekly: `df -h`  
+✅ Monitor GPU memory: `nvidia-smi`  
+✅ Test health endpoint: `curl http://localhost:8000/health`  
+✅ Keep old logs to max 5 (automatic in script)  
+✅ Service auto-restarts on crash within 5 seconds  
+✅ Stops after 10 consecutive failures (prevents infinite crash loop)
