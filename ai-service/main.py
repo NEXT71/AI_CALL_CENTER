@@ -1560,25 +1560,56 @@ async def calculate_quality_score(request: QualityScoreRequest):
             # -10 points per abusive word, max -30
             factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
         
-        # Factor 6: DNC Detection (-20 pts) - Only flag clear opt-out requests
-        # More specific phrases that clearly indicate customer doesn't want future calls
-        dnc_phrases = [
+        # Factor 6: DNC Detection (-20 pts) - Detect opt-out requests with improved flexibility
+        # Uses both exact phrases and regex patterns to catch variations
+        found_dnc = []
+        
+        # Exact phrase matches (longer, more specific phrases)
+        dnc_exact_phrases = [
             "do not call me", "don't call me", "stop calling me", 
             "remove me from your list", "take me off your list",
             "i don't want calls", "never call me again", "no more calls please",
             "opt me out", "unsubscribe from calls", "don't contact me",
-            "remove my number", "delete my number", "i'm not interested in calls"
+            "remove my number", "delete my number", "i'm not interested in calls",
+            "take me off the list", "remove me from the list",
+            "i do not want to be called", "please don't call me",
+            "stop calling", "do not call", "don't call"
         ]
         
-        found_dnc = []
-        for phrase in dnc_phrases:
+        for phrase in dnc_exact_phrases:
             if phrase in transcript_lower:
                 found_dnc.append(phrase)
+        
+        # Regex patterns for common DNC variations (catches more flexible wording)
+        dnc_patterns = [
+            r'\bdnc\b',  # "DNC" acronym
+            r'\bdo\s*not\s*call(?:\s+(?:me|again|back|anymore))?\b',  # "do not call [me/again/back/anymore]"
+            r'\bdon\'?t\s*call(?:\s+(?:me|again|back|anymore))?\b',  # "don't call [me/again/back/anymore]"
+            r'\bstop\s*calling(?:\s+(?:me|here))?\b',  # "stop calling [me/here]"
+            r'\bno\s*more\s*calls?\b',  # "no more call(s)"
+            r'\bremove\s+(?:me|my\s+number|my\s+info)(?:\s+from)?(?:\s+(?:your|the)\s+list)?\b',  # remove variations
+            r'\btake\s+me\s+off(?:\s+(?:your|the)\s+list)?\b',  # "take me off [your/the] list"
+            r'\bnever\s+call(?:\s+(?:me|again))?\b',  # "never call [me/again]"
+            r'\bopt\s*(?:me\s*)?out\b',  # "opt out" or "opt me out"
+            r'\bunsubscribe(?:\s+(?:me|from\s+calls?))?\b',  # "unsubscribe [me/from calls]"
+            r'\bdelete\s+my\s+(?:number|info|contact)\b',  # "delete my number/info/contact"
+            r'\bdelet\s+my\s+(?:number|info|contact)\b',  # "delet" typo variant
+        ]
+        
+        for pattern in dnc_patterns:
+            matches = re.findall(pattern, transcript_lower, re.IGNORECASE)
+            if matches:
+                # Add the actual matched text (first match)
+                found_dnc.append(matches[0])
+        
+        # Remove duplicates while preserving order
+        found_dnc = list(dict.fromkeys(found_dnc))
         
         if found_dnc:
             details["dnc_phrases_found"] = found_dnc
             flags["is_dnc_customer"] = True
             factors["dnc_penalty"] = -20.0
+            logger.info(f"⚠️ DNC REQUEST DETECTED: {found_dnc}")
         
         # Calculate overall score
         # Max positive: 25+10+25+20 = 80, Max penalty: -30-20 = -50
