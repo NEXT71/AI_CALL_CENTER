@@ -5,8 +5,10 @@ import {
   ArrowLeft, Download, Play, Pause, AlertTriangle, CheckCircle, 
   X, Phone, User, Calendar, Clock, Hash, TrendingUp, TrendingDown,
   Shield, Award, MessageSquare, Volume2, FileText, BrainCircuit,
-  Brain, Languages, Briefcase, MessageCircle, PhoneOff
+  Brain, Languages, Briefcase, MessageCircle, PhoneOff, Scissors
 } from 'lucide-react';
+import AudioPlayer from '../components/AudioPlayer';
+import AudioTrimmer from '../components/AudioTrimmer';
 
 const CallDetails = () => {
   const { id } = useParams();
@@ -14,7 +16,7 @@ const CallDetails = () => {
   const [call, setCall] = useState(null);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [showTrimmer, setShowTrimmer] = useState(false);
 
   useEffect(() => {
     fetchCallDetails();
@@ -298,24 +300,20 @@ const CallDetails = () => {
           </div>
 
           {/* Audio Player */}
-          <div className="card-enhanced p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <Volume2 size={20} />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900">Audio Recording</h2>
-            </div>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <audio
-                controls
-                className="w-full"
-                src={callService.getCallAudio(call._id)}
-                onPlay={() => setAudioPlaying(true)}
-                onPause={() => setAudioPlaying(false)}
-              >
-                Your browser does not support the audio element.
-              </audio>
-            </div>
+          <AudioPlayer callId={call._id} callName={call.callId} />
+          
+          {/* Audio Trimmer Button */}
+          <div className="card-enhanced p-4">
+            <button
+              onClick={() => setShowTrimmer(true)}
+              className="w-full btn-enhanced btn-secondary-enhanced flex items-center justify-center gap-2"
+            >
+              <Scissors size={18} />
+              Trim Audio
+            </button>
+            <p className="text-xs text-slate-500 text-center mt-2">
+              Extract specific segments from the recording
+            </p>
           </div>
         </div>
 
@@ -684,6 +682,15 @@ const CallDetails = () => {
           )}
         </div>
       </div>
+
+      {/* Audio Trimmer Modal */}
+      {showTrimmer && (
+        <AudioTrimmer 
+          callId={call._id} 
+          callName={call.callId} 
+          onClose={() => setShowTrimmer(false)} 
+        />
+      )}
     </div>
   );
 };

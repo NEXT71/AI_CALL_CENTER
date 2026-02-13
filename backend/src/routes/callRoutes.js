@@ -28,6 +28,9 @@ router.get('/:id', validateObjectId('id'), handleValidationErrors, callControlle
 // Get call audio
 router.get('/:id/audio', validateObjectId('id'), handleValidationErrors, callController.getCallAudio);
 
+// Trim call audio
+router.post('/:id/trim', validateObjectId('id'), handleValidationErrors, callController.trimCallAudio);
+
 // Delete call
 router.delete(
   '/:id',

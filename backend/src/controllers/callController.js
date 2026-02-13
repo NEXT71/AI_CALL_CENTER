@@ -643,6 +643,134 @@ exports.getCallAudio = async (req, res, next) => {
 };
 
 /**
+ * @route   POST /api/calls/:id/trim
+ * @desc    Trim audio file and return trimmed version
+ * @access  Private
+ */
+exports.trimCallAudio = async (req, res, next) => {
+  try {
+    const { startTime, endTime } = req.body;
+    const call = await Call.findById(req.params.id);
+
+    if (!call) {
+      return res.status(404).json({
+        success: false,
+        message: 'Call not found',
+      });
+    }
+
+    // Role-based access control
+    if (req.user.role === 'Agent' && call.agentId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to access this audio',
+      });
+    }
+
+    // Validate input
+    if (typeof startTime !== 'number' || typeof endTime !== 'number' || startTime < 0 || endTime <= startTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid trim parameters. Start time must be less than end time.',
+      });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(call.audioFilePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Audio file not found',
+      });
+    }
+
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execPromise = promisify(exec);
+    
+    // Create temporary output file
+    const tempDir = path.join(__dirname, '../../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    const outputPath = path.join(tempDir, `trimmed_${Date.now()}_${path.basename(call.audioFilePath)}`);
+    const duration = endTime - startTime;
+
+    try {
+      // Use ffmpeg to trim audio
+      // -ss: start time, -t: duration, -acodec copy: copy audio without re-encoding (faster)
+      const ffmpegCommand = `ffmpeg -i "${call.audioFilePath}" -ss ${startTime} -t ${duration} -acodec copy "${outputPath}"`;
+      
+      logger.info(`Trimming audio: ${ffmpegCommand}`);
+      await execPromise(ffmpegCommand);
+
+      // Check if output file was created
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('Failed to create trimmed audio file');
+      }
+
+      // Stream the trimmed file
+      const stat = fs.statSync(outputPath);
+      const fileSize = stat.size;
+
+      res.writeHead(200, {
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': fileSize,
+        'Content-Disposition': `attachment; filename="trimmed_${path.basename(call.audioFilePath)}"`,
+      });
+
+      const fileStream = fs.createReadStream(outputPath);
+      fileStream.pipe(res);
+
+      // Clean up temp file after streaming
+      fileStream.on('end', () => {
+        setTimeout(() => {
+          if (fs.existsSync(outputPath)) {
+            fs.unlinkSync(outputPath);
+            logger.info(`Cleaned up temp file: ${outputPath}`);
+          }
+        }, 1000);
+      });
+
+      fileStream.on('error', (streamError) => {
+        logger.error('Stream error:', streamError);
+        if (fs.existsSync(outputPath)) {
+          fs.unlinkSync(outputPath);
+        }
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: 'Error streaming trimmed audio',
+          });
+        }
+      });
+    } catch (trimError) {
+      // Clean up on error
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+      
+      logger.error('Audio trim error:', trimError);
+      
+      // Check if ffmpeg is not installed
+      if (trimError.message.includes('ffmpeg') || trimError.message.includes('command not found')) {
+        return res.status(500).json({
+          success: false,
+          message: 'Audio trimming is not available. FFmpeg is not installed on the server.',
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to trim audio. Please try again.',
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @route   DELETE /api/calls/:id
  * @desc    Delete a call
  * @access  Private (Admin only)
