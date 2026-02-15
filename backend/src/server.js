@@ -78,6 +78,29 @@ try {
 console.log('🔍 DEBUG: Initializing Express app...');
 const app = express();
 
+// Ensure upload directories exist
+const fs = require('fs');
+const path = require('path');
+const ensureUploadDirectories = () => {
+  const directories = [
+    config.upload.dir,
+    path.join(__dirname, '../temp')
+  ];
+
+  directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      logger.info(`Created directory: ${dir}`);
+      console.log(`✅ DEBUG: Created directory: ${dir}`);
+    } else {
+      console.log(`✅ DEBUG: Directory already exists: ${dir}`);
+    }
+  });
+};
+
+console.log('🔍 DEBUG: Ensuring upload directories exist...');
+ensureUploadDirectories();
+
 // Trust proxy - required for Render and other reverse proxy deployments
 // This allows express-rate-limit to correctly identify client IPs
 app.set('trust proxy', 1);

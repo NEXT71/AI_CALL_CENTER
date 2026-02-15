@@ -602,11 +602,29 @@ exports.getCallAudio = async (req, res, next) => {
       });
     }
 
-    // Check if file exists
-    if (!fs.existsSync(call.audioFilePath)) {
+    // Check if file path exists in database
+    if (!call.audioFilePath) {
+      logger.error('Audio file path is missing from database', { callId: call._id });
       return res.status(404).json({
         success: false,
-        message: 'Audio file not found',
+        message: 'Audio file path not configured for this call',
+      });
+    }
+
+    // Check if file exists on disk
+    if (!fs.existsSync(call.audioFilePath)) {
+      logger.error('Audio file not found on disk', { 
+        callId: call._id, 
+        audioFilePath: call.audioFilePath,
+        audioFileName: call.audioFileName 
+      });
+      return res.status(404).json({
+        success: false,
+        message: 'Audio file not found. The file may have been deleted or moved. Please contact support if this is a recent upload.',
+        details: {
+          expectedPath: call.audioFilePath,
+          fileName: call.audioFileName
+        }
       });
     }
 
@@ -675,17 +693,46 @@ exports.trimCallAudio = async (req, res, next) => {
       });
     }
 
-    // Check if file exists
-    if (!fs.existsSync(call.audioFilePath)) {
+    // Check if file path exists in database
+    if (!call.audioFilePath) {
+      logger.error('Audio file path is missing from database', { callId: call._id });
       return res.status(404).json({
         success: false,
-        message: 'Audio file not found',
+        message: 'Audio file path not configured for this call',
+      });
+    }
+
+    // Check if file exists on disk
+    if (!fs.existsSync(call.audioFilePath)) {
+      logger.error('Audio file not found on disk for trimming', { 
+        callId: call._id, 
+        audioFilePath: call.audioFilePath,
+        audioFileName: call.audioFileName 
+      });
+      return res.status(404).json({
+        success: false,
+        message: 'Audio file not found. The file may have been deleted or moved. Trimming is not available.',
+        details: {
+          expectedPath: call.audioFilePath,
+          fileName: call.audioFileName
+        }
       });
     }
 
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const execPromise = promisify(exec);
+    
+    // Check if ffmpeg is available
+    try {
+      await execPromise('ffmpeg -version');
+    } catch (ffmpegCheckError) {
+      logger.error('FFmpeg not available', { error: ffmpegCheckError.message });
+      return res.status(500).json({
+        success: false,
+        message: 'Audio trimming is not available. FFmpeg is not installed on the server. Please contact your administrator.',
+      });
+    }
     
     // Create temporary output file
     const tempDir = path.join(__dirname, '../../temp');
