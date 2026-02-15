@@ -722,12 +722,11 @@ exports.trimCallAudio = async (req, res, next) => {
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const execPromise = promisify(exec);
+    const ffmpegPath = require('ffmpeg-static');
     
     // Check if ffmpeg is available
-    try {
-      await execPromise('ffmpeg -version');
-    } catch (ffmpegCheckError) {
-      logger.error('FFmpeg not available', { error: ffmpegCheckError.message });
+    if (!ffmpegPath) {
+      logger.error('FFmpeg not available');
       return res.status(500).json({
         success: false,
         message: 'Audio trimming is not available. FFmpeg is not installed on the server. Please contact your administrator.',
@@ -746,7 +745,7 @@ exports.trimCallAudio = async (req, res, next) => {
     try {
       // Use ffmpeg to trim audio
       // -ss: start time, -t: duration, -acodec copy: copy audio without re-encoding (faster)
-      const ffmpegCommand = `ffmpeg -i "${call.audioFilePath}" -ss ${startTime} -t ${duration} -acodec copy "${outputPath}"`;
+      const ffmpegCommand = `"${ffmpegPath}" -i "${call.audioFilePath}" -ss ${startTime} -t ${duration} -acodec copy "${outputPath}"`;
       
       logger.info(`Trimming audio: ${ffmpegCommand}`);
       await execPromise(ffmpegCommand);

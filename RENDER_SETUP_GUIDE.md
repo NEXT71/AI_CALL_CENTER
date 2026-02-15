@@ -36,14 +36,16 @@ Add a **Persistent Disk** to your Render service to keep audio files between dep
 
 #### Step 3: Install FFmpeg
 
-1. Click **"Settings"** tab
-2. Scroll to **"Build & Deploy"** section
-3. Find **"Build Command"**
-4. Update it to:
+~~1. Click **"Settings"** tab~~
+~~2. Scroll to **"Build & Deploy"** section~~
+~~3. Find **"Build Command"**~~
+~~4. Update it to:~~
    ```bash
    npm install && apt-get update && apt-get install -y ffmpeg
    ```
-5. Click **"Save Changes"**
+~~5. Click **"Save Changes"**~~
+
+**UPDATE:** FFmpeg is now handled automatically via the `ffmpeg-static` npm package (already installed). No build command changes needed!
 
 #### Step 4: Deploy
 
@@ -60,14 +62,14 @@ Render will automatically redeploy with the new configuration. Wait for deployme
    # Check if directories exist
    ls -la /app/uploads/
    
-   # Check if FFmpeg is installed
-   ffmpeg -version
+   # ffmpeg-static is bundled with your app
+   node -e "console.log(require('ffmpeg-static'))"
    ```
 
 You should see:
 - Disk mounted at `/app/uploads` with your configured size
 - Directories created
-- FFmpeg version info
+- Path to the ffmpeg binary
 
 ---
 

@@ -154,7 +154,7 @@ const Dashboard = () => {
           apiService.getCalls({ limit: 10, status: 'completed', campaign: debouncedCampaign })
         );
       } else {
-        promises.push(Promise.resolve({ data: { calls: [] } })); // Empty array for admin with proper structure
+        promises.push(Promise.resolve({ data: [] })); // Empty array for admin
       }
 
       promises.push(
@@ -166,29 +166,17 @@ const Dashboard = () => {
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
-      // Handle new response structure where calls are nested in data.calls
-      console.log('Dashboard callsResponse:', callsResponse);
-      const callsArray = Array.isArray(callsResponse.data?.calls) 
-        ? callsResponse.data.calls 
-        : Array.isArray(callsResponse.data) 
-          ? callsResponse.data 
-          : [];
-      
-      setRecentCalls(callsArray);
+      setRecentCalls(callsResponse.data);
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
       setCurrentSubscription(subscriptionResponse.success ? subscriptionResponse.data : null);
       
       // Set pending payments for admin
       if (user.role === 'Admin' && pendingResponse) {
-        setPendingPayments(Array.isArray(pendingResponse.data) ? pendingResponse.data : []);
+        setPendingPayments(pendingResponse.success ? pendingResponse.data : []);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Ensure state is set to empty arrays on error
-      setRecentCalls([]);
-      setStats(null);
-      setSalesData(null);
     } finally {
       setLoading(false);
     }
@@ -228,61 +216,19 @@ const Dashboard = () => {
       return;
     }
 
-    // Payment method - REQUIRED
-    const paymentMethod = prompt('Payment Method (REQUIRED - bank_transfer/cash/check/card/other):', 'bank_transfer');
-    if (!paymentMethod || !paymentMethod.trim()) {
-      alert('Payment method is REQUIRED for security and audit compliance!');
+    // Payment method
+    const paymentMethod = prompt('Payment Method (bank_transfer/cash/check/other):', 'bank_transfer');
+    if (!paymentMethod) return;
+
+    // Payment reference (required)
+    const paymentReference = prompt('Payment Reference/Receipt Number (REQUIRED):', '');
+    if (!paymentReference || paymentReference.trim() === '') {
+      alert('Payment reference is required!');
       return;
     }
 
-    // Payment reference - REQUIRED
-    const paymentReference = prompt('Payment Reference/Receipt Number (REQUIRED for audit):', '');
-    if (!paymentReference || !paymentReference.trim()) {
-      alert('Payment reference is REQUIRED! Please provide a valid receipt/transaction number.');
-      return;
-    }
-
-    // Transaction ID (optional but recommended)
-    const transactionId = prompt('Bank Transaction ID (optional but recommended):', '');
-
-    // CRITICAL SECURITY: Payment proof FILE UPLOAD - MANDATORY
-    alert('⚠️ PAYMENT PROOF REQUIRED\n\nYou must now upload payment proof document(s) to activate this subscription.\n\nAccepted: Receipt, invoice, bank statement, or payment screenshot\nFormats: JPEG, PNG, PDF, DOC, DOCX\nMax: 10MB per file, up to 5 files\n\nThis is mandatory to prevent fraud.');
-    
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.multiple = true;
-    fileInput.accept = '.jpg,.jpeg,.png,.pdf,.doc,.docx';
-    
-    const files = await new Promise((resolve) => {
-      fileInput.onchange = (e) => resolve(e.target.files);
-      fileInput.onerror = () => resolve(null);
-      fileInput.click();
-    });
-
-    if (!files || files.length === 0) {
-      alert('❌ PAYMENT PROOF FILE IS MANDATORY!\n\nYou must upload at least one document:\n- Payment receipt\n- Bank statement\n- Invoice\n- Transaction screenshot\n\nSubscription activation cancelled.');
-      return;
-    }
-
-    // Validate file types and size
-    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    for (let i = 0; i < files.length; i++) {
-      if (!allowedTypes.includes(files[i].type)) {
-        alert(`❌ File "${files[i].name}" is not allowed.\n\nOnly these formats are accepted:\n- JPEG, PNG (images)\n- PDF (documents)\n- DOC, DOCX (Word documents)`);
-        return;
-      }
-      if (files[i].size > maxSize) {
-        alert(`❌ File "${files[i].name}" is too large (${(files[i].size / 1024 / 1024).toFixed(2)}MB).\n\nMaximum file size: 10MB per file`);
-        return;
-      }
-    }
-
-    const fileNames = Array.from(files).map(f => f.name).join(', ');
-    if (!confirm(`Activate subscription with ${files.length} payment proof file(s)?\n\nFiles: ${fileNames}\n\nUser: ${payment.userEmail}\nPlan: ${planType}\nAmount: $${paymentAmount}`)) {
-      return;
-    }
+    // Transaction ID (optional)
+    const transactionId = prompt('Bank Transaction ID (optional, press Cancel to skip):', '');
 
     try {
       setLoading(true);
@@ -293,12 +239,11 @@ const Dashboard = () => {
         paymentAmount,
         paymentMethod.toLowerCase(),
         paymentReference,
-        files, // Pass FileList for upload
         transactionId || null
       );
 
       if (response.success) {
-        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.userName || 'N/A'}\nEmail: ${response.data.userEmail || 'N/A'}\nPlan: ${response.data.plan || 'N/A'}\nStatus: ${response.data.status || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nProof Files: ${response.data.payment?.proofDocumentsCount || 0}`);
+        alert(`✅ Subscription activated successfully!\n\nUser: ${response.data.user?.name || 'N/A'}\nEmail: ${response.data.user?.email || 'N/A'}\nPlan: ${response.data.subscription?.plan || 'N/A'}\nInvoice: ${response.data.payment?.invoiceNumber || 'N/A'}\nPeriod End: ${response.data.subscription?.currentPeriodEnd ? new Date(response.data.subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}`);
 
         // Refresh pending payments
         const refreshResponse = await apiService.getPendingPayments();
@@ -678,7 +623,7 @@ const Dashboard = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="kpi-label-enhanced">Total Calls</p>
-                <p className="kpi-value-enhanced">{(stats?.overview?.totalCalls ?? 0).toLocaleString()}</p>
+                <p className="kpi-value-enhanced">{stats.overview?.totalCalls?.toLocaleString() || 0}</p>
                 <div className="kpi-change-enhanced kpi-change-positive flex items-center gap-1.5 mt-3">
                   <ArrowUp size={14} className="animate-bounce" />
                   <span>12.5% from last period</span>
@@ -701,7 +646,7 @@ const Dashboard = () => {
                 <p className="kpi-value-enhanced">{salesData?.totalSales || 0}</p>
                 <div className="kpi-change-enhanced kpi-change-neutral flex items-center gap-1.5 mt-3">
                   <ShoppingCart size={14} />
-                  <span>{(salesData?.conversionRate ?? 0).toFixed(1)}% conversion</span>
+                  <span>{salesData?.conversionRate?.toFixed(1) || 0}% conversion</span>
                 </div>
               </div>
               <div className="kpi-icon-enhanced kpi-icon-orange group-hover:scale-110 transition-transform duration-300">
@@ -740,7 +685,7 @@ const Dashboard = () => {
                 <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    ${(salesData?.totalRevenue ?? 0).toLocaleString()}
+                    ${salesData.totalRevenue?.toLocaleString() || 0}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
                     <ArrowUp size={12} />
@@ -751,7 +696,7 @@ const Dashboard = () => {
                 <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-slate-500 mb-1">Avg Sale Value</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    ${(salesData?.avgSaleAmount ?? 0).toFixed(2)}
+                    ${salesData.avgSaleAmount?.toFixed(2) || 0}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full w-fit">
                     <ArrowUp size={12} />
@@ -762,7 +707,7 @@ const Dashboard = () => {
                 <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-slate-500 mb-1">Quality Score</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {(salesData?.avgQualityScore ?? 0).toFixed(1)}
+                    {salesData.avgQualityScore?.toFixed(1) || 0}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full w-fit">
                     <span>Sale calls avg</span>
@@ -1010,7 +955,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(recentCalls) && recentCalls.slice(0, 5).map((call, index) => (
+                  {recentCalls.slice(0, 5).map((call, index) => (
                     <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
                       <td className="font-mono text-xs font-semibold text-slate-900">
                         <span className="px-2 py-1 bg-slate-100 rounded text-xs">

@@ -123,53 +123,7 @@ const CallsList = () => {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(true);
-      }
-
-      console.log('Fetching calls with params:', {
-        ...filters,
-        campaign: debouncedCampaign,
-        agentName: debouncedAgentName,
-        sortBy: sortField,
-        sortOrder: sortDirection,
-      });
-
-      const response = await callService.getCalls({
-        ...filters,
-        campaign: debouncedCampaign,
-        agentName: debouncedAgentName,
-        sortBy: sortField,
-        sortOrder: sortDirection,
-      });
-
-      console.log('API Response:', response);
-
-      if (response.success) {
-        const callsData = response.data.calls || response.data || [];
-        const totalData = response.data.total || response.total || 0;
-        const totalPagesData = response.data.totalPages || response.totalPages || 0;
-        const currentPageData = response.data.currentPage || response.currentPage || 1;
-        
-        console.log('Setting calls:', callsData);
-        setCalls(callsData);
-        setPagination({
-          total: totalData,
-          totalPages: totalPagesData,
-          currentPage: currentPageData,
-        });
-      } else {
-        console.error('API returned success: false');
-      }
-    } catch (error) {
-      console.error('Error fetching calls:', error);
-      console.error('Error response:', error.response?.data);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user, filters, debouncedCampaign, debouncedAgentName, sortField, sortDirection]);
-
-  const handleSort = useCallback((field) => {
+        setLoading(truseCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -183,6 +137,30 @@ const CallsList = () => {
     fetchCalls(true);
   }, [fetchCalls]);
 
+  const getScoreBadge = (score) => {
+    if (!score) return 'badge-neutral';
+    if (score >= 90) return 'badge-score-high';
+    if (score >= 75) return 'badge-score-medium';
+    if (score >= 60) return 'badge-score-low';
+    return 'badge-score-critical';
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const resetFilters = useCallback(() => {
     setFilters({
       campaign: '',
@@ -195,12 +173,38 @@ const CallsList = () => {
       page: 1,
       limit: 20,
     });
-  }, []);
+  }, []) return 'badge-score-critical';
+  };
 
-  // Fetch calls on mount and when filters change
-  useEffect(() => {
-    fetchCalls();
-  }, [fetchCalls]);
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      campaign: '',
+      agentName: '',
+      status: '',
+      minQuality: '',
+      maxQuality: '',
+      startDate: '',
+      endDate: '',
+      page: 1,
+      limit: 20,
+    });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -381,13 +385,12 @@ const CallsList = () => {
                 <Search className="text-slate-400" size={40} />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No calls found</h3>
-              <p className="text-slate-500 mb-2 max-w-md mx-auto">
+              <p className="text-slate-500 mb-6 max-w-md mx-auto">
                 {Object.values(filters).some(v => v && v !== '') 
                   ? 'We couldn\'t find any calls matching your current filters. Try adjusting them or search for something else.' 
                   : 'No calls have been uploaded yet. Get started by uploading your first call recording.'
                 }
               </p>
-              <p className="text-xs text-slate-400 mb-6">Debug: calls array length = {calls.length}, total = {pagination.total}</p>
               <div className="flex gap-3 justify-center">
                 {Object.values(filters).some(v => v && v !== '') && (
                   <button onClick={resetFilters} className="btn-enhanced btn-secondary-enhanced">
