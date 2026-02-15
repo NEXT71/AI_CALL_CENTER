@@ -34,18 +34,21 @@ Add a **Persistent Disk** to your Render service to keep audio files between dep
    - **Value:** `/app/uploads/calls`
 3. Click **"Save Changes"**
 
-#### Step 3: Install FFmpeg
+#### Step 3: Update Build Command
 
-~~1. Click **"Settings"** tab~~
-~~2. Scroll to **"Build & Deploy"** section~~
-~~3. Find **"Build Command"**~~
-~~4. Update it to:~~
+**IMPORTANT:** Remove any custom build commands that try to install FFmpeg via apt-get.
+
+1. Click **"Settings"** tab
+2. Scroll to **"Build & Deploy"** section
+3. Find **"Build Command"**
+4. Make sure it's ONLY:
    ```bash
-   npm install && apt-get update && apt-get install -y ffmpeg
+   npm install
    ```
-~~5. Click **"Save Changes"**~~
+   **NOT** `npm install && apt-get update && apt-get install -y ffmpeg`
+5. Click **"Save Changes"**
 
-**UPDATE:** FFmpeg is now handled automatically via the `ffmpeg-static` npm package (already installed). No build command changes needed!
+**Why?** FFmpeg is now bundled with your app via the `ffmpeg-static` npm package, so you don't need to install it separately.
 
 #### Step 4: Deploy
 

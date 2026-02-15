@@ -166,7 +166,10 @@ const Dashboard = () => {
 
       const [callsResponse, analyticsResponse, salesResponse, subscriptionResponse, pendingResponse] = await Promise.all(promises);
 
-      setRecentCalls(callsResponse.data);
+      // Handle recentCalls - it might be nested in data.calls
+      const calls = callsResponse.data?.calls || callsResponse.data || [];
+      setRecentCalls(Array.isArray(calls) ? calls : []);
+      
       setStats(analyticsResponse.data);
       setSalesData(salesResponse.data);
       setCurrentSubscription(subscriptionResponse.success ? subscriptionResponse.data : null);
@@ -807,7 +810,7 @@ const Dashboard = () => {
               </div>
 
               <div className="p-4">
-                {pendingPayments.length === 0 ? (
+                {(!Array.isArray(pendingPayments) || pendingPayments.length === 0) ? (
                   <div className="text-center py-8">
                     <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
                     <p className="text-slate-600">No pending payments to process</p>
@@ -955,7 +958,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentCalls.slice(0, 5).map((call, index) => (
+                  {Array.isArray(recentCalls) && recentCalls.slice(0, 5).map((call, index) => (
                     <tr key={call._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-blue-50/50 transition-all duration-200`}>
                       <td className="font-mono text-xs font-semibold text-slate-900">
                         <span className="px-2 py-1 bg-slate-100 rounded text-xs">
