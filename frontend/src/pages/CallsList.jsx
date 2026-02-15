@@ -194,7 +194,7 @@ const CallsList = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Call Records</h1>
           <p className="text-slate-600 mt-1">
-            {pagination.total} total calls • {calls.filter(c => c.status === 'completed').length} completed
+            {pagination?.total || 0} total calls • {calls.filter(c => c.status === 'completed').length} completed
           </p>
         </div>
         <button className="btn-enhanced btn-secondary-enhanced flex items-center gap-2">
@@ -422,7 +422,7 @@ const CallsList = () => {
                   </button>
                 </div>
                 <div className="text-sm font-medium text-slate-600">
-                  Showing {calls.length} of {pagination.total} calls
+                  Showing {calls.length} of {pagination?.total || 0} calls
                 </div>
               </div>
 
@@ -646,12 +646,12 @@ const CallsList = () => {
               </div>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination?.totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
                   <p className="text-sm text-slate-600">
                     Showing <span className="font-semibold text-slate-900">{(pagination.currentPage - 1) * filters.limit + 1}</span> to{' '}
-                    <span className="font-semibold text-slate-900">{Math.min(pagination.currentPage * filters.limit, pagination.total)}</span> of{' '}
-                    <span className="font-semibold text-slate-900">{pagination.total}</span> results
+                    <span className="font-semibold text-slate-900">{Math.min((pagination?.currentPage || 1) * filters.limit, pagination?.total || 0)}</span> of{' '}
+                    <span className="font-semibold text-slate-900">{pagination?.total || 0}</span> results
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -662,7 +662,7 @@ const CallsList = () => {
                       <ChevronLeft size={18} />
                     </button>
                     <div className="flex items-center gap-1">
-                      {[...Array(Math.min(pagination.totalPages, 5))].map((_, idx) => {
+                      {[...Array(Math.min(pagination?.totalPages || 1, 5))].map((_, idx) => {
                         const page = idx + 1;
                         // Simple pagination logic for display
                         return (
@@ -670,7 +670,7 @@ const CallsList = () => {
                             key={page}
                             onClick={() => setFilters({ ...filters, page })}
                             className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
-                              page === pagination.currentPage
+                              page === (pagination?.currentPage || 1)
                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                                 : 'text-slate-600 hover:bg-slate-100'
                             }`}
@@ -682,7 +682,7 @@ const CallsList = () => {
                     </div>
                     <button
                       onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-                      disabled={pagination.currentPage === pagination.totalPages}
+                      disabled={(pagination?.currentPage || 1) === (pagination?.totalPages || 1)}
                       className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronRight size={18} />
