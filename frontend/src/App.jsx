@@ -87,8 +87,7 @@ function App() {
           </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Suspense path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );

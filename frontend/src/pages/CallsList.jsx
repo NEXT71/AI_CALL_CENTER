@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { callService } from '../services/apiService';
+import api from '../services/api';
 import { useDebounce } from '../hooks/usePerformance';
 import {
   Search,
@@ -20,44 +20,6 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
-
-// Memoized call row component
-const CallRow = memo(({ call, formatDate, getScoreBadge }) => (
-  <tr className="hover:bg-slate-blue-light/20 transition-colors">
-    <td className="px-6 py-4">
-      <div className="font-medium text-cool-white">{call.agentName || 'Unknown'}</div>
-      <div className="text-xs text-cool-white/60">{call.campaign || 'N/A'}</div>
-    </td>
-    <td className="px-6 py-4 text-cool-white/80">
-      {formatDate(call.callDate)}
-    </td>
-    <td className="px-6 py-4">
-      <span className={`badge-compact ${getScoreBadge(call.qualityScore)}`}>
-        {call.qualityScore ? `${call.qualityScore}%` : 'N/A'}
-      </span>
-    </td>
-    <td className="px-6 py-4">
-      <span className={`badge-compact ${
-        call.status === 'completed' ? 'badge-success' : 
-        call.status === 'processing' ? 'badge-warning' : 
-        'badge-danger'
-      }`}>
-        {call.status}
-      </span>
-    </td>
-    <td className="px-6 py-4">
-      <Link 
-        to={`/app/calls/${call._id}`} 
-        className="text-electric-blue hover:text-electric-blue-light inline-flex items-center gap-1 transition-colors"
-      >
-        <Eye size={16} />
-        View
-      </Link>
-    </td>
-  </tr>
-));
-
-CallRow.displayName = 'CallRow';
 
 const CallsList = () => {
   const { user } = useAuth();
@@ -113,6 +75,42 @@ const CallsList = () => {
     });
   }, []);
 
+  // Memoized call row component
+  const CallRow = memo(({ call }) => (
+    <tr className="hover:bg-slate-blue-light/20 transition-colors">
+      <td className="px-6 py-4">
+        <div className="font-medium text-cool-white">{call.agentName || 'Unknown'}</div>
+        <div className="text-xs text-cool-white/60">{call.campaign || 'N/A'}</div>
+      </td>
+      <td className="px-6 py-4 text-cool-white/80">
+        {formatDate(call.callDate)}
+      </td>
+      <td className="px-6 py-4">
+        <span className={`badge-compact ${getScoreBadge(call.qualityScore)}`}>
+          {call.qualityScore ? `${call.qualityScore}%` : 'N/A'}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className={`badge-compact ${
+          call.status === 'completed' ? 'badge-success' : 
+          call.status === 'processing' ? 'badge-warning' : 
+          'badge-danger'
+        }`}>
+          {call.status}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <Link 
+          to={`/app/calls/${call._id}`} 
+          className="text-electric-blue hover:text-electric-blue-light inline-flex items-center gap-1 transition-colors"
+        >
+          <Eye size={16} />
+          View
+        </Link>
+      </td>
+    </tr>
+  ));
+
   const fetchCalls = useCallback(async (isRefresh = false) => {
     if (!user) {
       setLoading(false);
@@ -123,7 +121,39 @@ const CallsList = () => {
       if (isRefresh) {
         setRefreshing(true);
       } else {
-        setLoading(truseCallback((field) => {
+        setLoading(true);
+      }
+
+      const params = new URLSearchParams({
+        campaign: filters.campaign,
+        agentName: filters.agentName,
+        status: filters.status,
+        minQuality: filters.minQuality,
+        maxQuality: filters.maxQuality,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        page: filters.page.toString(),
+        limit: filters.limit.toString(),
+        sortBy: sortField,
+        sortOrder: sortDirection,
+      });
+
+      const response = await api.get(`/calls?${params}`);
+      
+      if (response.data.success) {
+        setCalls(response.data.data.calls);
+        setPagination(response.data.data.pagination);
+      }
+    } catch (err) {
+      console.error('Error fetching calls:', err);
+      setError(err.response?.data?.message || 'Failed to load calls');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user, filters, sortField, sortDirection]);
+
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -137,30 +167,6 @@ const CallsList = () => {
     fetchCalls(true);
   }, [fetchCalls]);
 
-  const getScoreBadge = (score) => {
-    if (!score) return 'badge-neutral';
-    if (score >= 90) return 'badge-score-high';
-    if (score >= 75) return 'badge-score-medium';
-    if (score >= 60) return 'badge-score-low';
-    return 'badge-score-critical';
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const resetFilters = useCallback(() => {
     setFilters({
       campaign: '',
@@ -173,38 +179,7 @@ const CallsList = () => {
       page: 1,
       limit: 20,
     });
-  }, []) return 'badge-score-critical';
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const resetFilters = () => {
-    setFilters({
-      campaign: '',
-      agentName: '',
-      status: '',
-      minQuality: '',
-      maxQuality: '',
-      startDate: '',
-      endDate: '',
-      page: 1,
-      limit: 20,
-    });
-  };
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">
