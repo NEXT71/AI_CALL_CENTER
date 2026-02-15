@@ -26,6 +26,7 @@ const CallsList = () => {
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [sortField, setSortField] = useState('callDate');
   const [sortDirection, setSortDirection] = useState('desc');
   const [filters, setFilters] = useState({
@@ -180,6 +181,11 @@ const CallsList = () => {
       limit: 20,
     });
   }, []);
+
+  // Fetch calls when component mounts or filters/sorting changes
+  useEffect(() => {
+    fetchCalls();
+  }, [fetchCalls]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -490,7 +496,43 @@ const CallsList = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {calls.map((call, index) => (
+                      {loading ? (
+                        <tr>
+                          <td colSpan="10" className="text-center py-12">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                              <p className="text-slate-600">Loading calls...</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : error ? (
+                        <tr>
+                          <td colSpan="10" className="text-center py-12">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <X size={24} className="text-red-600" />
+                              </div>
+                              <p className="text-red-600 font-medium">{error}</p>
+                              <button onClick={() => fetchCalls()} className="btn-enhanced btn-primary-enhanced text-sm">
+                                Try Again
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : calls.length === 0 ? (
+                        <tr>
+                          <td colSpan="10" className="text-center py-12">
+                            <div className="flex flex-col items-center gap-3">
+                              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                                <Phone size={24} className="text-slate-400" />
+                              </div>
+                              <p className="text-slate-600 font-medium">No calls found</p>
+                              <p className="text-slate-500 text-sm">Try adjusting your filters</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        calls.map((call, index) => (
                         <tr key={call._id} className="group hover:bg-blue-50/50 transition-colors">
                           <td className="font-mono text-xs font-semibold text-slate-600">
                             <span className="px-2 py-1 bg-slate-100 rounded border border-slate-200 group-hover:border-blue-200 group-hover:bg-white transition-colors">
@@ -581,7 +623,8 @@ const CallsList = () => {
                             </Link>
                           </td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
