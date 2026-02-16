@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as salesService from '../services/salesService';
-import { Plus, Search, Download, Eye, Trash2, ArrowUpDown, Filter, FileText, BarChart2 } from 'lucide-react';
+import { Plus, Search, Download, Eye, Trash2, ArrowUpDown, Filter, FileText } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/Toast';
 
@@ -153,7 +153,6 @@ const ViewSales = () => {
   // Check permissions
   const canAddSales = ['Admin', 'User'].includes(user?.role);
   const canDelete = user?.role === 'Admin';
-  const canViewReports = ['Admin', 'User'].includes(user?.role);
 
   return (
     <div className="animate-fade-in">
@@ -182,12 +181,6 @@ const ViewSales = () => {
             <Download className="w-4 h-4 mr-2" />
             Export
           </button>
-          {canViewReports && (
-            <Link to="/app/sales-reports" className="btn-enhanced btn-secondary-enhanced">
-              <BarChart2 className="w-4 h-4 mr-2" />
-              Reports
-            </Link>
-          )}
           {canAddSales && (
             <Link 
               to="/app/sales-data/add" 
