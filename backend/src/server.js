@@ -56,7 +56,7 @@ console.log('🔍 DEBUG: runpodRoutes type:', typeof runpodRoutes);
 console.log('🔍 DEBUG: runpodRoutes.stack:', runpodRoutes.stack ? 'has routes' : 'NO ROUTES');
 
 // Import jobs
-// const fileCleanupJob = require('./jobs/fileCleanup'); // Temporarily disabled
+const fileCleanupJob = require('./jobs/fileCleanup');
 const subscriptionExpiration = require('./jobs/subscriptionExpiration');
 
 console.log('🔍 DEBUG: Starting environment validation...');
@@ -330,7 +330,7 @@ const server = app.listen(PORT, () => {
   });
   
   // Start scheduled jobs
-  // fileCleanupJob.start(); // Temporarily disabled
+  fileCleanupJob.start();
   
   // Initialize subscription management cron jobs
   try {

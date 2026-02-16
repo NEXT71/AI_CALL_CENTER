@@ -243,6 +243,14 @@ const callSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    // File cleanup tracking
+    fileDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
