@@ -277,6 +277,7 @@ const CallDetails = () => {
             }`}>
               {call.qualityScore >= 80 ? 'positive' : call.qualityScore >= 60 ? 'neutral' : 'negative'}
             </span>
+          </div>
           <div className="text-3xl font-bold text-slate-900 mb-1 capitalize">
             {call.qualityScore >= 80 ? 'Positive' : call.qualityScore >= 60 ? 'Neutral' : 'Negative'}
           </div>
