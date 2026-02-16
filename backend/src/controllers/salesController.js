@@ -11,6 +11,7 @@ exports.createSalesRecord = async (req, res, next) => {
     const {
       recordType = 'agent',
       agentId,
+      agentName,
       campaign,
       salesDate,
       totalCalls,
@@ -35,15 +36,27 @@ exports.createSalesRecord = async (req, res, next) => {
     };
 
     if (recordType === 'agent') {
-      // Verify agent exists
-      const agent = await User.findById(agentId);
-      if (!agent) {
-        throw new AppError('Agent not found', 404);
+      // Handle agent name - can be provided directly or looked up via agentId
+      let finalAgentName = agentName;
+      let finalAgentId = agentId;
+
+      if (agentId && !agentName) {
+        // If only agentId provided, lookup the agent
+        const agent = await User.findById(agentId);
+        if (!agent) {
+          throw new AppError('Agent not found', 404);
+        }
+        finalAgentName = agent.name;
+      } else if (!agentName) {
+        // Neither agentId nor agentName provided
+        throw new AppError('Agent name is required', 400);
       }
 
       // Add agent-specific fields
-      salesRecordData.agentId = agentId;
-      salesRecordData.agentName = agent.name;
+      if (finalAgentId) {
+        salesRecordData.agentId = finalAgentId;
+      }
+      salesRecordData.agentName = finalAgentName;
       salesRecordData.totalCalls = totalCalls;
       salesRecordData.successfulSales = successfulSales;
       salesRecordData.failedSales = failedSales;

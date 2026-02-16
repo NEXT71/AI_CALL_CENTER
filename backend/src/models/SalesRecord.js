@@ -14,7 +14,7 @@ const salesRecordSchema = new mongoose.Schema(
     agentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: function() { return this.recordType === 'agent'; },
+      required: false, // Made optional to allow direct agentName entry
     },
     agentName: {
       type: String,

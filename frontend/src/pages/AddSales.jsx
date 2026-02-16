@@ -18,7 +18,7 @@ const AddSales = () => {
   const [isOfficeData, setIsOfficeData] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
-    agentId: '',
+    agentName: '',
     campaign: '',
     salesDate: new Date().toISOString().split('T')[0],
     totalCalls: '',
@@ -79,8 +79,8 @@ const AddSales = () => {
 
     try {
       // Validation
-      if (!isOfficeData && !formData.agentId) {
-        throw new Error('Please select an agent');
+      if (!isOfficeData && !formData.agentName?.trim()) {
+        throw new Error('Please enter an agent name');
       }
       if (!formData.campaign) {
         throw new Error('Please select a campaign');
@@ -112,7 +112,7 @@ const AddSales = () => {
         officeNotes: formData.officeNotes,
       } : {
         recordType: 'agent',
-        agentId: formData.agentId,
+        agentName: formData.agentName.trim(),
         campaign: formData.campaign,
         salesDate: formData.salesDate,
         totalCalls,
@@ -201,22 +201,25 @@ const AddSales = () => {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                  Agent *
+                  Agent Name *
                 </label>
-                <select
-                  name="agentId"
-                  value={formData.agentId}
+                <input
+                  type="text"
+                  name="agentName"
+                  value={formData.agentName}
                   onChange={handleChange}
+                  list="agents"
                   required
+                  placeholder="e.g., John Smith"
                   className="input-enhanced w-full"
-                >
-                  <option value="">Select Agent</option>
+                />
+                <datalist id="agents">
                   {agents.map((agent) => (
-                    <option key={agent._id} value={agent._id}>
-                      {agent.name} - {agent.email}
+                    <option key={agent._id} value={agent.name}>
+                      {agent.email}
                     </option>
                   ))}
-                </select>
+                </datalist>
               </div>
             )}
 
