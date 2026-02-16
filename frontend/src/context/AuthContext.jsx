@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '../services/apiService';
+import useInactivityTimeout from '../hooks/useInactivityTimeout';
 
 const AuthContext = createContext(null);
 
@@ -14,6 +15,35 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Define logout function first so it can be used in handleInactiveLogout
+  const logout = useCallback(async () => {
+    // Clear cookies via API call
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Clear local storage
+    localStorage.removeItem('user');
+    setUser(null);
+    
+    // Redirect to login page
+    window.location.href = '/login';
+  }, []);
+
+  // Auto-logout after 10 minutes of inactivity
+  const handleInactiveLogout = useCallback(() => {
+    if (user) {
+      console.log('Auto-logout due to inactivity');
+      alert('You have been logged out due to 10 minutes of inactivity.');
+      logout();
+    }
+  }, [user, logout]);
+
+  // Initialize inactivity timeout (10 minutes) - only when user is logged in
+  useInactivityTimeout(user ? handleInactiveLogout : null, 10);
 
   useEffect(() => {
     // Check if user is logged in
@@ -85,19 +115,6 @@ export const AuthProvider = ({ children }) => {
       console.error('Failed to refresh user data:', error);
       return { success: false, error };
     }
-  };
-
-  const logout = async () => {
-    // Clear cookies via API call
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-    
-    // Clear local storage
-    localStorage.removeItem('user');
-    setUser(null);
   };
 
   const hasRole = (roles) => {
