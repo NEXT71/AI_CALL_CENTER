@@ -11,6 +11,15 @@ import {
 } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
 import AudioTrimmer from '../components/AudioTrimmer';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Spinner } from '../components/ui/Spinner';
+import { Alert } from '../components/ui/Alert';
+import { CallInfoCard } from '../components/calls/CallInfoCard';
+import { QualityScoresCard } from '../components/calls/QualityScoresCard';
+import { TranscriptCard } from '../components/calls/TranscriptCard';
+import { ComplianceCard } from '../components/calls/ComplianceCard';
 
 const CallDetails = () => {
   const { id } = useParams();
@@ -131,7 +140,7 @@ const CallDetails = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
-        <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <Spinner size="lg" className="mb-4" />
         <p className="text-slate-900 font-bold">Loading call details...</p>
       </div>
     );
@@ -145,9 +154,9 @@ const CallDetails = () => {
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Call Not Found</h2>
         <p className="text-slate-900 font-semibold mb-6">The call record you're looking for doesn't exist or has been removed.</p>
-        <button onClick={() => navigate('/app/calls')} className="btn-enhanced btn-primary-enhanced">
+        <Button onClick={() => navigate('/app/calls')}>
           Back to Calls
-        </button>
+        </Button>
       </div>
     );
   }
@@ -157,12 +166,13 @@ const CallDetails = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button
+          <Button
             onClick={() => navigate('/app/calls')}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            variant="ghost"
+            size="sm"
           >
             <ArrowLeft size={24} />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
               Call Details
@@ -178,10 +188,10 @@ const CallDetails = () => {
         </div>
         <div className="flex gap-3">
           {report && (
-            <button onClick={downloadReport} className="btn-enhanced btn-secondary-enhanced flex items-center gap-2">
+            <Button onClick={downloadReport} variant="secondary">
               <Download size={18} />
               Download Report
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -290,14 +300,14 @@ const CallDetails = () => {
             <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 group-hover:scale-110 transition-transform duration-300">
               <Clock size={24} />
             </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-              call.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
-              call.status === 'processing' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-              call.status === 'failed' ? 'bg-red-100 text-red-800 border-red-200' :
-              'bg-yellow-100 text-yellow-800 border-yellow-200'
-            }`}>
+            <Badge variant={
+              call.status === 'completed' ? 'success' :
+              call.status === 'processing' ? 'info' :
+              call.status === 'failed' ? 'error' :
+              'warning'
+            }>
               {call.status}
-            </span>
+            </Badge>
           </div>
           <div className="text-3xl font-bold text-slate-900 mb-1 font-mono">
             {call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '0:00'}
@@ -364,18 +374,19 @@ const CallDetails = () => {
           <AudioPlayer callId={call._id} callName={call.callId} />
           
           {/* Audio Trimmer Button */}
-          <div className="card-enhanced p-4">
-            <button
+          <Card className="p-4">
+            <Button
               onClick={() => setShowTrimmer(true)}
-              className="w-full btn-enhanced btn-secondary-enhanced flex items-center justify-center gap-2"
+              variant="secondary"
+              className="w-full"
             >
               <Scissors size={18} />
               Trim Audio
-            </button>
+            </Button>
             <p className="text-xs text-slate-800 font-semibold text-center mt-2">
               Extract specific segments from the recording
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Right Column - Transcript & Analysis */}
@@ -751,41 +762,33 @@ const CallDetails = () => {
                   AI Coaching Recommendations
                 </h2>
                 {!coaching ? (
-                  <button
+                  <Button
                     onClick={handleGenerateCoaching}
                     disabled={generatingCoaching}
-                    className="btn-enhanced btn-primary-enhanced flex items-center gap-2"
+                    loading={generatingCoaching}
                   >
-                    {generatingCoaching ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Generating...
-                      </>
-                    ) : (
+                    {generatingCoaching ? 'Generating...' : (
                       <>
                         <Sparkles size={18} />
                         Generate Coaching
                       </>
                     )}
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     onClick={handleGenerateCoaching}
                     disabled={generatingCoaching}
-                    className="btn-enhanced btn-secondary-enhanced flex items-center gap-2 text-sm"
+                    loading={generatingCoaching}
+                    variant="secondary"
+                    size="sm"
                   >
-                    {generatingCoaching ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
-                        Regenerating...
-                      </>
-                    ) : (
+                    {generatingCoaching ? 'Regenerating...' : (
                       <>
                         <Sparkles size={16} />
                         Regenerate
                       </>
                     )}
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -912,32 +915,37 @@ const CallDetails = () => {
                         Manager Coaching Notes
                       </h3>
                       {!editingNotes ? (
-                        <button
+                        <Button
                           onClick={() => setEditingNotes(true)}
-                          className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
+                          variant="ghost"
+                          size="sm"
                         >
                           <Edit2 size={14} />
                           Edit
-                        </button>
+                        </Button>
                       ) : (
                         <div className="flex gap-2">
-                          <button
+                          <Button
                             onClick={() => {
                               setEditingNotes(false);
                               setManagerNotes(coaching.managerNotes || '');
                             }}
-                            className="text-sm text-slate-600 hover:text-slate-700 font-semibold"
+                            variant="ghost"
+                            size="sm"
                           >
                             Cancel
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={handleSaveManagerNotes}
                             disabled={savingNotes}
-                            className="text-sm text-green-600 hover:text-green-700 font-semibold flex items-center gap-1"
+                            loading={savingNotes}
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-600 hover:text-green-700"
                           >
                             <Save size={14} />
                             {savingNotes ? 'Saving...' : 'Save'}
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -976,23 +984,18 @@ const CallDetails = () => {
                   <p className="text-slate-900 font-semibold mb-6 max-w-md mx-auto">
                     Click "Generate Coaching" to analyze this call and get AI-powered coaching recommendations for the agent.
                   </p>
-                  <button
+                  <Button
                     onClick={handleGenerateCoaching}
                     disabled={generatingCoaching}
-                    className="btn-enhanced btn-primary-enhanced inline-flex items-center gap-2"
+                    loading={generatingCoaching}
                   >
-                    {generatingCoaching ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Analyzing Call...
-                      </>
-                    ) : (
+                    {generatingCoaching ? 'Analyzing Call...' : (
                       <>
                         <Sparkles size={18} />
                         Generate AI Coaching
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

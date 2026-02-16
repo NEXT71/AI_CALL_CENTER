@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Check, ArrowLeft, Shield, Zap, UserPlus } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card, CardContent } from '../components/ui/Card';
+import { Alert } from '../components/ui/Alert';
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -284,14 +288,13 @@ const Signup = () => {
                   ))}
                 </ul>
 
-                <button
+                <Button
                   onClick={() => handlePlanSelect(key)}
-                  className={`w-full px-4 py-3 rounded-xl font-semibold text-base transition-all duration-200 ${
-                    plan.popular || formData.plan === key ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-md hover:shadow-lg'
-                  }`}
+                  variant={plan.popular || formData.plan === key ? 'primary' : 'secondary'}
+                  className="w-full"
                 >
                   {formData.plan === key ? 'Selected' : 'Select Plan'}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -304,13 +307,14 @@ const Signup = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 py-12 px-4">
       <div className="max-w-2xl mx-auto animate-fade-in">
         <div className="text-center mb-8">
-          <button
+          <Button
             onClick={() => setStep(1)}
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
+            variant="ghost"
+            className="inline-flex items-center gap-2 mb-4"
           >
             <ArrowLeft size={20} />
             Change Plan
-          </button>
+          </Button>
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl mb-6">
             <UserPlus className="text-white" size={32} />
           </div>
@@ -465,20 +469,14 @@ const Signup = () => {
               </label>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-base transition-all duration-200 inline-flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              loading={loading}
+              className="w-full"
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Creating Account...</span>
-                </div>
-              ) : (
-                `Start ${currentPlan.trialDays}-Day Free Trial`
-              )}
-            </button>
+              {loading ? 'Creating Account...' : `Start ${currentPlan.trialDays}-Day Free Trial`}
+            </Button>
 
             <p className="text-center text-sm text-slate-600">
               Already have an account?{' '}

@@ -16,6 +16,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { authService } from '../services/apiService';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Modal } from '../components/ui/Modal';
+import { SearchBar } from '../components/common/SearchBar';
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -208,29 +215,28 @@ const UserManagement = () => {
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={fetchUsers}
-              className="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              variant="secondary"
             >
               <RefreshCw className="h-4 w-4" />
               Refresh
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={exportUsers}
-              className="flex items-center gap-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              variant="secondary"
             >
               <Download className="h-4 w-4" />
               Export
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
               Add User
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -277,48 +283,48 @@ const UserManagement = () => {
                       {user.department || '-'}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        user.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <Badge variant={user.isActive ? 'success' : 'error'}>
                         {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-slate-600">
                       {user.subscription?.plan || 'free'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button
+                        <Button
                           onClick={() => openViewModal(user)}
-                          className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                          variant="ghost"
+                          size="sm"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => openEditModal(user)}
-                          className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                          variant="ghost"
+                          size="sm"
                           title="Edit User"
                         >
                           <Edit className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => openResetPasswordModal(user)}
-                          className="p-1 text-slate-400 hover:text-orange-600 transition-colors"
+                          variant="ghost"
+                          size="sm"
                           title="Reset Password"
                         >
                           <Key className="h-4 w-4" />
-                        </button>
+                        </Button>
                         {user._id !== currentUser._id && (
-                          <button
+                          <Button
                             onClick={() => handleDeactivateUser(user._id)}
-                            className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                            variant="ghost"
+                            size="sm"
                             title="Deactivate User"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -413,19 +419,20 @@ const UserManagement = () => {
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                    variant="secondary"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1"
                   >
                     Create User
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -509,19 +516,20 @@ const UserManagement = () => {
                   <label htmlFor="isActive" className="text-sm text-slate-700">Active User</label>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                    variant="secondary"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1"
                   >
                     Update User
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -578,12 +586,13 @@ const UserManagement = () => {
                 </div>
               </div>
               <div className="flex gap-3 pt-6">
-                <button
+                <Button
                   onClick={() => setShowViewModal(false)}
-                  className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Close
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -612,19 +621,21 @@ const UserManagement = () => {
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowResetPasswordModal(false)}
-                    className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                    variant="secondary"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                    variant="warning"
+                    className="flex-1"
                   >
                     Reset Password
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

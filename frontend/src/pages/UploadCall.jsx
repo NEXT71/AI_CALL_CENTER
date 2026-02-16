@@ -8,6 +8,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DOMPurify from 'dompurify';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Card, CardContent } from '../components/ui/Card';
+import { Alert } from '../components/ui/Alert';
 
 const UploadCall = () => {
   const navigate = useNavigate();
@@ -260,17 +265,18 @@ const UploadCall = () => {
                     )}
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
                   onClick={() => {
                     setAudioFile(null);
                     setFormData(prev => ({ ...prev, duration: '' }));
                   }}
-                  className="btn-enhanced btn-secondary-enhanced py-2 px-4 text-sm"
+                  variant="secondary"
+                  size="sm"
                 >
                   <X size={16} className="mr-2" />
                   Remove File
-                </button>
+                </Button>
               </div>
             ) : (
               <div>
@@ -371,23 +377,24 @@ const UploadCall = () => {
                         onChange={(e) => setNewAgentName(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleAddAgent()}
                       />
-                      <button
-                        type="button"
-                        onClick={handleAddAgent}
-                        className="btn-enhanced bg-blue-600 text-white px-3 py-1 text-sm"
-                      >
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddAgent(false);
-                          setNewAgentName('');
-                        }}
-                        className="btn-enhanced bg-slate-200 text-slate-700 px-3 py-1 text-sm"
-                      >
-                        Cancel
-                      </button>
+                    <Button
+                      type="button"
+                      onClick={handleAddAgent}
+                      size="sm"
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowAddAgent(false);
+                        setNewAgentName('');
+                      }}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
                     </div>
                   )}
                 </div>
@@ -450,30 +457,30 @@ const UploadCall = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-4 pt-4">
-          <button
+          <Button
             type="submit"
             disabled={uploading || !audioFile}
-            className="flex-1 btn-enhanced btn-primary-enhanced py-4 text-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+            loading={uploading}
+            className="flex-1 text-lg font-bold shadow-lg"
           >
             {uploading ? (
-              <>
-                <span>Uploading {uploadProgress}%</span>
-              </>
+              `Uploading ${uploadProgress}%`
             ) : (
               <>
                 <UploadIcon size={24} />
                 Upload & Process Call
               </>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => navigate('/app/calls')}
             disabled={uploading}
-            className="btn-enhanced btn-secondary-enhanced px-8 font-semibold"
+            variant="secondary"
+            className="px-8"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>

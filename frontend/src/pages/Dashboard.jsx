@@ -5,66 +5,12 @@ import apiService from '../services/apiService';
 import { useDebounce } from '../hooks/usePerformance';
 import SalesWidget from '../components/SalesWidget';
 import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard, RefreshCw } from 'lucide-react';
-
-// Memoized stat card component
-const StatCard = memo(({ icon: Icon, label, value, change, changeType, color, loading }) => {
-  if (loading) {
-    return (
-      <div className="kpi-card-enhanced animate-pulse">
-        <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
-        <div className="h-8 bg-slate-200 rounded w-32"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="kpi-card-enhanced group">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="kpi-label-enhanced">{label}</p>
-          <p className="kpi-value-enhanced">{value}</p>
-          {change && (
-            <div className={`kpi-change-enhanced flex items-center gap-1 mt-2 ${
-              changeType === 'positive' ? 'text-green-600' : changeType === 'negative' ? 'text-red-600' : 'text-slate-600'
-            }`}>
-              {changeType === 'positive' ? <ArrowUp size={14} /> : changeType === 'negative' ? <ArrowDown size={14} /> : null}
-              <span>{change}</span>
-            </div>
-          )}
-        </div>
-        <div className={`kpi-icon-enhanced ${color}`}>
-          <Icon size={24} />
-        </div>
-      </div>
-    </div>
-  );
-});
-
-StatCard.displayName = 'StatCard';
-
-// Memoized recent call row
-const RecentCallRow = memo(({ call, formatDate, getScoreBadge }) => (
-  <tr key={call._id}>
-    <td className="px-6 py-4">
-      <div className="font-medium text-cool-white">{call.agentName || 'Unknown'}</div>
-      <div className="text-xs text-cool-white/60">{call.campaign || 'N/A'}</div>
-    </td>
-    <td className="px-6 py-4 text-cool-white/80">{formatDate(call.callDate)}</td>
-    <td className="px-6 py-4">
-      <span className={`badge-compact ${getScoreBadge(call.qualityScore)}`}>
-        {call.qualityScore ? `${call.qualityScore}%` : 'N/A'}
-      </span>
-    </td>
-    <td className="px-6 py-4">
-      <Link to={`/app/calls/${call._id}`} className="text-electric-blue hover:text-electric-blue-light inline-flex items-center gap-1 transition-colors">
-        <Eye size={16} />
-        View
-      </Link>
-    </td>
-  </tr>
-));
-
-RecentCallRow.displayName = 'RecentCallRow';
+import { StatCard } from '../components/dashboard/StatCard';
+import { RecentCallRow as CallRow } from '../components/dashboard/RecentCallRow';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Spinner } from '../components/ui/Spinner';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -327,7 +273,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="spinner w-12 h-12"></div>
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -917,9 +863,11 @@ const Dashboard = () => {
               <p className="text-sm text-slate-500">Latest call analysis results</p>
             </div>
           </div>
-          <Link to="/app/calls" className="btn-enhanced btn-primary-enhanced flex items-center gap-2 group">
-            <span>View All Calls</span>
-            <ArrowUp size={16} className="group-hover:translate-x-1 transition-transform duration-200 rotate-90" />
+          <Link to="/app/calls">
+            <Button className="flex items-center gap-2 group">
+              <span>View All Calls</span>
+              <ArrowUp size={16} className="group-hover:translate-x-1 transition-transform duration-200 rotate-90" />
+            </Button>
           </Link>
         </div>
 
@@ -932,8 +880,10 @@ const Dashboard = () => {
             <p className="empty-state-description">
               Upload your first call recording to get started with AI-powered analysis.
             </p>
-            <Link to="/app/upload" className="btn-enhanced btn-primary-enhanced mt-4">
-              Upload Call Recording
+            <Link to="/app/upload">
+              <Button className="mt-4">
+                Upload Call Recording
+              </Button>
             </Link>
           </div>
         ) : (
@@ -964,9 +914,9 @@ const Dashboard = () => {
                       <td className="font-medium text-slate-900">{call.agentName}</td>
                       <td className="text-slate-600">{call.customerName || 'Unknown'}</td>
                       <td className="text-slate-600">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <Badge variant="info">
                           {call.campaign}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="text-slate-500 text-xs">
                         <div className="font-medium">{formatDate(call.callDate)}</div>
@@ -980,13 +930,13 @@ const Dashboard = () => {
                               call.qualityScore >= 60 ? 'bg-yellow-500' :
                               'bg-red-500'
                             }`}></div>
-                            <span className={`badge-compact ${
-                              call.qualityScore >= 80 ? 'badge-success' :
-                              call.qualityScore >= 60 ? 'badge-warning' :
-                              'badge-danger'
-                            }`}>
+                            <Badge variant={
+                              call.qualityScore >= 80 ? 'success' :
+                              call.qualityScore >= 60 ? 'warning' :
+                              'error'
+                            }>
                               {call.qualityScore}%
-                            </span>
+                            </Badge>
                           </div>
                         ) : (
                           <span className="text-slate-400">N/A</span>
@@ -1000,25 +950,25 @@ const Dashboard = () => {
                               call.complianceScore >= 60 ? 'bg-yellow-500' :
                               'bg-red-500'
                             }`}></div>
-                            <span className={`badge-compact ${
-                              call.complianceScore >= 80 ? 'badge-success' :
-                              call.complianceScore >= 60 ? 'badge-warning' :
-                              'badge-danger'
-                            }`}>
+                            <Badge variant={
+                              call.complianceScore >= 80 ? 'success' :
+                              call.complianceScore >= 60 ? 'warning' :
+                              'error'
+                            }>
                               {call.complianceScore}%
-                            </span>
+                            </Badge>
                           </div>
                         ) : (
                           <span className="text-slate-400">N/A</span>
                         )}
                       </td>
                       <td>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          call.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          call.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          call.status === 'failed' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <Badge variant={
+                          call.status === 'completed' ? 'success' :
+                          call.status === 'processing' ? 'info' :
+                          call.status === 'failed' ? 'error' :
+                          'secondary'
+                        }>
                           <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                             call.status === 'completed' ? 'bg-green-500' :
                             call.status === 'processing' ? 'bg-blue-500 animate-pulse' :
@@ -1026,15 +976,14 @@ const Dashboard = () => {
                             'bg-gray-500'
                           }`}></div>
                           {call.status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-4">
-                        <Link
-                          to={`/app/calls/${call._id}`}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
-                        >
-                          <Eye size={14} className="group-hover:scale-110 transition-transform" />
-                          <span>View</span>
+                        <Link to={`/app/calls/${call._id}`}>
+                          <Button variant="secondary" size="sm">
+                            <Eye size={14} />
+                            <span>View</span>
+                          </Button>
                         </Link>
                       </td>
                     </tr>

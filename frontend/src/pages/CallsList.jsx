@@ -20,6 +20,14 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Spinner } from '../components/ui/Spinner';
+import { SearchBar } from '../components/common/SearchBar';
 
 const CallsList = () => {
   const { user } = useAuth();
@@ -197,25 +205,26 @@ const CallsList = () => {
             {pagination?.total || 0} total calls • {calls.filter(c => c.status === 'completed').length} completed
           </p>
         </div>
-        <button className="btn-enhanced btn-secondary-enhanced flex items-center gap-2">
+        <Button variant="secondary">
           <Download size={18} />
           Export Data
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
         {/* Left Sidebar Filters */}
         <div className={`col-span-12 lg:col-span-3 space-y-5 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-          <div className="card-enhanced p-5 sticky top-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <Filter size={18} className="text-blue-600" />
-                Filters
-              </h3>
-              <button onClick={resetFilters} className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                Reset All
-              </button>
-            </div>
+          <Card className="sticky top-6">
+            <CardContent>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Filter size={18} className="text-blue-600" />
+                  Filters
+                </h3>
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  Reset All
+                </Button>
+              </div>
 
             <div className="space-y-4">
               {/* Search */}
@@ -223,16 +232,13 @@ const CallsList = () => {
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
                   Search
                 </label>
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Call ID, customer..."
-                    className="input-enhanced w-full pl-9 py-2 text-sm"
-                    value={filters.campaign}
-                    onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-                  />
-                </div>
+                <Input
+                  type="text"
+                  placeholder="Call ID, customer..."
+                  value={filters.campaign}
+                  onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
+                  icon={<Search size={14} />}
+                />
               </div>
 
               {/* Agent Filter */}
@@ -240,16 +246,13 @@ const CallsList = () => {
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
                   Agent
                 </label>
-                <div className="relative">
-                  <User size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Agent name..."
-                    className="input-enhanced w-full pl-9 py-2 text-sm"
-                    value={filters.agentName}
-                    onChange={(e) => setFilters({ ...filters, agentName: e.target.value, page: 1 })}
-                  />
-                </div>
+                <Input
+                  type="text"
+                  placeholder="Agent name..."
+                  value={filters.agentName}
+                  onChange={(e) => setFilters({ ...filters, agentName: e.target.value, page: 1 })}
+                  icon={<User size={14} />}
+                />
               </div>
 
               {/* Campaign Filter */}
@@ -257,26 +260,21 @@ const CallsList = () => {
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
                   Campaign
                 </label>
-                <div className="relative">
-                  <Building2 size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <select
-                    className="input-enhanced w-full pl-9 py-2 text-sm appearance-none bg-white"
-                    value={filters.campaign}
-                    onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-                  >
-                    <option value="">All Campaigns</option>
-                    <option value="ACA">ACA</option>
-                    <option value="Medicare">Medicare</option>
-                    <option value="Final Expense">Final Expense</option>
-                  </select>
-                </div>
+                <Select
+                  value={filters.campaign}
+                  onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
+                >
+                  <option value="">All Campaigns</option>
+                  <option value="ACA">ACA</option>
+                  <option value="Medicare">Medicare</option>
+                  <option value="Final Expense">Final Expense</option>
+                </Select>
               </div>
 
               {/* Status Filter */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Status</label>
-                <select
-                  className="input-enhanced w-full py-2 text-sm bg-white"
+                <Select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
                 >
@@ -285,26 +283,24 @@ const CallsList = () => {
                   <option value="processing">Processing</option>
                   <option value="queued">Queued</option>
                   <option value="failed">Failed</option>
-                </select>
+                </Select>
               </div>
 
               {/* Quality Score Range */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Quality Score</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <input
+                  <Input
                     type="number"
                     placeholder="Min"
-                    className="input-enhanced w-full py-2 text-sm"
                     min="0"
                     max="100"
                     value={filters.minQuality}
                     onChange={(e) => setFilters({ ...filters, minQuality: e.target.value, page: 1 })}
                   />
-                  <input
+                  <Input
                     type="number"
                     placeholder="Max"
-                    className="input-enhanced w-full py-2 text-sm"
                     min="0"
                     max="100"
                     value={filters.maxQuality}
@@ -319,15 +315,13 @@ const CallsList = () => {
                   Date Range
                 </label>
                 <div className="space-y-2">
-                  <input
+                  <Input
                     type="date"
-                    className="input-enhanced w-full py-2 text-sm"
                     value={filters.startDate}
                     onChange={(e) => setFilters({ ...filters, startDate: e.target.value, page: 1 })}
                   />
-                  <input
+                  <Input
                     type="date"
-                    className="input-enhanced w-full py-2 text-sm"
                     value={filters.endDate}
                     onChange={(e) => setFilters({ ...filters, endDate: e.target.value, page: 1 })}
                   />
@@ -337,8 +331,7 @@ const CallsList = () => {
               {/* Results per page */}
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Rows per page</label>
-                <select
-                  className="input-enhanced w-full py-2 text-sm bg-white"
+                <Select
                   value={filters.limit}
                   onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value), page: 1 })}
                 >
@@ -346,80 +339,73 @@ const CallsList = () => {
                   <option value="20">20</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
-                </select>
+                </Select>
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content */}
         <div className="col-span-12 lg:col-span-9">
           {loading ? (
-            <div className="card-enhanced p-12 flex flex-col items-center justify-center">
-              <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-              <p className="text-slate-600 font-medium">Loading calls...</p>
-              <p className="text-slate-400 text-sm mt-1">Please wait while we fetch your data</p>
-            </div>
-          ) : calls.length === 0 ? (
-            <div className="card-enhanced p-12 text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Search className="text-slate-400" size={40} />
+            <Card className="p-12">
+              <div className="flex flex-col items-center justify-center">
+                <Spinner size="lg" className="mb-4" />
+                <p className="text-slate-600 font-medium">Loading calls...</p>
+                <p className="text-slate-400 text-sm mt-1">Please wait while we fetch your data</p>
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">No calls found</h3>
-              <p className="text-slate-500 mb-6 max-w-md mx-auto">
-                {Object.values(filters).some(v => v && v !== '') 
+            </Card>
+          ) : calls.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No calls found"
+              description={
+                Object.values(filters).some(v => v && v !== '') 
                   ? 'We couldn\'t find any calls matching your current filters. Try adjusting them or search for something else.' 
                   : 'No calls have been uploaded yet. Get started by uploading your first call recording.'
-                }
-              </p>
-              <div className="flex gap-3 justify-center">
-                {Object.values(filters).some(v => v && v !== '') && (
-                  <button onClick={resetFilters} className="btn-enhanced btn-secondary-enhanced">
-                    Clear Filters
-                  </button>
-                )}
-                <Link to="/app/upload" className="btn-enhanced btn-primary-enhanced">
-                  Upload First Call
-                </Link>
-              </div>
-            </div>
+              }
+              action={(
+                <div className="flex gap-3 justify-center">
+                  {Object.values(filters).some(v => v && v !== '') && (
+                    <Button variant="secondary" onClick={resetFilters}>
+                      Clear Filters
+                    </Button>
+                  )}
+                  <Link to="/app/upload">
+                    <Button>Upload First Call</Button>
+                  </Link>
+                </div>
+              )}
+            />
           ) : (
             <div className="space-y-4">
               {/* Table Controls */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button
+                  <Button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="lg:hidden btn-enhanced btn-secondary-enhanced p-2"
+                    variant="secondary" 
+                    size="sm"
+                    className="lg:hidden"
                   >
                     <SlidersHorizontal size={20} />
-                  </button>
-                  <div className="relative flex-1 sm:flex-none">
-                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Quick search..."
-                      value={filters.search || ''}
-                      onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
-                      className="input-enhanced pl-10 pr-10 py-2 w-full sm:w-64"
-                    />
-                    {filters.search && (
-                      <button
-                        onClick={() => setFilters({ ...filters, search: '', page: 1 })}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <button
+                  </Button>
+                  <SearchBar
+                    value={filters.search || ''}
+                    onChange={(value) => setFilters({ ...filters, search: value, page: 1 })}
+                    placeholder="Quick search..."
+                    className="w-full sm:w-64"
+                  />
+                  <Button
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="btn-enhanced btn-secondary-enhanced p-2"
+                    variant="secondary"
+                    size="sm"
                     title="Refresh list"
                   >
                     <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-                  </button>
+                  </Button>
                 </div>
                 <div className="text-sm font-medium text-slate-600">
                   Showing {calls.length} of {pagination?.total || 0} calls
@@ -513,9 +499,9 @@ const CallsList = () => {
                                 <X size={24} className="text-red-600" />
                               </div>
                               <p className="text-red-600 font-medium">{error}</p>
-                              <button onClick={() => fetchCalls()} className="btn-enhanced btn-primary-enhanced text-sm">
+                              <Button onClick={() => fetchCalls()} size="sm">
                                 Try Again
-                              </button>
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -551,9 +537,9 @@ const CallsList = () => {
                             {call.customerName || 'Unknown'}
                           </td>
                           <td>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            <Badge variant={call.campaign === 'ACA' ? 'primary' : call.campaign === 'Medicare' ? 'success' : 'info'}>
                               {call.campaign}
-                            </span>
+                            </Badge>
                           </td>
                           <td>
                             <div className="flex flex-col">
@@ -599,27 +585,26 @@ const CallsList = () => {
                             )}
                           </td>
                           <td>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                              call.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              call.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                              call.status === 'queued' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                              call.status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
-                              'bg-slate-50 text-slate-700 border-slate-100'
-                            }`} title={call.status === 'failed' ? call.processingError : ''}>
+                            <Badge variant={
+                              call.status === 'completed' ? 'success' :
+                              call.status === 'processing' ? 'info' :
+                              call.status === 'queued' ? 'warning' :
+                              call.status === 'failed' ? 'error' :
+                              'secondary'
+                            } title={call.status === 'failed' ? call.processingError : ''}>
                               {(call.status === 'processing' || call.status === 'queued') && (
                                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse mr-1.5"></div>
                               )}
                               {call.status === 'failed' && '❌ '}
                               {call.status === 'queued' ? 'Queued' : call.status.charAt(0).toUpperCase() + call.status.slice(1)}
-                            </span>
+                            </Badge>
                           </td>
                           <td className="sticky right-0 bg-gradient-to-l from-white via-white to-transparent pl-4">
-                            <Link
-                              to={`${call._id}`}
-                              className="btn-enhanced btn-secondary-enhanced py-1.5 px-3 text-xs flex items-center gap-1.5"
-                            >
-                              <Eye size={14} />
-                              View
+                            <Link to={`${call._id}`}>
+                              <Button variant="secondary" size="sm">
+                                <Eye size={14} />
+                                View
+                              </Button>
                             </Link>
                           </td>
                         </tr>
@@ -654,39 +639,38 @@ const CallsList = () => {
                     <span className="font-semibold text-slate-900">{pagination?.total || 0}</span> results
                   </p>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
                       disabled={pagination.currentPage === 1}
-                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="secondary"
+                      size="sm"
                     >
                       <ChevronLeft size={18} />
-                    </button>
+                    </Button>
                     <div className="flex items-center gap-1">
                       {[...Array(Math.min(pagination?.totalPages || 1, 5))].map((_, idx) => {
                         const page = idx + 1;
-                        // Simple pagination logic for display
                         return (
-                          <button
+                          <Button
                             key={page}
                             onClick={() => setFilters({ ...filters, page })}
-                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
-                              page === (pagination?.currentPage || 1)
-                                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
+                            variant={page === (pagination?.currentPage || 1) ? 'primary' : 'secondary'}
+                            size="sm"
+                            className="w-8 h-8"
                           >
                             {page}
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>
-                    <button
+                    <Button
                       onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                       disabled={(pagination?.currentPage || 1) === (pagination?.totalPages || 1)}
-                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="secondary"
+                      size="sm"
                     >
                       <ChevronRight size={18} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

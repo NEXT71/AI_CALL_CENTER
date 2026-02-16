@@ -3,6 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, Mail, Lock, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Alert } from '../components/ui/Alert';
+import { Card, CardContent } from '../components/ui/Card';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -89,10 +93,9 @@ const Login = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 animate-slide-in-right">
-              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <p className="text-sm font-medium">{error}</p>
-            </div>
+            <Alert variant="error" className="mb-6">
+              {error}
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -100,59 +103,45 @@ const Login = () => {
               <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
                 Email Address
               </label>
-              <div className="relative group">
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-12 px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
-                  placeholder="you@company.com"
-                />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200">
-                  <Mail size={20} />
-                </div>
-              </div>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@company.com"
+                icon={<Mail size={20} />}
+              />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
                 Password
               </label>
-              <div className="relative group">
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-12 px-4 py-3 text-sm border-2 border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300"
-                  placeholder="••••••••"
-                />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200">
-                  <Lock size={20} />
-                </div>
-              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                icon={<Lock size={20} />}
+              />
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-base transition-all duration-200 inline-flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              loading={loading}
+              className="w-full"
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Signing in...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-3">
-                  <span>Sign In</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
+              {loading ? 'Signing in...' : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
               )}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6 text-center">

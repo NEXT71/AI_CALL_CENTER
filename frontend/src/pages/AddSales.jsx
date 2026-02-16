@@ -6,6 +6,7 @@ import api from '../services/api';
 import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, BarChart2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/Toast';
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, Alert } from '../components/ui';
 
 const AddSales = () => {
   const { user } = useAuth();
@@ -150,249 +151,213 @@ const AddSales = () => {
           duration={toast.duration}
         />
       ))}
-      <div className="card-enhanced">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <BarChart2 className="w-8 h-8 text-white" />
+      
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <BarChart2 className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <CardTitle>
+                  {isOfficeData ? 'Add Office Sales Data' : 'Add Sales Record'}
+                </CardTitle>
+                <CardDescription>
+                  {isOfficeData ? 'Enter office-wide sales metrics and performance data' : 'Enter daily sales data for an agent'}
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                {isOfficeData ? 'Add Office Sales Data' : 'Add Sales Record'}
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                {isOfficeData ? 'Enter office-wide sales metrics and performance data' : 'Enter daily sales data for an agent'}
-              </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => setIsOfficeData(!isOfficeData)}
+                className={isOfficeData ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
+              >
+                {isOfficeData ? '📊 Office Data' : '👤 Agent Data'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/app/sales-data')}
+                icon={X}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsOfficeData(!isOfficeData)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                isOfficeData 
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm' 
-                  : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              {isOfficeData ? '📊 Office Data' : '👤 Agent Data'}
-            </button>
-            <button
-              onClick={() => navigate('/app/sales-data')}
-              className="btn-enhanced btn-secondary-enhanced"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </button>
-          </div>
-        </div>
+        </CardHeader>
 
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-start shadow-sm animate-shake">
-            <XCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-            <span className="font-medium">{error}</span>
-          </div>
-        )}
+        <CardContent>
+          {error && (
+            <Alert variant="error" className="mb-6" onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Agent & Campaign Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {!isOfficeData && (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Agent & Campaign Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {!isOfficeData && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
+                    Agent Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="agentName"
+                    value={formData.agentName}
+                    onChange={handleChange}
+                    list="agents"
+                    required
+                    placeholder="e.g., John Smith"
+                    className="input-enhanced w-full"
+                  />
+                  <datalist id="agents">
+                    {agents.map((agent) => (
+                      <option key={agent._id} value={agent.name}>
+                        {agent.email}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  <User className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                  Agent Name *
+                  <Briefcase className="w-4 h-4 inline mr-1.5 text-blue-600" />
+                  Campaign *
                 </label>
                 <input
                   type="text"
-                  name="agentName"
-                  value={formData.agentName}
+                  name="campaign"
+                  value={formData.campaign}
                   onChange={handleChange}
-                  list="agents"
+                  list="campaigns"
                   required
-                  placeholder="e.g., John Smith"
+                  placeholder="e.g., Inbound Sales"
                   className="input-enhanced w-full"
                 />
-                <datalist id="agents">
-                  {agents.map((agent) => (
-                    <option key={agent._id} value={agent.name}>
-                      {agent.email}
-                    </option>
+                <datalist id="campaigns">
+                  {campaigns.map((campaign, idx) => (
+                    <option key={idx} value={campaign} />
                   ))}
                 </datalist>
               </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <Briefcase className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                Campaign *
-              </label>
-              <input
-                type="text"
-                name="campaign"
-                value={formData.campaign}
-                onChange={handleChange}
-                list="campaigns"
-                required
-                placeholder="e.g., Inbound Sales"
-                className="input-enhanced w-full"
-              />
-              <datalist id="campaigns">
-                {campaigns.map((campaign, idx) => (
-                  <option key={idx} value={campaign} />
-                ))}
-              </datalist>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                Date *
-              </label>
-              <input
-                type="date"
-                name="salesDate"
-                value={formData.salesDate}
-                onChange={handleChange}
-                max={new Date().toISOString().split('T')[0]}
-                required
-                className="input-enhanced w-full"
-              />
-            </div>
-          </div>
-
-          {/* Sales Metrics */}
-          <div className="border-t border-slate-100 pt-8">
-            <h3 className="section-header-enhanced mb-6">Sales Metrics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1.5 text-slate-500" />
-                  Total Calls *
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1.5 text-blue-600" />
+                  Date *
                 </label>
                 <input
+                  type="date"
+                  name="salesDate"
+                  value={formData.salesDate}
+                  onChange={handleChange}
+                  max={new Date().toISOString().split('T')[0]}
+                  required
+                  className="input-enhanced w-full"
+                />
+              </div>
+            </div>
+
+            {/* Sales Metrics */}
+            <div className="border-t border-slate-100 pt-8">
+              <h3 className="section-header-enhanced mb-6">Sales Metrics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Input
+                  label="Total Calls"
                   type="number"
                   name="totalCalls"
                   value={formData.totalCalls}
                   onChange={handleChange}
                   min="0"
                   required
-                  className={`input-enhanced w-full ${fieldErrors.totalCalls ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  error={fieldErrors.totalCalls}
                   placeholder="0"
                 />
-                {fieldErrors.totalCalls && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                    <XCircle size={14} />
-                    {fieldErrors.totalCalls}
-                  </p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <CheckCircle className="w-4 h-4 inline mr-1.5 text-emerald-600" />
-                  Successful Sales *
-                </label>
-                <input
+                <Input
+                  label="Successful Sales"
                   type="number"
                   name="successfulSales"
                   value={formData.successfulSales}
                   onChange={handleChange}
                   min="0"
                   required
-                  className={`input-enhanced w-full ${fieldErrors.successfulSales ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  error={fieldErrors.successfulSales}
                   placeholder="0"
                 />
-                {fieldErrors.successfulSales && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                    <XCircle size={14} />
-                    {fieldErrors.successfulSales}
-                  </p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <XCircle className="w-4 h-4 inline mr-1.5 text-rose-600" />
-                  Failed Sales *
-                </label>
-                <input
+                <Input
+                  label="Failed Sales"
                   type="number"
                   name="failedSales"
                   value={formData.failedSales}
                   onChange={handleChange}
                   min="0"
                   required
-                  className="input-enhanced w-full"
                   placeholder="0"
                 />
-              </div>
 
-              {/* Success Rate Display */}
-              <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Success Rate
-                </label>
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 shadow-sm">
-                  <div className="text-3xl font-bold text-blue-600">
-                    {successRate}%
+                {/* Success Rate Display */}
+                <div className="md:col-span-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Success Rate
+                  </label>
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 shadow-sm">
+                    <div className="text-3xl font-bold text-blue-600">
+                      {successRate}%
+                    </div>
+                    <div className="text-xs text-blue-600/80 mt-1 font-medium">Auto-calculated</div>
                   </div>
-                  <div className="text-xs text-blue-600/80 mt-1 font-medium">Auto-calculated</div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Additional Notes
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows="3"
-              maxLength="1000"
-              className="input-enhanced w-full"
-              placeholder="Any additional comments or observations..."
-            />
-            <div className="text-xs text-slate-400 mt-1 text-right">
-              {formData.notes.length}/1000 characters
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows="3"
+                maxLength="1000"
+                className="input-enhanced w-full"
+                placeholder="Any additional comments or observations..."
+              />
+              <div className="text-xs text-slate-400 mt-1 text-right">
+                {formData.notes.length}/1000 characters
+              </div>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => navigate('/app/sales-data')}
-              className="btn-enhanced btn-secondary-enhanced"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-enhanced btn-primary-enhanced"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Sales Record
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* Submit Button */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => navigate('/app/sales-data')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={loading}
+                icon={Save}
+              >
+                Save Sales Record
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

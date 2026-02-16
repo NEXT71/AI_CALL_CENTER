@@ -5,6 +5,8 @@ import * as salesService from '../services/salesService';
 import { Plus, Search, Download, Eye, Trash2, ArrowUpDown, Filter, FileText } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/Toast';
+import { Button, Card, CardContent, Badge, Input, EmptyState } from '../components/ui';
+import { SearchBar } from '../components/common';
 
 const ViewSales = () => {
   const { user } = useAuth();
@@ -177,81 +179,73 @@ const ViewSales = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button onClick={handleExport} className="btn-enhanced btn-secondary-enhanced">
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="secondary" onClick={handleExport} icon={Download}>
             Export
-          </button>
+          </Button>
           {canAddSales && (
-            <Link 
-              to="/app/sales-data/add" 
-              className="btn-enhanced btn-primary-enhanced"
-            >
-              <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-              Add Sales
+            <Link to="/app/sales-data/add">
+              <Button variant="primary" icon={Plus}>
+                Add Sales
+              </Button>
             </Link>
           )}
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="card-enhanced mb-6 p-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by agent name or campaign..."
-            className="input-enhanced w-full pl-12"
-          />
-        </div>
-      </div>
+      <Card className="mb-6" padding="sm">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search by agent name or campaign..."
+        />
+      </Card>
 
       {/* Filters */}
-      <div className="card-enhanced mb-6 p-6">
-        <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-slate-700">
-          <Filter className="w-4 h-4 text-blue-600" />
-          Filters
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => setFilters({ ...filters, startDate: e.target.value, page: 1 })}
-            className="input-enhanced"
-            placeholder="Start Date"
-          />
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => setFilters({ ...filters, endDate: e.target.value, page: 1 })}
-            className="input-enhanced"
-            placeholder="End Date"
-          />
-          <input
-            type="text"
-            value={filters.campaign}
-            onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
-            className="input-enhanced"
-            placeholder="Campaign"
-          />
-          <select
-            value={filters.recordType || ''}
-            onChange={(e) => setFilters({ ...filters, recordType: e.target.value, page: 1 })}
-            className="input-enhanced"
-          >
-            <option value="">All Record Types</option>
-            <option value="agent">Agent Data</option>
-            <option value="office">Office Data</option>
-          </select>
-          <button
-            onClick={() => setFilters({ startDate: '', endDate: '', agentName: '', campaign: '', recordType: '', page: 1 })}
-            className="btn-enhanced btn-secondary-enhanced justify-center"
-          >
-            Clear Filters
-          </button>
-        </div>
-      </div>
+      <Card className="mb-6">
+        <CardContent>
+          <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-slate-700">
+            <Filter className="w-4 h-4 text-blue-600" />
+            Filters
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <Input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters({ ...filters, startDate: e.target.value, page: 1 })}
+              placeholder="Start Date"
+            />
+            <Input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters({ ...filters, endDate: e.target.value, page: 1 })}
+              placeholder="End Date"
+            />
+            <Input
+              type="text"
+              value={filters.campaign}
+              onChange={(e) => setFilters({ ...filters, campaign: e.target.value, page: 1 })}
+              placeholder="Campaign"
+            />
+            <select
+              value={filters.recordType || ''}
+              onChange={(e) => setFilters({ ...filters, recordType: e.target.value, page: 1 })}
+              className="input-enhanced"
+            >
+              <option value="">All Record Types</option>
+              <option value="agent">Agent Data</option>
+              <option value="office">Office Data</option>
+            </select>
+            <Button
+              variant="secondary"
+              onClick={() => setFilters({ startDate: '', endDate: '', agentName: '', campaign: '', recordType: '', page: 1 })}
+              className="w-full"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Bulk Actions */}
       {selectedRecords.length > 0 && canDelete && (
@@ -264,10 +258,9 @@ const ViewSales = () => {
               record(s) selected
             </span>
           </div>
-          <button onClick={handleBulkDelete} className="btn-enhanced bg-red-600 text-white hover:bg-red-700 border-red-600 hover:border-red-700 shadow-md hover:shadow-lg">
-            <Trash2 className="w-4 h-4 mr-2" />
+          <Button variant="danger" onClick={handleBulkDelete} icon={Trash2}>
             Delete Selected
-          </button>
+          </Button>
         </div>
       )}
 
@@ -275,25 +268,30 @@ const ViewSales = () => {
       {/* Sales Table */}
       <div className="table-container-enhanced">
         {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-lg font-semibold text-slate-700">Loading sales data...</p>
-            <p className="text-sm text-slate-500 mt-2">Please wait while we fetch the records</p>
-          </div>
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-lg font-semibold text-slate-700">Loading sales data...</p>
+              <p className="text-sm text-slate-500 mt-2">Please wait while we fetch the records</p>
+            </CardContent>
+          </Card>
         ) : filteredSales.length === 0 ? (
-          <div className="empty-state-enhanced">
-            <div className="empty-state-icon">
-              <FileText className="w-16 h-16 text-slate-300" />
-            </div>
-            <h3 className="empty-state-title">No sales records found</h3>
-            <p className="empty-state-description">Get started by adding your first sales record to track agent performance</p>
-            {canAddSales && (
-              <Link to="/app/sales-data/add" className="btn-enhanced btn-primary-enhanced mt-4">
-                <Plus className="w-5 h-5 mr-2" />
-                Add Sales Record
-              </Link>
-            )}
-          </div>
+          <Card>
+            <CardContent>
+              <EmptyState
+                icon={FileText}
+                title="No sales records found"
+                description="Get started by adding your first sales record to track agent performance"
+                action={
+                  canAddSales && (
+                    <Link to="/app/sales-data/add">
+                      <Button variant="primary" icon={Plus}>Add Sales Record</Button>
+                    </Link>
+                  )
+                }
+              />
+            </CardContent>
+          </Card>
         ) : (
           <div className="overflow-x-auto">
             <table className="table-enhanced">
@@ -415,16 +413,21 @@ const ViewSales = () => {
                       )}
                     </td>
                     <td>
-                      <span className={`badge-compact ${getStatusBadge(record.status)}`}>
+                      <Badge variant={getStatusBadge(record.status)}>
                         {record.status}
-                      </span>
+                      </Badge>
                     </td>
                     <td>
                       <div className="flex space-x-2">
                         {canDelete && (
-                          <button onClick={() => handleDelete(record._id)} className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200 group" title="Delete">
-                            <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(record._id)}
+                            icon={Trash2}
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            title="Delete"
+                          />
                         )}
                       </div>
                     </td>
@@ -439,23 +442,23 @@ const ViewSales = () => {
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
         <div className="flex justify-center mt-8 space-x-3">
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
             disabled={filters.page === 1}
-            className="btn-enhanced btn-secondary-enhanced disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
-          </button>
+          </Button>
           <div className="px-6 py-2.5 bg-white text-slate-900 rounded-lg border border-slate-200 font-bold shadow-sm flex items-center">
             Page {pagination.currentPage} of {pagination.totalPages}
           </div>
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
             disabled={filters.page === pagination.totalPages}
-            className="btn-enhanced btn-secondary-enhanced disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
     </div>
