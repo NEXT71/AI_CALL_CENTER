@@ -398,7 +398,7 @@ const CallDetails = () => {
                         Customer Tone
                         <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full cursor-help">?</span>
                       </div>
-                      <div className="text-sm text-slate-800 font-medium">{call.qualityMetrics.aiDetails?.customer_tone || 'N/A'}</div>
+                      <div className="text-sm text-slate-900 font-bold">{call.qualityMetrics.aiDetails?.customer_tone || 'N/A'}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -425,7 +425,7 @@ const CallDetails = () => {
                         Language Quality
                         <span className="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full cursor-help">?</span>
                       </div>
-                      <div className="text-sm text-slate-800 font-medium">{call.qualityMetrics.aiDetails?.detected_language || 'N/A'}</div>
+                      <div className="text-sm text-slate-900 font-bold">{call.qualityMetrics.aiDetails?.detected_language || 'N/A'}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -451,7 +451,7 @@ const CallDetails = () => {
                         Agent Professionalism
                         <span className="text-xs px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full cursor-help">?</span>
                       </div>
-                      <div className="text-sm text-slate-800 font-medium">
+                      <div className="text-sm text-slate-900 font-bold">
                         {call.qualityMetrics.aiDetails?.agent_casual_phrases?.length > 0 
                           ? `${call.qualityMetrics.aiDetails.agent_casual_phrases.length} casual phrases`
                           : 'Professional tone'}
@@ -481,7 +481,7 @@ const CallDetails = () => {
                         Customer Communication
                         <span className="text-xs px-2 py-0.5 bg-orange-200 text-orange-800 rounded-full cursor-help">?</span>
                       </div>
-                      <div className="text-sm text-slate-800 font-medium">{call.qualityMetrics.aiDetails?.customer_style || 'N/A'}</div>
+                      <div className="text-sm text-slate-900 font-bold">{call.qualityMetrics.aiDetails?.customer_style || 'N/A'}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -508,7 +508,7 @@ const CallDetails = () => {
                           Abusive Language
                           <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded-full cursor-help">!</span>
                         </div>
-                        <div className="text-sm text-slate-800 font-medium">
+                        <div className="text-sm text-slate-900 font-bold">
                           {call.qualityMetrics.aiDetails?.abusive_words_found?.length || 0} words detected
                         </div>
                       </div>
@@ -538,7 +538,7 @@ const CallDetails = () => {
                           Do Not Call Request
                           <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full cursor-help">!</span>
                         </div>
-                        <div className="text-sm text-slate-800 font-medium">Customer opted out</div>
+                        <div className="text-sm text-slate-900 font-bold">Customer opted out</div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -588,7 +588,7 @@ const CallDetails = () => {
                     </div>
                     <div>
                       <div className="font-semibold text-slate-900">Overall Quality</div>
-                      <div className="text-sm text-slate-800 font-medium">
+                      <div className="text-sm text-slate-900 font-bold">
                         {call.qualityScore >= 90 ? 'Excellent' :
                          call.qualityScore >= 70 ? 'Good' :
                          call.qualityScore >= 50 ? 'Fair' : 'Needs Improvement'}
