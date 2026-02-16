@@ -141,10 +141,10 @@ const CallDetails = () => {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-center">
         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-          <FileText className="text-slate-400" size={40} />
+          <FileText className="text-slate-600" size={40} />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Call Not Found</h2>
-        <p className="text-slate-600 mb-6">The call record you're looking for doesn't exist or has been removed.</p>
+        <p className="text-slate-900 font-semibold mb-6">The call record you're looking for doesn't exist or has been removed.</p>
         <button onClick={() => navigate('/app/calls')} className="btn-enhanced btn-primary-enhanced">
           Back to Calls
         </button>
@@ -166,11 +166,11 @@ const CallDetails = () => {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
               Call Details
-              <span className="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-md font-mono">
+              <span className="text-sm font-semibold text-slate-800 bg-slate-100 px-2 py-1 rounded-md font-mono border border-slate-300">
                 {call.callId}
               </span>
             </h1>
-            <p className="text-slate-600 flex items-center gap-2 text-sm mt-1">
+            <p className="text-slate-800 font-semibold flex items-center gap-2 text-sm mt-1">
               <Calendar size={14} />
               {new Date(call.callDate).toLocaleString()}
             </p>
@@ -277,17 +277,16 @@ const CallDetails = () => {
             }`}>
               {call.qualityScore >= 80 ? 'positive' : call.qualityScore >= 60 ? 'neutral' : 'negative'}
             </span>
-          </div>
           <div className="text-3xl font-bold text-slate-900 mb-1 capitalize">
             {call.qualityScore >= 80 ? 'Positive' : call.qualityScore >= 60 ? 'Neutral' : 'Negative'}
           </div>
-          <div className="text-sm font-medium text-slate-500">Overall Sentiment</div>
-          <div className="text-xs text-slate-400 mt-1">Based on quality score</div>
+          <div className="text-sm font-bold text-slate-900">Overall Sentiment</div>
+          <div className="text-xs text-slate-800 mt-1 font-semibold">Based on quality score</div>
         </div>
 
         <div className="kpi-card-enhanced group">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 group-hover:scale-110 transition-transform duration-300">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 group-hover:scale-110 transition-transform duration-300">
               <Clock size={24} />
             </div>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
@@ -302,7 +301,7 @@ const CallDetails = () => {
           <div className="text-3xl font-bold text-slate-900 mb-1 font-mono">
             {call.duration ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}` : '0:00'}
           </div>
-          <div className="text-sm font-medium text-slate-500">Duration</div>
+          <div className="text-sm font-bold text-slate-900">Duration</div>
         </div>
       </div>
 
@@ -321,7 +320,7 @@ const CallDetails = () => {
                   <User size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Agent</div>
+                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5 bg-blue-50 px-2 py-0.5 rounded">Agent</div>
                   <div className="font-semibold text-slate-900">{call.agentName}</div>
                 </div>
               </div>
@@ -331,7 +330,7 @@ const CallDetails = () => {
                   <Phone size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Customer</div>
+                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5 bg-green-50 px-2 py-0.5 rounded">Customer</div>
                   <div className="font-semibold text-slate-900">{call.customerName || 'N/A'}</div>
                 </div>
               </div>
@@ -341,7 +340,7 @@ const CallDetails = () => {
                   <Hash size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Campaign</div>
+                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5 bg-purple-50 px-2 py-0.5 rounded">Campaign</div>
                   <div className="font-semibold text-slate-900">{call.campaign}</div>
                 </div>
               </div>
@@ -351,7 +350,7 @@ const CallDetails = () => {
                   <Calendar size={20} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Date & Time</div>
+                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-0.5 bg-amber-50 px-2 py-0.5 rounded">Date & Time</div>
                   <div className="font-semibold text-slate-900">
                     {new Date(call.callDate).toLocaleString()}
                   </div>
@@ -372,7 +371,7 @@ const CallDetails = () => {
               <Scissors size={18} />
               Trim Audio
             </button>
-            <p className="text-xs text-slate-500 text-center mt-2">
+            <p className="text-xs text-slate-800 font-semibold text-center mt-2">
               Extract specific segments from the recording
             </p>
           </div>
@@ -973,7 +972,7 @@ const CallDetails = () => {
                     <Lightbulb size={40} className="text-blue-400" />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2">No Coaching Recommendations Yet</h3>
-                  <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                  <p className="text-slate-900 font-semibold mb-6 max-w-md mx-auto">
                     Click "Generate Coaching" to analyze this call and get AI-powered coaching recommendations for the agent.
                   </p>
                   <button
