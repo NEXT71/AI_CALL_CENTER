@@ -40,6 +40,8 @@ const reportRoutes = require('./routes/reportRoutes');
 console.log('✅ DEBUG: reportRoutes imported');
 const salesRoutes = require('./routes/salesRoutes');
 console.log('✅ DEBUG: salesRoutes imported');
+const coachingRoutes = require('./routes/coachingRoutes');
+console.log('✅ DEBUG: coachingRoutes imported');
 // const queueRoutes = require('./routes/queueRoutes'); // Temporarily disabled - Redis not running
 const auditLogRoutes = require('./routes/auditLogRoutes');
 console.log('✅ DEBUG: auditLogRoutes imported');
@@ -252,6 +254,8 @@ console.log('🔍 DEBUG: Mounting reports routes...');
 app.use(`${API_VERSION}/reports`, reportRoutes);
 console.log('🔍 DEBUG: Mounting sales routes...');
 app.use(`${API_VERSION}/sales`, salesRoutes);
+console.log('🔍 DEBUG: Mounting coaching routes...');
+app.use(`${API_VERSION}/coaching`, coachingRoutes);
 // app.use(`${API_VERSION}/queue`, queueRoutes); // Temporarily disabled - Redis not running
 console.log('🔍 DEBUG: Mounting audit-logs routes...');
 app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
@@ -281,6 +285,7 @@ app.use('/api/calls', (req, res) => res.redirect(308, `${API_VERSION}/calls${req
 app.use('/api/rules', (req, res) => res.redirect(308, `${API_VERSION}/rules${req.url}`));
 app.use('/api/reports', (req, res) => res.redirect(308, `${API_VERSION}/reports${req.url}`));
 app.use('/api/sales', (req, res) => res.redirect(308, `${API_VERSION}/sales${req.url}`));
+app.use('/api/coaching', (req, res) => res.redirect(308, `${API_VERSION}/coaching${req.url}`));
 app.use('/api/audit-logs', (req, res) => res.redirect(308, `${API_VERSION}/audit-logs${req.url}`));
 // app.use('/api/subscriptions', (req, res) => res.redirect(308, `${API_VERSION}/subscriptions${req.url}`)); // Temporarily disabled for testing
 console.log('✅ DEBUG: Legacy routes set up');

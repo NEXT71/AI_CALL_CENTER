@@ -268,12 +268,45 @@ export const subscriptionService = {
   },
 };
 
+export const coachingService = {
+  generateCoaching: async (callId) => {
+    const response = await api.post(`/coaching/generate/${callId}`);
+    return response.data;
+  },
+
+  getCoaching: async (callId) => {
+    const response = await api.get(`/coaching/${callId}`);
+    return response.data;
+  },
+
+  updateManagerNotes: async (callId, managerNotes) => {
+    const response = await api.put(`/coaching/${callId}/manager-notes`, { managerNotes });
+    return response.data;
+  },
+
+  getAgentCoachingStats: async (agentId, params) => {
+    const response = await api.get(`/coaching/stats/agent/${agentId}`, { params });
+    return response.data;
+  },
+
+  getCompanyCoachingStats: async (params) => {
+    const response = await api.get('/coaching/stats/company', { params });
+    return response.data;
+  },
+
+  deleteCoaching: async (callId) => {
+    const response = await api.delete(`/coaching/${callId}`);
+    return response.data;
+  },
+};
+
 const apiService = {
   ...authService,
   ...callService,
   ...ruleService,
   ...reportService,
   ...subscriptionService,
+  ...coachingService,
 };
 
 export default apiService;

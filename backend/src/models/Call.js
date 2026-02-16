@@ -243,6 +243,29 @@ const callSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    // AI Coaching Recommendations
+    coaching: {
+      strengths: [String],
+      improvementAreas: [String],
+      recommendations: [{
+        category: String,
+        issue: String,
+        suggestion: String,
+        suggestedScript: String,
+        priority: {
+          type: String,
+          enum: ['High', 'Medium', 'Low'],
+        },
+      }],
+      trainingTags: [String],
+      priorityScore: {
+        type: String,
+        enum: ['High', 'Medium', 'Low'],
+      },
+      managerNotes: String,
+      generatedAt: Date,
+      lastModified: Date,
+    },
     // File cleanup tracking
     fileDeleted: {
       type: Boolean,

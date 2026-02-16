@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { callService, reportService } from '../services/apiService';
+import { callService, reportService, coachingService } from '../services/apiService';
 import { 
   ArrowLeft, Download, Play, Pause, AlertTriangle, CheckCircle, 
   X, Phone, User, Calendar, Clock, Hash, TrendingUp, TrendingDown,
   Shield, Award, MessageSquare, Volume2, FileText, BrainCircuit,
-  Brain, Languages, Briefcase, MessageCircle, PhoneOff, Scissors
+  Brain, Languages, Briefcase, MessageCircle, PhoneOff, Scissors,
+  Lightbulb, Target, BookOpen, Edit2, Save, Sparkles, TrendingDown as ArrowDown,
+  CheckCircle2, AlertCircle
 } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
 import AudioTrimmer from '../components/AudioTrimmer';
@@ -17,6 +19,14 @@ const CallDetails = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showTrimmer, setShowTrimmer] = useState(false);
+  
+  // Coaching states
+  const [coaching, setCoaching] = useState(null);
+  const [loadingCoaching, setLoadingCoaching] = useState(false);
+  const [generatingCoaching, setGeneratingCoaching] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [managerNotes, setManagerNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     fetchCallDetails();
@@ -36,10 +46,61 @@ const CallDetails = () => {
       console.log('Call Quality Metrics:', callResponse.data.qualityMetrics);
       console.log('Has aiFactors?', !!callResponse.data.qualityMetrics?.aiFactors);
       console.log('aiFactors:', callResponse.data.qualityMetrics?.aiFactors);
+      
+      // Load coaching if exists
+      if (callResponse.data.coaching) {
+        setCoaching(callResponse.data.coaching);
+        setManagerNotes(callResponse.data.coaching.managerNotes || '');
+      }
     } catch (error) {
       console.error('Error fetching call details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleGenerateCoaching = async () => {
+    try {
+      setGeneratingCoaching(true);
+      const response = await coachingService.generateCoaching(id);
+      setCoaching(response.data);
+      setManagerNotes(response.data.managerNotes || '');
+      
+      // Show success message
+      alert('Coaching recommendations generated successfully!');
+    } catch (error) {
+      console.error('Error generating coaching:', error);
+      alert(error.response?.data?.message || 'Failed to generate coaching recommendations');
+    } finally {
+      setGeneratingCoaching(false);
+    }
+  };
+  
+  const handleSaveManagerNotes = async () => {
+    try {
+      setSavingNotes(true);
+      const response = await coachingService.updateManagerNotes(id, managerNotes);
+      setCoaching(response.data);
+      setEditingNotes(false);
+      alert('Manager notes saved successfully!');
+    } catch (error) {
+      console.error('Error saving manager notes:', error);
+      alert('Failed to save manager notes');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+  
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'High':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Low':
+        return 'bg-green-100 text-green-800 border-green-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -678,6 +739,238 @@ const CallDetails = () => {
                   {call.speakerLabeledTranscript || call.transcript}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* AI Coaching Recommendations */}
+          {call.status === 'completed' && (
+            <div className="card-enhanced p-6 border-l-4 border-l-blue-500">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Lightbulb size={20} className="text-blue-600" />
+                  AI Coaching Recommendations
+                </h2>
+                {!coaching && (
+                  <button
+                    onClick={handleGenerateCoaching}
+                    disabled={generatingCoaching}
+                    className="btn-enhanced btn-primary-enhanced flex items-center gap-2"
+                  >
+                    {generatingCoaching ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} />
+                        Generate Coaching
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {coaching ? (
+                <div className="space-y-6">
+                  {/* Priority Badge */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <Target size={20} className="text-slate-600" />
+                      <span className="font-semibold text-slate-900">Priority Level</span>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-bold border ${getPriorityColor(coaching.priorityScore)}`}>
+                      {coaching.priorityScore}
+                    </span>
+                  </div>
+
+                  {/* Strengths */}
+                  {coaching.strengths && coaching.strengths.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                      <h3 className="text-md font-bold text-green-900 mb-4 flex items-center gap-2">
+                        <CheckCircle2 size={20} className="text-green-600" />
+                        What Went Well ({coaching.strengths.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {coaching.strengths.map((strength, idx) => (
+                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-green-100">
+                            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                            <p className="text-sm text-green-900 font-medium">{strength}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Improvement Areas */}
+                  {coaching.improvementAreas && coaching.improvementAreas.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                      <h3 className="text-md font-bold text-amber-900 mb-4 flex items-center gap-2">
+                        <AlertCircle size={20} className="text-amber-600" />
+                        Areas for Improvement ({coaching.improvementAreas.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {coaching.improvementAreas.map((area, idx) => (
+                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-amber-100">
+                            <ArrowDown size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-amber-900 font-medium">{area}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specific Recommendations */}
+                  {coaching.recommendations && coaching.recommendations.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                      <h3 className="text-md font-bold text-blue-900 mb-4 flex items-center gap-2">
+                        <BookOpen size={20} className="text-blue-600" />
+                        Specific Coaching Actions ({coaching.recommendations.length})
+                      </h3>
+                      <div className="space-y-4">
+                        {coaching.recommendations.map((rec, idx) => (
+                          <div key={idx} className="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-bold">
+                                  {rec.category}
+                                </span>
+                                <span className={`px-2 py-1 rounded-md text-xs font-bold ${getPriorityColor(rec.priority)}`}>
+                                  {rec.priority} Priority
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-xs font-bold text-slate-500 uppercase">Issue:</span>
+                                <p className="text-sm text-slate-900 font-semibold">{rec.issue}</p>
+                              </div>
+                              
+                              <div>
+                                <span className="text-xs font-bold text-slate-500 uppercase">Recommendation:</span>
+                                <p className="text-sm text-slate-700">{rec.suggestion}</p>
+                              </div>
+                              
+                              {rec.suggestedScript && (
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-2">
+                                  <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Suggested Script:</span>
+                                  <p className="text-sm text-slate-900 italic font-medium">"{rec.suggestedScript}"</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Training Tags */}
+                  {coaching.trainingTags && coaching.trainingTags.length > 0 && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-5">
+                      <h3 className="text-md font-bold text-purple-900 mb-4 flex items-center gap-2">
+                        <BookOpen size={20} className="text-purple-600" />
+                        Training Focus Areas
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {coaching.trainingTags.map((tag, idx) => (
+                          <span key={idx} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold border border-purple-200">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manager Notes */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-md font-bold text-slate-900 flex items-center gap-2">
+                        <Edit2 size={18} className="text-slate-600" />
+                        Manager Coaching Notes
+                      </h3>
+                      {!editingNotes ? (
+                        <button
+                          onClick={() => setEditingNotes(true)}
+                          className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingNotes(false);
+                              setManagerNotes(coaching.managerNotes || '');
+                            }}
+                            className="text-sm text-slate-600 hover:text-slate-700 font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSaveManagerNotes}
+                            disabled={savingNotes}
+                            className="text-sm text-green-600 hover:text-green-700 font-semibold flex items-center gap-1"
+                          >
+                            <Save size={14} />
+                            {savingNotes ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {editingNotes ? (
+                      <textarea
+                        value={managerNotes}
+                        onChange={(e) => setManagerNotes(e.target.value)}
+                        rows={4}
+                        placeholder="Add your coaching notes for this agent..."
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      />
+                    ) : (
+                      <div className="bg-white border border-slate-200 rounded-lg p-4 min-h-[80px]">
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                          {coaching.managerNotes || 'No manager notes added yet. Click Edit to add notes.'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-slate-500 text-center">
+                    Generated on {new Date(coaching.generatedAt).toLocaleString()}
+                    {coaching.lastModified && coaching.lastModified !== coaching.generatedAt && (
+                      <> • Last modified {new Date(coaching.lastModified).toLocaleString()}</>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Lightbulb size={40} className="text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">No Coaching Recommendations Yet</h3>
+                  <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                    Click "Generate Coaching" to analyze this call and get AI-powered coaching recommendations for the agent.
+                  </p>
+                  <button
+                    onClick={handleGenerateCoaching}
+                    disabled={generatingCoaching}
+                    className="btn-enhanced btn-primary-enhanced inline-flex items-center gap-2"
+                  >
+                    {generatingCoaching ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Analyzing Call...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={18} />
+                        Generate AI Coaching
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
