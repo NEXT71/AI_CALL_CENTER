@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiService from '../services/apiService';
 import { useDebounce } from '../hooks/usePerformance';
-import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import SalesWidget from '../components/SalesWidget';
 import { Phone, TrendingUp, AlertTriangle, CheckCircle, DollarSign, ShoppingCart, Eye, ArrowUp, ArrowDown, Users, Award, Upload, BarChart3, Activity, CreditCard, RefreshCw } from 'lucide-react';
 
@@ -335,9 +334,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Email Verification Banner */}
-      <EmailVerificationBanner />
-
       {/* Current Plan Display */}
       {currentSubscription && (
         <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
