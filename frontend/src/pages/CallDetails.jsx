@@ -132,7 +132,7 @@ const CallDetails = () => {
     return (
       <div className="flex flex-col items-center justify-center h-96">
         <div className="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-600 font-medium">Loading call details...</p>
+        <p className="text-slate-900 font-bold">Loading call details...</p>
       </div>
     );
   }
@@ -200,7 +200,7 @@ const CallDetails = () => {
               </h3>
               <p className="text-red-800 font-medium mb-3">{call.processingError}</p>
               <div className="bg-white border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-900 font-semibold">
                   <strong>What to do:</strong> This call could not be processed automatically. 
                   {call.processingError.includes('timeout') && ' Try uploading a shorter audio file or check if the AI service is running.'}
                   {call.processingError.includes('unavailable') && ' The AI service is currently unavailable. Please try again later or contact support.'}
@@ -251,7 +251,7 @@ const CallDetails = () => {
               </h3>
               <p className="text-red-800 font-medium mb-3">{call.processingError}</p>
               <div className="bg-white border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-900 font-semibold">
                   <strong>What to do:</strong> This call could not be processed automatically. 
                   {call.processingError.includes('timeout') && ' Try uploading a shorter audio file or check if the AI service is running.'}
                   {call.processingError.includes('unavailable') && ' The AI service is currently unavailable. Please try again later or contact support.'}
@@ -668,7 +668,7 @@ const CallDetails = () => {
                     </div>
                     <div>
                       <div className="font-semibold text-slate-900">Sentiment</div>
-                      <div className="text-sm text-slate-600 capitalize">{call.sentiment || 'neutral'}</div>
+                      <div className="text-sm text-slate-900 capitalize font-bold">{call.sentiment || 'neutral'}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -695,7 +695,7 @@ const CallDetails = () => {
                       </div>
                       <div>
                         <div className="font-semibold text-slate-900">Greeting</div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-slate-900 font-bold">
                           {call.qualityMetrics.hasGreeting ? 'Present' : 'Missing'}
                         </div>
                       </div>
@@ -715,7 +715,7 @@ const CallDetails = () => {
                       </div>
                       <div>
                         <div className="font-semibold text-slate-900">Proper Closing</div>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-slate-900 font-bold">
                           {call.qualityMetrics.hasProperClosing ? 'Present' : 'Missing'}
                         </div>
                       </div>
