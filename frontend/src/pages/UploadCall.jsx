@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { callService, ruleService } from '../services/apiService';
 import { 
   Upload as UploadIcon, X, File, Check, Clock, 
-  FileAudio, User, Hash, Calendar, DollarSign, Tag,
+  FileAudio, User, Hash, Calendar, Tag,
   AlertCircle, CheckCircle, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -17,8 +17,6 @@ const UploadCall = () => {
     agentName: '',
     campaign: '',
     callDate: new Date().toISOString().slice(0, 16),
-    isSale: false,
-    saleAmount: '',
   });
   const [audioFile, setAudioFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -166,12 +164,6 @@ const UploadCall = () => {
       return;
     }
 
-    // Validate sale data
-    if (formData.isSale && (!formData.saleAmount || parseFloat(formData.saleAmount) <= 0)) {
-      setError('Sale amount is required for sale calls');
-      return;
-    }
-
     try {
       setUploading(true);
 
@@ -180,8 +172,6 @@ const UploadCall = () => {
         agentName: DOMPurify.sanitize(formData.agentName, { ALLOWED_TAGS: [] }),
         campaign: DOMPurify.sanitize(formData.campaign, { ALLOWED_TAGS: [] }),
         callDate: formData.callDate,
-        isSale: formData.isSale,
-        saleAmount: formData.saleAmount,
       };
 
       const data = new FormData();
@@ -432,57 +422,6 @@ const UploadCall = () => {
                   onChange={(e) => setFormData({ ...formData, callDate: e.target.value })}
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Sale Information */}
-          <div className="card-enhanced p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                <DollarSign size={20} />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900">Sale Information</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isSale"
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                  checked={formData.isSale}
-                  onChange={(e) => setFormData({ ...formData, isSale: e.target.checked })}
-                />
-                <label htmlFor="isSale" className="ml-2 text-sm font-semibold text-slate-700">
-                  This call resulted in a sale
-                </label>
-              </div>
-
-              {formData.isSale && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    Sale Amount <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required={formData.isSale}
-                      className="input-enhanced w-full pl-8"
-                      value={formData.saleAmount}
-                      onChange={(e) => setFormData({ ...formData, saleAmount: e.target.value })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!formData.isSale && (
-                <div className="text-center py-8 text-slate-400">
-                  <p className="text-sm">Check the box above if this call resulted in a sale</p>
-                </div>
-              )}
             </div>
           </div>
         </div>

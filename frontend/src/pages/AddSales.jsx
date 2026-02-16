@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as salesService from '../services/salesService';
 import api from '../services/api';
-import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, ArrowUpCircle, PhoneCall, BarChart2 } from 'lucide-react';
+import { Save, X, Calendar, User, Briefcase, Phone, CheckCircle, XCircle, BarChart2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import Toast from '../components/Toast';
 
@@ -24,8 +24,6 @@ const AddSales = () => {
     totalCalls: '',
     successfulSales: '',
     failedSales: '',
-    warmTransfers: '',
-    callbacksScheduled: '',
     officeRevenue: '',
     officeTargets: '',
     officeNotes: '',
@@ -94,19 +92,11 @@ const AddSales = () => {
       const totalCalls = parseInt(formData.totalCalls) || 0;
       const successfulSales = parseInt(formData.successfulSales) || 0;
       const failedSales = parseInt(formData.failedSales) || 0;
-      const warmTransfers = parseInt(formData.warmTransfers) || 0;
-      const callbacksScheduled = parseInt(formData.callbacksScheduled) || 0;
 
       // Enhanced validation for agent data
       if (!isOfficeData) {
         if (totalCalls < (successfulSales + failedSales)) {
           throw new Error('Total calls must be greater than or equal to successful + failed sales');
-        }
-        if (warmTransfers > totalCalls) {
-          throw new Error('Warm transfers cannot exceed total calls');
-        }
-        if (callbacksScheduled > totalCalls) {
-          throw new Error('Callbacks scheduled cannot exceed total calls');
         }
         if (successfulSales + failedSales > totalCalls) {
           throw new Error('Successful + Failed sales cannot exceed total calls');
@@ -128,8 +118,6 @@ const AddSales = () => {
         totalCalls,
         successfulSales,
         failedSales,
-        warmTransfers,
-        callbacksScheduled,
         notes: formData.notes,
       };
 
@@ -333,38 +321,6 @@ const AddSales = () => {
                   onChange={handleChange}
                   min="0"
                   required
-                  className="input-enhanced w-full"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <ArrowUpCircle className="w-4 h-4 inline mr-1.5 text-blue-600" />
-                  Warm Transfers
-                </label>
-                <input
-                  type="number"
-                  name="warmTransfers"
-                  value={formData.warmTransfers}
-                  onChange={handleChange}
-                  min="0"
-                  className="input-enhanced w-full"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <PhoneCall className="w-4 h-4 inline mr-1.5 text-purple-600" />
-                  Callbacks Scheduled
-                </label>
-                <input
-                  type="number"
-                  name="callbacksScheduled"
-                  value={formData.callbacksScheduled}
-                  onChange={handleChange}
-                  min="0"
                   className="input-enhanced w-full"
                   placeholder="0"
                 />

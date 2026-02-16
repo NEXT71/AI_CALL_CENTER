@@ -33,12 +33,6 @@ router.post(
     body('failedSales')
       .if(body('recordType').equals('agent'))
       .isInt({ min: 0 }).withMessage('Failed sales must be a positive number'),
-    body('warmTransfers')
-      .optional()
-      .isInt({ min: 0 }).withMessage('Warm transfers must be a positive number'),
-    body('callbacksScheduled')
-      .optional()
-      .isInt({ min: 0 }).withMessage('Callbacks must be a positive number'),
     // Office-specific fields
     body('officeRevenue')
       .if(body('recordType').equals('office'))

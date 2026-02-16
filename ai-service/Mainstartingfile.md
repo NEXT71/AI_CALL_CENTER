@@ -24,7 +24,7 @@ ALLOWED_ORIGINS=https://ai-call-center-o7d7.vercel.app,https://ai-call-center-pt
 
 # RunPod API Configuration
 RUNPOD_API_KEY=rpa_OE77UPNSKN8LZO0Y041YDN3DX29V9O1XGROVCBFU1f15gq
-RUNPOD_POD_ID=w8sxidggkky937
+RUNPOD_POD_ID=kphzlxn313ebt8
 
 # HuggingFace Token
 HUGGINGFACE_TOKEN=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
