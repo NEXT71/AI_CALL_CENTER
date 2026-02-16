@@ -7,7 +7,7 @@ import {
   Shield, Award, MessageSquare, Volume2, FileText, BrainCircuit,
   Brain, Languages, Briefcase, MessageCircle, PhoneOff, Scissors,
   Lightbulb, Target, BookOpen, Edit2, Save, Sparkles, TrendingDown as ArrowDown,
-  CheckCircle2, AlertCircle
+  CheckCircle2, AlertCircle, XCircle
 } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
 import AudioTrimmer from '../components/AudioTrimmer';
@@ -750,7 +750,7 @@ const CallDetails = () => {
                   <Lightbulb size={20} className="text-blue-600" />
                   AI Coaching Recommendations
                 </h2>
-                {!coaching && (
+                {!coaching ? (
                   <button
                     onClick={handleGenerateCoaching}
                     disabled={generatingCoaching}
@@ -768,16 +768,36 @@ const CallDetails = () => {
                       </>
                     )}
                   </button>
+                ) : (
+                  <button
+                    onClick={handleGenerateCoaching}
+                    disabled={generatingCoaching}
+                    className="btn-enhanced btn-secondary-enhanced flex items-center gap-2 text-sm"
+                  >
+                    {generatingCoaching ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Regenerate
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
 
               {coaching ? (
                 <div className="space-y-6">
                   {/* Priority Badge */}
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between p-4 bg-white rounded-xl border-2 border-slate-200 shadow-sm">
                     <div className="flex items-center gap-3">
-                      <Target size={20} className="text-slate-600" />
-                      <span className="font-semibold text-slate-900">Priority Level</span>
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                        <Target size={20} className="text-slate-700" />
+                      </div>
+                      <span className="font-bold text-slate-900">Priority Level</span>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-sm font-bold border ${getPriorityColor(coaching.priorityScore)}`}>
                       {coaching.priorityScore}
@@ -793,9 +813,9 @@ const CallDetails = () => {
                       </h3>
                       <div className="space-y-2">
                         {coaching.strengths.map((strength, idx) => (
-                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-green-100">
-                            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                            <p className="text-sm text-green-900 font-medium">{strength}</p>
+                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-green-100 shadow-sm">
+                            <div className="w-2 h-2 rounded-full bg-green-600 mt-2 flex-shrink-0"></div>
+                            <p className="text-sm text-slate-900 font-semibold">{strength}</p>
                           </div>
                         ))}
                       </div>
@@ -811,9 +831,9 @@ const CallDetails = () => {
                       </h3>
                       <div className="space-y-2">
                         {coaching.improvementAreas.map((area, idx) => (
-                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-amber-100">
+                          <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-amber-100 shadow-sm">
                             <ArrowDown size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-amber-900 font-medium">{area}</p>
+                            <p className="text-sm text-slate-900 font-semibold">{area}</p>
                           </div>
                         ))}
                       </div>
@@ -841,21 +861,21 @@ const CallDetails = () => {
                               </div>
                             </div>
                             
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <div>
-                                <span className="text-xs font-bold text-slate-500 uppercase">Issue:</span>
-                                <p className="text-sm text-slate-900 font-semibold">{rec.issue}</p>
+                                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Issue:</span>
+                                <p className="text-sm text-slate-900 font-bold mt-1">{rec.issue}</p>
                               </div>
                               
                               <div>
-                                <span className="text-xs font-bold text-slate-500 uppercase">Recommendation:</span>
-                                <p className="text-sm text-slate-700">{rec.suggestion}</p>
+                                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Recommendation:</span>
+                                <p className="text-sm text-slate-900 font-medium mt-1">{rec.suggestion}</p>
                               </div>
                               
                               {rec.suggestedScript && (
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-2">
-                                  <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Suggested Script:</span>
-                                  <p className="text-sm text-slate-900 italic font-medium">"{rec.suggestedScript}"</p>
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide block mb-1">💬 Suggested Script:</span>
+                                  <p className="text-sm text-slate-900 italic font-bold leading-relaxed">"{rec.suggestedScript}"</p>
                                 </div>
                               )}
                             </div>
