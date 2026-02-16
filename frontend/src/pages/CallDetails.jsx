@@ -394,7 +394,7 @@ const CallDetails = () => {
                       <User size={18} className="text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                         Customer Tone
                         <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full cursor-help">?</span>
                       </div>
@@ -421,7 +421,7 @@ const CallDetails = () => {
                       <Languages size={18} className="text-green-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                         Language Quality
                         <span className="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full cursor-help">?</span>
                       </div>
@@ -447,7 +447,7 @@ const CallDetails = () => {
                       <Briefcase size={18} className="text-purple-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                         Agent Professionalism
                         <span className="text-xs px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full cursor-help">?</span>
                       </div>
@@ -477,7 +477,7 @@ const CallDetails = () => {
                       <MessageCircle size={18} className="text-orange-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                         Customer Communication
                         <span className="text-xs px-2 py-0.5 bg-orange-200 text-orange-800 rounded-full cursor-help">?</span>
                       </div>
@@ -504,7 +504,7 @@ const CallDetails = () => {
                         <X size={18} className="text-red-600" />
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-900 flex items-center gap-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                           Abusive Language
                           <span className="text-xs px-2 py-0.5 bg-red-200 text-red-800 rounded-full cursor-help">!</span>
                         </div>
@@ -534,7 +534,7 @@ const CallDetails = () => {
                         <PhoneOff size={18} className="text-amber-600" />
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-900 flex items-center gap-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm">
                           Do Not Call Request
                           <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full cursor-help">!</span>
                         </div>
@@ -587,7 +587,7 @@ const CallDetails = () => {
                       <Award size={18} className="text-purple-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">Overall Quality</div>
+                      <div className="font-bold text-slate-900 bg-white px-3 py-1.5 rounded-lg shadow-sm inline-block">Overall Quality</div>
                       <div className="text-sm text-slate-900 font-bold bg-white px-2 py-1 rounded-md inline-block mt-1">
                         {call.qualityScore >= 90 ? 'Excellent' :
                          call.qualityScore >= 70 ? 'Good' :
