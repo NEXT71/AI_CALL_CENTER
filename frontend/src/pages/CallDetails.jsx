@@ -863,19 +863,21 @@ const CallDetails = () => {
                             
                             <div className="space-y-3">
                               <div>
-                                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Issue:</span>
-                                <p className="text-sm text-slate-900 font-bold mt-1">{rec.issue}</p>
+                                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wide bg-red-100 px-2 py-1 rounded inline-block">⚠️ Issue:</span>
+                                <p className="text-sm text-slate-900 font-bold mt-2 leading-relaxed">{rec.issue}</p>
                               </div>
                               
                               <div>
-                                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Recommendation:</span>
-                                <p className="text-sm text-slate-900 font-medium mt-1">{rec.suggestion}</p>
+                                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wide bg-green-100 px-2 py-1 rounded inline-block">✅ Recommendation:</span>
+                                <p className="text-sm text-slate-900 font-bold mt-2 leading-relaxed">{rec.suggestion}</p>
                               </div>
                               
                               {rec.suggestedScript && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wide block mb-1">💬 Suggested Script:</span>
-                                  <p className="text-sm text-slate-900 italic font-bold leading-relaxed">"{rec.suggestedScript}"</p>
+                                <div className="bg-white border-2 border-blue-300 rounded-lg p-4 mt-3 shadow-sm">
+                                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wide block mb-2 flex items-center gap-1">
+                                    💬 Suggested Script:
+                                  </span>
+                                  <p className="text-base text-slate-900 font-bold leading-relaxed">"{rec.suggestedScript}"</p>
                                 </div>
                               )}
                             </div>
@@ -894,7 +896,7 @@ const CallDetails = () => {
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {coaching.trainingTags.map((tag, idx) => (
-                          <span key={idx} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold border border-purple-200">
+                          <span key={idx} className="px-3 py-1.5 bg-white text-slate-900 rounded-full text-sm font-bold border-2 border-purple-300 shadow-sm">
                             {tag}
                           </span>
                         ))}
@@ -948,19 +950,21 @@ const CallDetails = () => {
                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       />
                     ) : (
-                      <div className="bg-white border border-slate-200 rounded-lg p-4 min-h-[80px]">
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                      <div className="bg-white border-2 border-slate-300 rounded-lg p-4 min-h-[80px]">
+                        <p className="text-sm text-slate-900 font-semibold whitespace-pre-wrap">
                           {coaching.managerNotes || 'No manager notes added yet. Click Edit to add notes.'}
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <div className="text-xs text-slate-500 text-center">
-                    Generated on {new Date(coaching.generatedAt).toLocaleString()}
-                    {coaching.lastModified && coaching.lastModified !== coaching.generatedAt && (
-                      <> • Last modified {new Date(coaching.lastModified).toLocaleString()}</>
-                    )}
+                  <div className="bg-slate-100 border border-slate-200 rounded-lg p-3">
+                    <p className="text-xs text-slate-900 font-semibold text-center">
+                      🕒 Generated on {new Date(coaching.generatedAt).toLocaleString()}
+                      {coaching.lastModified && coaching.lastModified !== coaching.generatedAt && (
+                        <> • Last modified {new Date(coaching.lastModified).toLocaleString()}</>
+                      )}
+                    </p>
                   </div>
                 </div>
               ) : (
