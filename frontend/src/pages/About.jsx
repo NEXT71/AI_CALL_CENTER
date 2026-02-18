@@ -1,9 +1,25 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Target, Users, Zap, Shield, Heart, Globe, CheckCircle2 } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const About = () => {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "About QualityPulse",
+    "description": "Learn about QualityPulse, the AI-powered call center quality assurance platform transforming customer service excellence.",
+    "url": "https://ai-call-center-o7d7.vercel.app/about"
+  };
+  
   return (
     <div className="min-h-screen bg-slate-50 animate-fade-in">
+      <SEO
+        title="About QualityPulse - AI-Powered Call Center QA Platform"
+        description="Learn about QualityPulse, the AI-powered call center quality assurance platform transforming customer service excellence. Discover our mission, values, and commitment to innovation."
+        keywords="about QualityPulse, call center QA platform, AI quality assurance, company mission, customer service technology"
+        url="/about"
+        structuredData={structuredData}
+      />
       {/* Header */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

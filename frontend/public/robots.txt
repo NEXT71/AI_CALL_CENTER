@@ -1,0 +1,33 @@
+# robots.txt for QualityPulse
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+
+# Disallow authentication and user-specific pages
+Disallow: /login
+Disallow: /signup
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /dashboard
+Disallow: /calls
+Disallow: /upload
+Disallow: /rules
+Disallow: /analytics
+Disallow: /subscription
+Disallow: /sales
+Disallow: /users
+Disallow: /reports
+
+# Allow important public pages
+Allow: /about
+Allow: /contact
+Allow: /terms
+Allow: /privacy
+
+# Sitemap location
+Sitemap: https://ai-call-center-o7d7.vercel.app/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1

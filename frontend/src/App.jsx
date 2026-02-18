@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 
 // Eager load critical components
@@ -47,16 +48,17 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Public Marketing Pages */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
+    <HelmetProvider>
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public Marketing Pages */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
           
           {/* Auth */}
           <Route path="/login" element={<Login />} />
@@ -85,11 +87,12 @@ function App() {
             <Route path="users" element={<RoleGuard allowedRoles={['Admin']}><UserManagement /></RoleGuard>} />
             <Route path="reports" element={<RoleGuard allowedRoles={['Admin']}><SystemReports /></RoleGuard>} />
           </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </Router>
+  </AuthProvider>
+</HelmetProvider>
   );
 }
 

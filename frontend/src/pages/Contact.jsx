@@ -1,8 +1,17 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, MessageSquare, Clock, Users, Shield, Zap, Send, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
+import SEO from '../components/SEO';
 
 const Contact = () => {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "name": "Contact QualityPulse",
+    "description": "Get in touch with QualityPulse for sales inquiries, support, or partnership opportunities.",
+    "url": "https://ai-call-center-o7d7.vercel.app/contact"
+  };
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,6 +31,13 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <SEO
+        title="Contact QualityPulse - Get in Touch for Call Center QA Solutions"
+        description="Get in touch with QualityPulse for sales inquiries, support, or partnership opportunities. We're here to help you transform your call center quality assurance."
+        keywords="contact QualityPulse, call center QA support, sales inquiry, customer support, partnership opportunities"
+        url="/contact"
+        structuredData={structuredData}
+      />
       {/* Header */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

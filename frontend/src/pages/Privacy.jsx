@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Lock, Eye, FileText, Server, Globe, Mail } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const Privacy = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 font-sans text-slate-900">
+      <SEO
+        title="Privacy Policy - QualityPulse"
+        description="Read QualityPulse's Privacy Policy to understand how we collect, use, and protect your data. Your privacy is our priority."
+        keywords="privacy policy, data protection, GDPR compliance, data security, user privacy"
+        url="/privacy"
+        noindex={false}
+      />
       {/* Header */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

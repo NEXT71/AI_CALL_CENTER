@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Shield, Scale, Lock, AlertCircle, HelpCircle } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const Terms = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <SEO
+        title="Terms of Service - QualityPulse"
+        description="Read QualityPulse's Terms of Service. Understand your rights and obligations when using our AI-powered call center quality assurance platform."
+        keywords="terms of service, QualityPulse terms, user agreement, service terms"
+        url="/terms"
+        noindex={false}
+      />
       {/* Header */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

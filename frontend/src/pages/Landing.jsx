@@ -1,9 +1,29 @@
 import { Link } from 'react-router-dom';
 import { Check, Phone, TrendingUp, Shield, Zap, BarChart3, Clock, Users, ArrowRight, Star, Award, Lock, Globe, HeadphonesIcon, ChevronDown, Plus, Minus, Play, Mail } from 'lucide-react';
 import { useState } from 'react';
+import SEO from '../components/SEO';
 
 const Landing = () => {
   const [openFaq, setOpenFaq] = useState(null);
+  
+  // Structured data for homepage
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "QualityPulse - AI-Powered Call Center Quality Assurance",
+    "description": "Transform your call center quality assurance with AI-powered transcription, compliance monitoring, and quality scoring. Analyze calls in minutes, not hours.",
+    "url": "https://ai-call-center-o7d7.vercel.app",
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [{
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://ai-call-center-o7d7.vercel.app"
+      }]
+    }
+  };
+  
   const features = [
     {
       icon: Phone,
@@ -185,6 +205,13 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900">
+      <SEO
+        title="QualityPulse - AI-Powered Call Center Quality Assurance | Automated Call Analysis"
+        description="Transform your call center quality assurance with AI-powered transcription, compliance monitoring, and quality scoring. Analyze calls in minutes, not hours. Start your free trial today."
+        keywords="call center QA, quality assurance software, AI transcription, call analysis, compliance monitoring, call center analytics, customer service quality, automated QA, speech-to-text, call scoring, agent performance, contact center software, call recording analysis"
+        url="/"
+        structuredData={structuredData}
+      />
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
