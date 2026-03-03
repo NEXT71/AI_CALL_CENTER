@@ -69,24 +69,26 @@ const Landing = () => {
         'Basic quality scoring',
         'Community support',
         '1 team member',
-        '7-day data retention'
+        '7-day data retention',
+        '1 concurrent call'
       ],
       cta: 'Get Started Free',
       ctaLink: '/signup?plan=free',
       popular: false
     },
     {
-      name: 'Starter',
-      price: '$149',
+      name: 'Starter (Team)',
+      price: '$129',
       period: '/month',
       description: 'Perfect for small teams getting started',
       features: [
-        'Up to 100 calls/month',
+        '1,000 minutes/month',
+        'Unlimited calls within minutes',
+        '$0.14/min overage rate',
+        '5 simultaneous calls',
         'AI transcription & scoring',
-        'Basic compliance rules',
-        'Email support',
-        '1 team member',
-        '1 dedicated pod',
+        'Email support (48hr)',
+        '3 team members',
         '30-day data retention'
       ],
       cta: 'Start Free Trial',
@@ -94,17 +96,19 @@ const Landing = () => {
       popular: false
     },
     {
-      name: 'Professional',
-      price: '$249',
+      name: 'Professional (BPO)',
+      price: '$299',
       period: '/month',
-      description: 'Best for growing organizations',
+      description: 'Best for growing BPO operations',
       features: [
-        'Up to 500 calls/month',
+        '3,000 minutes/month',
+        'Unlimited calls within minutes',
+        '$0.09/min overage rate',
+        '25 simultaneous calls',
         'Advanced AI analysis',
         'Custom compliance rules',
-        'Priority support',
-        '5 team members',
-        '1 dedicated pod',
+        'Priority support (24hr)',
+        '10 team members',
         'API access',
         '90-day data retention'
       ],
@@ -113,19 +117,23 @@ const Landing = () => {
       popular: true
     },
     {
-      name: 'Enterprise',
-      price: '$399',
+      name: 'Enterprise (Scale)',
+      price: '$899',
       period: '/month',
       description: 'For large-scale operations',
       features: [
+        '12,000 minutes/month',
         'Unlimited calls',
-        'Dedicated AI models',
+        '$0.06/min overage rate',
+        'Unlimited concurrent calls',
+        'Full AI suite + diarization',
         'White-label options',
         '24/7 premium support',
         'Unlimited team members',
         'Custom reporting',
         'On-premise deployment',
-        'SLA guarantees'
+        'SLA guarantees (99.9%)',
+        '1-year data retention'
       ],
       cta: 'Contact Sales',
       ctaLink: '/contact',

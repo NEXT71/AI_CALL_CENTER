@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const User = require('../models/User');
 const logger = require('../config/logger');
 const emailService = require('../services/emailService');
+const usageAlerts = require('../services/usageAlerts');
+const config = require('../config/config');
 
 /**
  * Check for expired subscriptions and trials
@@ -127,6 +129,73 @@ const checkExpiringSubscriptions = async () => {
 };
 
 /**
+ * Monthly billing cycle - reset usage counters and charge overages
+ * Runs on the 1st of each month at midnight
+ */
+const monthlyBillingCycle = async () => {
+  try {
+    logger.info('Running monthly billing cycle...');
+    const users = await User.find({ 
+      'subscription.status': 'active',
+      'subscription.plan': { $in: ['starter', 'professional', 'enterprise'] }
+    });
+
+    let processedCount = 0;
+    let overageCount = 0;
+    let totalOverageCharges = 0;
+
+    for (const user of users) {
+      const usage = user.subscription.usage;
+      const planConfig = config.subscription.plans[user.subscription.plan];
+
+      if (!usage || !planConfig) continue;
+
+      // Send overage summary if applicable
+      if (usage.overageMinutes > 0 && usage.overageCharges > 0) {
+        await usageAlerts.sendOverageSummary(user._id);
+        overageCount++;
+        totalOverageCharges += usage.overageCharges;
+
+        logger.info('Overage charges recorded', {
+          userId: user._id,
+          email: user.email,
+          plan: user.subscription.plan,
+          overageMinutes: usage.overageMinutes,
+          overageCharges: usage.overageCharges,
+        });
+
+        // TODO: Charge overage via Stripe
+        // await stripeService.chargeOverage(user.stripeCustomerId, usage.overageCharges);
+      }
+
+      // Reset monthly counters
+      user.subscription.usage = {
+        minutesThisMonth: 0,
+        minutesIncluded: planConfig.includedMinutes,
+        overageMinutes: 0,
+        overageCharges: 0,
+        lastResetDate: new Date(),
+        alertsSent: [],
+        callsThisMonth: 0,
+        activeCalls: usage.activeCalls || 0, // Keep active calls counter
+      };
+
+      await user.save();
+      processedCount++;
+    }
+
+    logger.info('Monthly billing cycle complete', {
+      usersProcessed: processedCount,
+      usersWithOverage: overageCount,
+      totalOverageCharges: totalOverageCharges.toFixed(2),
+    });
+
+  } catch (error) {
+    logger.error('Error in monthly billing cycle:', error);
+  }
+};
+
+/**
  * Initialize subscription management cron jobs
  */
 exports.initSubscriptionJobs = () => {
@@ -142,6 +211,12 @@ exports.initSubscriptionJobs = () => {
     checkExpiringSubscriptions();
   });
 
+  // Monthly billing cycle - runs on 1st of each month at midnight
+  cron.schedule('0 0 1 * *', () => {
+    logger.info('Starting monthly billing cycle');
+    monthlyBillingCycle();
+  });
+
   logger.info('Subscription management cron jobs initialized');
 
   // Run immediately on startup
@@ -151,3 +226,4 @@ exports.initSubscriptionJobs = () => {
 // Export for manual execution
 exports.checkExpiredSubscriptions = checkExpiredSubscriptions;
 exports.checkExpiringSubscriptions = checkExpiringSubscriptions;
+exports.monthlyBillingCycle = monthlyBillingCycle;

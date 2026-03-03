@@ -285,10 +285,21 @@ exports.uploadCall = [
  */
 async function processCallAsync(callId) {
   try {
-    const call = await Call.findById(callId);
+    const call = await Call.findById(callId).populate('uploadedBy');
     if (!call) return;
 
     logger.info('Starting AI processing', { callId: call.callId });
+
+    // Increment concurrency counter at start
+    if (call.uploadedBy && call.uploadedBy._id) {
+      try {
+        await usageLimits.checkConcurrency({ user: call.uploadedBy }, null, async () => {
+          logger.info('Concurrency check passed', { callId: call.callId, userId: call.uploadedBy._id });
+        });
+      } catch (concurrError) {
+        logger.error('Concurrency check failed, proceeding anyway', { error: concurrError.message });
+      }
+    }
 
     // Update status
     call.status = 'processing';
@@ -449,6 +460,21 @@ async function processCallAsync(callId) {
     await call.save();
 
     logger.info('Call processed successfully', { callId: call.callId, qualityScore: call.qualityScore });
+
+    // Update usage metrics (minute-based tracking)
+    if (call.uploadedBy) {
+      const userId = call.uploadedBy._id || call.uploadedBy;
+      await usageLimits.updateUsageMetrics(userId, call.duration || 0);
+      
+      // Check and send usage alerts
+      await usageAlerts.checkAndSendUsageAlerts(userId);
+    }
+
+    // Decrement concurrency counter
+    if (call.uploadedBy) {
+      const userId = call.uploadedBy._id || call.uploadedBy;
+      await usageLimits.decrementConcurrency(userId);
+    }
   } catch (error) {
     logger.error('Error processing call', { callId, error: error.message, stack: error.stack });
     
@@ -457,6 +483,17 @@ async function processCallAsync(callId) {
       status: 'failed',
       processingError: error.message,
     });
+
+    // Decrement concurrency even on failure
+    try {
+      const call = await Call.findById(callId).populate('uploadedBy');
+      if (call && call.uploadedBy) {
+        const userId = call.uploadedBy._id || call.uploadedBy;
+        await usageLimits.decrementConcurrency(userId);
+      }
+    } catch (cleanupError) {
+      logger.error('Error during cleanup', { error: cleanupError.message });
+    }
   }
 }
 

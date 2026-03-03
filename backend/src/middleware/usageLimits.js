@@ -1,43 +1,27 @@
 const Call = require('../models/Call');
+const User = require('../models/User');
 const logger = require('../config/logger');
+const config = require('../config/config');
 
-// Plan limits configuration
-const PLAN_LIMITS = {
-  free: {
-    callsPerMonth: 10,
-    storageGB: 1,
-    dataRetentionDays: 7,
-    teamMembers: 1,
-  },
-  starter: {
-    callsPerMonth: 100,
-    storageGB: 10,
-    dataRetentionDays: 30,
-    teamMembers: 3,
-  },
-  professional: {
-    callsPerMonth: 500,
-    storageGB: 50,
-    dataRetentionDays: 90,
-    teamMembers: 5,
-  },
-  enterprise: {
-    callsPerMonth: -1, // Unlimited
-    storageGB: -1, // Unlimited
-    dataRetentionDays: 365,
-    teamMembers: -1, // Unlimited
-  },
-};
+// Use centralized plan config from config.js
+const PLAN_CONFIG = config.subscription.plans;
 
 /**
- * Check if user has exceeded their monthly call limit
+ * Check if user has exceeded their monthly minute limit or concurrency limit
  */
-exports.checkCallLimit = async (req, res, next) => {
+exports.checkUsageLimits = async (req, res, next) => {
   try {
     const user = req.user;
     const subscription = user.subscription || {};
     const plan = subscription.plan || 'free';
-    const limits = PLAN_LIMITS[plan];
+    const planConfig = PLAN_CONFIG[plan];
+
+    if (!planConfig) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subscription plan',
+      });
+    }
 
     // Check subscription validity first
     const now = new Date();
@@ -73,44 +57,227 @@ exports.checkCallLimit = async (req, res, next) => {
       });
     }
 
-    // If unlimited (enterprise), skip check
-    if (limits.callsPerMonth === -1) {
-      return next();
-    }
+    // Check concurrency limit (number of active calls being processed)
+    const activeCalls = subscription.usage?.activeCalls || 0;
+    const concurrencyLimit = planConfig.limits.concurrentCalls;
 
-    // Get start of current month
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    // Count calls uploaded this month by this user
-    const callCount = await Call.countDocuments({
-      uploadedBy: user._id,
-      createdAt: { $gte: startOfMonth },
-    });
-
-    // Check if limit exceeded
-    if (callCount >= limits.callsPerMonth) {
-      return res.status(402).json({
+    if (concurrencyLimit !== -1 && activeCalls >= concurrencyLimit) {
+      return res.status(429).json({
         success: false,
-        message: `You have reached your monthly limit of ${limits.callsPerMonth} calls. Please upgrade your plan to continue.`,
-        limitExceeded: true,
-        currentUsage: callCount,
-        limit: limits.callsPerMonth,
+        message: `You have reached your concurrency limit of ${concurrencyLimit} simultaneous calls. Please wait for current calls to complete or upgrade your plan.`,
+        concurrencyExceeded: true,
+        activeCalls,
+        limit: concurrencyLimit,
         plan,
       });
     }
 
+    // For free plan, check call count (no minutes)
+    if (plan === 'free') {
+      const callLimit = planConfig.limits.callsPerMonth;
+      const callsThisMonth = subscription.usage?.callsThisMonth || 0;
+
+      if (callsThisMonth >= callLimit) {
+        return res.status(402).json({
+          success: false,
+          message: `You have reached your monthly limit of ${callLimit} calls. Please upgrade your plan to continue.`,
+          limitExceeded: true,
+          currentUsage: callsThisMonth,
+          limit: callLimit,
+          plan,
+        });
+      }
+    } else {
+      // For paid plans, check minutes (but allow overage with warning)
+      const minutesUsed = subscription.usage?.minutesThisMonth || 0;
+      const minutesIncluded = planConfig.includedMinutes;
+      
+      // If over limit, set flag for overage billing (but don't block)
+      if (minutesUsed >= minutesIncluded) {
+        logger.warn('User exceeded included minutes, applying overage rate', {
+          userId: user._id,
+          minutesUsed,
+          minutesIncluded,
+          plan,
+        });
+        
+        req.overageApplied = true;
+        req.overageRate = planConfig.overageRate;
+      }
+    }
+
     // Add usage info to request for logging
     req.usageInfo = {
-      currentUsage: callCount,
-      limit: limits.callsPerMonth,
-      remaining: limits.callsPerMonth - callCount,
+      minutesUsed: subscription.usage?.minutesThisMonth || 0,
+      minutesIncluded: planConfig.includedMinutes,
+      activeCalls,
+      concurrencyLimit,
+      plan,
     };
 
     next();
   } catch (error) {
-    logger.error('Error checking call limit:', error);
+    logger.error('Error checking usage limits:', error);
     // Don't block on error, just log and continue
     next();
+  }
+};
+
+/**
+ * Check concurrency limit before starting call processing
+ */
+exports.checkConcurrency = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const subscription = user.subscription || {};
+    const plan = subscription.plan || 'free';
+    const planConfig = PLAN_CONFIG[plan];
+
+    const activeCalls = subscription.usage?.activeCalls || 0;
+    const concurrencyLimit = planConfig.limits.concurrentCalls;
+
+    if (concurrencyLimit !== -1 && activeCalls >= concurrencyLimit) {
+      return res.status(429).json({
+        success: false,
+        message: `Concurrency limit reached (${activeCalls}/${concurrencyLimit}). Please wait for calls to complete.`,
+        concurrencyExceeded: true,
+        activeCalls,
+        limit: concurrencyLimit,
+      });
+    }
+
+    // Increment active calls
+    user.subscription.usage = user.subscription.usage || {};
+    user.subscription.usage.activeCalls = (user.subscription.usage.activeCalls || 0) + 1;
+    await user.save();
+
+    // Store in request for cleanup
+    req.incrementedConcurrency = true;
+
+    next();
+  } catch (error) {
+    logger.error('Error checking concurrency:', error);
+    next();
+  }
+};
+
+/**
+ * Decrement concurrency counter after call processing completes
+ */
+exports.decrementConcurrency = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    if (user && user.subscription.usage) {
+      user.subscription.usage.activeCalls = Math.max(0, (user.subscription.usage.activeCalls || 1) - 1);
+      await user.save();
+      logger.info('Decremented concurrency counter', {
+        userId,
+        activeCalls: user.subscription.usage.activeCalls,
+      });
+    }
+  } catch (error) {
+    logger.error('Error decrementing concurrency:', error);
+  }
+};
+
+/**
+ * Update usage metrics after call processing
+ */
+exports.updateUsageMetrics = async (userId, callDurationSeconds) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return;
+
+    const durationMinutes = Math.ceil(callDurationSeconds / 60);
+    const planConfig = PLAN_CONFIG[user.subscription.plan];
+
+    // Initialize usage if not exists
+    if (!user.subscription.usage) {
+      user.subscription.usage = {
+        minutesThisMonth: 0,
+        minutesIncluded: planConfig.includedMinutes,
+        overageMinutes: 0,
+        overageCharges: 0,
+        lastResetDate: new Date(),
+        alertsSent: [],
+        callsThisMonth: 0,
+        activeCalls: 0,
+      };
+    }
+
+    // Update minute usage
+    user.subscription.usage.minutesThisMonth += durationMinutes;
+    user.subscription.usage.callsThisMonth += 1;
+
+    // Calculate overage if applicable
+    if (user.subscription.plan !== 'free') {
+      const includedMinutes = user.subscription.usage.minutesIncluded || planConfig.includedMinutes;
+      if (user.subscription.usage.minutesThisMonth > includedMinutes) {
+        const overageMinutes = user.subscription.usage.minutesThisMonth - includedMinutes;
+        const overageRate = planConfig.overageRate;
+        
+        user.subscription.usage.overageMinutes = overageMinutes;
+        user.subscription.usage.overageCharges = overageMinutes * overageRate;
+
+        logger.info('Overage charges calculated', {
+          userId,
+          overageMinutes,
+          overageRate,
+          overageCharges: user.subscription.usage.overageCharges,
+        });
+      }
+    }
+
+    await user.save();
+
+    logger.info('Usage metrics updated', {
+      userId,
+      plan: user.subscription.plan,
+      minutesUsed: user.subscription.usage.minutesThisMonth,
+      callsProcessed: user.subscription.usage.callsThisMonth,
+      durationMinutes,
+    });
+
+    // Check if usage alerts should be sent
+    await checkAndSendUsageAlerts(user);
+
+  } catch (error) {
+    logger.error('Error updating usage metrics:', error);
+  }
+};
+
+/**
+ * Check usage thresholds and trigger alerts
+ */
+const checkAndSendUsageAlerts = async (user) => {
+  try {
+    const usage = user.subscription.usage;
+    if (!usage || !usage.minutesIncluded || user.subscription.plan === 'free') return;
+
+    const usagePercent = usage.minutesThisMonth / usage.minutesIncluded;
+    const thresholds = config.subscription.usageAlertThresholds; // [0.8, 0.9, 1.0, 1.2]
+
+    for (const threshold of thresholds) {
+      if (usagePercent >= threshold && (!usage.alertsSent || !usage.alertsSent.includes(threshold))) {
+        // Send alert (implement email service separately)
+        logger.warn('Usage threshold reached', {
+          userId: user._id,
+          email: user.email,
+          threshold: `${threshold * 100}%`,
+          minutesUsed: usage.minutesThisMonth,
+          minutesIncluded: usage.minutesIncluded,
+        });
+
+        // Mark alert as sent
+        if (!usage.alertsSent) usage.alertsSent = [];
+        usage.alertsSent.push(threshold);
+        await user.save();
+
+        // TODO: Call email service to send notification
+      }
+    }
+  } catch (error) {
+    logger.error('Error checking usage alerts:', error);
   }
 };
 
@@ -119,7 +286,11 @@ exports.checkCallLimit = async (req, res, next) => {
  */
 exports.getUsageStats = async (userId, plan) => {
   try {
-    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+    const user = await User.findById(userId);
+    if (!user) return null;
+
+    const planConfig = PLAN_CONFIG[plan] || PLAN_CONFIG.free;
+    const usage = user.subscription.usage || {};
 
     // Get start of current month
     const now = new Date();
@@ -150,17 +321,30 @@ exports.getUsageStats = async (userId, plan) => {
     const storageUsedGB = storageUsedBytes / (1024 * 1024 * 1024);
 
     return {
+      minutes: {
+        used: usage.minutesThisMonth || 0,
+        included: planConfig.includedMinutes,
+        remaining: Math.max(0, planConfig.includedMinutes - (usage.minutesThisMonth || 0)),
+        overage: usage.overageMinutes || 0,
+        overageCharges: usage.overageCharges || 0,
+      },
       calls: {
         used: callsThisMonth,
-        limit: limits.callsPerMonth,
-        remaining: limits.callsPerMonth === -1 ? -1 : Math.max(0, limits.callsPerMonth - callsThisMonth),
-        unlimited: limits.callsPerMonth === -1,
+        limit: planConfig.limits.callsPerMonth,
+        remaining: planConfig.limits.callsPerMonth === -1 ? -1 : Math.max(0, planConfig.limits.callsPerMonth - callsThisMonth),
+        unlimited: planConfig.limits.callsPerMonth === -1,
+      },
+      concurrency: {
+        active: usage.activeCalls || 0,
+        limit: planConfig.limits.concurrentCalls,
+        available: planConfig.limits.concurrentCalls === -1 ? -1 : Math.max(0, planConfig.limits.concurrentCalls - (usage.activeCalls || 0)),
+        unlimited: planConfig.limits.concurrentCalls === -1,
       },
       storage: {
         usedGB: parseFloat(storageUsedGB.toFixed(2)),
-        limitGB: limits.storageGB,
-        remainingGB: limits.storageGB === -1 ? -1 : parseFloat(Math.max(0, limits.storageGB - storageUsedGB).toFixed(2)),
-        unlimited: limits.storageGB === -1,
+        limitGB: planConfig.limits.storageGB,
+        remainingGB: planConfig.limits.storageGB === -1 ? -1 : parseFloat(Math.max(0, planConfig.limits.storageGB - storageUsedGB).toFixed(2)),
+        unlimited: planConfig.limits.storageGB === -1,
       },
       plan,
     };
@@ -170,4 +354,4 @@ exports.getUsageStats = async (userId, plan) => {
   }
 };
 
-module.exports.PLAN_LIMITS = PLAN_LIMITS;
+module.exports.PLAN_CONFIG = PLAN_CONFIG;

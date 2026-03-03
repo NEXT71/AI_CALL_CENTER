@@ -85,6 +85,39 @@ const userSchema = new mongoose.Schema(
       },
       stripeCustomerId: String,
       stripeSubscriptionId: String,
+      usage: {
+        minutesThisMonth: { 
+          type: Number, 
+          default: 0 
+        },
+        minutesIncluded: { 
+          type: Number, 
+          default: 0 
+        },
+        overageMinutes: { 
+          type: Number, 
+          default: 0 
+        },
+        overageCharges: { 
+          type: Number, 
+          default: 0 
+        },
+        lastResetDate: { 
+          type: Date, 
+          default: Date.now 
+        },
+        alertsSent: [{ 
+          type: Number 
+        }],
+        callsThisMonth: {
+          type: Number,
+          default: 0
+        },
+        activeCalls: {
+          type: Number,
+          default: 0
+        }
+      }
     },
     tokenVersion: {
       type: Number,

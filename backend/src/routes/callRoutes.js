@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const callController = require('../controllers/callController');
 const { protect, authorize, checkTrialExpiration } = require('../middleware/auth');
-const { checkCallLimit } = require('../middleware/usageLimits');
+const { checkUsageLimits } = require('../middleware/usageLimits');
 const { validateCallUpload, handleValidationErrors, validateObjectId } = require('../middleware/validation');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 
@@ -10,11 +10,11 @@ const { uploadLimiter } = require('../middleware/rateLimiter');
 router.use(protect);
 router.use(checkTrialExpiration);
 
-// Upload call with rate limiting and usage limits
+// Upload call with rate limiting and usage limits (minute-based + concurrency)
 router.post(
   '/upload',
   uploadLimiter,
-  checkCallLimit, // Check if user has exceeded monthly call limit
+  checkUsageLimits, // Check minute limits, concurrency, and subscription validity
   authorize('Admin', 'User'),
   callController.uploadCall
 );

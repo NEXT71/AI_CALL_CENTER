@@ -49,65 +49,9 @@ const uploadPaymentProof = multer({
   },
 }).array('paymentProofs', 5);
 
-// Local plans configuration for manual payments
-// Pod cost: $0.26/hour = ~$187/month for 24/7 usage
-const PLANS = {
-  free: {
-    name: 'Free',
-    amount: 0, // $0/month in cents
-    interval: 'month',
-    features: [
-      '10 calls/month',
-      'Basic transcription',
-      'Community support',
-      '1 user',
-      '7-day data retention',
-    ],
-  },
-  starter: {
-    name: 'Starter',
-    amount: 14900, // $149/month in cents (80% of pod cost)
-    interval: 'month',
-    features: [
-      '100 calls/month',
-      'Basic analytics',
-      'Email support',
-      '1 user',
-      '1 dedicated pod',
-      '30-day data retention',
-    ],
-  },
-  professional: {
-    name: 'Professional',
-    amount: 24900, // $249/month in cents (133% of pod cost)
-    interval: 'month',
-    features: [
-      '500 calls/month',
-      'Advanced analytics',
-      'Priority support',
-      '5 users',
-      '1 dedicated pod',
-      'Custom rules',
-      'API access',
-      '90-day data retention',
-    ],
-  },
-  enterprise: {
-    name: 'Enterprise',
-    amount: 39900, // $399/month in cents (213% of pod cost)
-    interval: 'month',
-    features: [
-      'Unlimited calls',
-      'Full analytics suite',
-      'Priority support',
-      'Unlimited users',
-      '1 dedicated pod',
-      'API access',
-      'Dedicated account manager',
-      '1-year data retention',
-    ],
-  },
-};
+// 2026 BPO Pricing Model - Use centralized config
+const config = require('../config/config');
+const PLANS = config.subscription.plans;
 
 /**
  * @route   GET /api/subscriptions/plans
