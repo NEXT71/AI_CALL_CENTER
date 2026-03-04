@@ -14,7 +14,8 @@ python-multipart==0.0.12
 transformers==4.47.1
 
 # Audio Processing
-openai-whisper==20250625
+# Using stable PyPI version (20250625 not available in PyPI)
+openai-whisper==20231117
 librosa==0.10.2.post1
 soundfile==0.12.1
 pydub==0.25.1
@@ -31,7 +32,7 @@ rapidfuzz==3.10.1
 pyannote.audio==3.1.1
 
 # Timezone handling
-pytz==2025.2
+pytz>=2024.1
 
 # Utilities
 psutil==6.1.0
