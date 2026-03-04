@@ -1,7 +1,10 @@
-# Core Framework
+# Core Framework - RunPod Serverless
 runpod==1.5.0
 requests==2.31.0
+
+# Python basics
 python-dotenv==1.0.1
+python-multipart==0.0.12
 
 # GPU-Accelerated Deep Learning
 # PyTorch installed separately in Dockerfile with CUDA 12.1 support
@@ -17,8 +20,8 @@ soundfile==0.12.1
 pydub==0.25.1
 ffmpeg-python==0.2.0
 
-# NumPy compatibility fix (required for older packages)
-numpy<2.0.0
+# NumPy installed separately in Dockerfile (before other packages)
+# numpy>=1.26.4,<2.0.0
 
 # NLP
 spacy==3.8.3

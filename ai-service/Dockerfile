@@ -24,6 +24,9 @@ COPY requirements.txt .
 # Install PyTorch with CUDA support (updated to match requirements.txt)
 RUN pip3 install --no-cache-dir torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
+# Install NumPy first (critical for compatibility with pyannote.audio)
+RUN pip3 install --no-cache-dir "numpy>=1.26.4,<2.0.0"
+
 # Install other Python packages
 RUN pip3 install --no-cache-dir -r requirements.txt
 
