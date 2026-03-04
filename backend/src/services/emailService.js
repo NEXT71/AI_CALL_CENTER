@@ -172,6 +172,46 @@ exports.sendPasswordResetEmail = async (user, resetToken) => {
 };
 
 /**
+ * Generic email sending function
+ * @param {string} to - Recipient email address
+ * @param {string} subject - Email subject
+ * @param {string} html - HTML email content
+ */
+exports.sendEmail = async (to, subject, html) => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"QualityPulse" <${process.env.SMTP_USER || 'noreply@qualitypulse.com'}>`,
+      to,
+      subject,
+      html,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    // In development without SMTP, log the email details
+    if (config.nodeEnv === 'development' && !process.env.SMTP_USER) {
+      logger.info('Email (development - not sent)', {
+        to,
+        subject,
+      });
+    } else {
+      logger.info('Email sent', {
+        to,
+        subject,
+        messageId: info.messageId,
+      });
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    logger.error('Error sending email:', { to, subject, error: error.message });
+    throw error;
+  }
+};
+
+/**
  * Send welcome email (after verification)
  */
 exports.sendWelcomeEmail = async (user) => {
