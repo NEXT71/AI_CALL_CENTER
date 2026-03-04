@@ -21,6 +21,14 @@ warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# HTTPException replacement for RunPod Serverless (FastAPI removed)
+class HTTPException(Exception):
+    """Mimics FastAPI HTTPException for compatibility with existing code"""
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
+
 # Load environment variables
 load_dotenv()
 
@@ -248,7 +256,10 @@ SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetune
 SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
 SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
 
-# Pydantic models
+# Pydantic models - NOT USED in RunPod Serverless (handler uses dictionaries)
+# These were part of the old FastAPI implementation
+# Commented out to prevent import errors since BaseModel is not imported
+"""
 class TranscribeRequest(BaseModel):
     audio_path: str
 
@@ -315,6 +326,7 @@ class TranscribeWithSpeakersResponse(BaseModel):
     language: Optional[str] = None
     duration: Optional[float] = None
     word_count: Optional[int] = None
+"""
 
 
 def chunk_audio_file(audio_path: str, chunk_length_ms: int = 300000, overlap_ms: int = 3000):
@@ -803,7 +815,8 @@ async def analyze_sentiment(request: SentimentRequest):
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Sentiment analysis failed: {str(e)}")
 
-
+# Pydantic models - NOT USED in RunPod Serverless
+"""
 class PerSpeakerSentimentRequest(BaseModel):
     speaker_labeled_transcript: str
 
@@ -813,6 +826,7 @@ class PerSpeakerSentimentResponse(BaseModel):
     customer_sentiment: str
     agent_score: float
     customer_score: float
+"""
 
 
 @app.post("/analyze-per-speaker-sentiment", response_model=PerSpeakerSentimentResponse)
@@ -1229,7 +1243,8 @@ async def check_compliance(request: ComplianceCheckRequest):
         logger.error(f"❌ Compliance error: {e}")
         raise HTTPException(status_code=500, detail=f"Compliance check failed: {str(e)}")
 
-
+# Pydantic models - NOT USED in RunPod Serverless
+"""
 class QualityScoreRequest(BaseModel):
     transcript: str
     speaker_labeled_transcript: Optional[str] = None
@@ -1250,6 +1265,7 @@ class QualityScoreResponse(BaseModel):
     factors: Dict[str, float]
     details: QualityDetails
     flags: Dict[str, bool]
+"""
 
 
 @app.post("/calculate-quality-score", response_model=QualityScoreResponse)
@@ -2158,63 +2174,294 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
             }
         
         # ========================================================================
-        # 🔧 [PASTE YOUR 2200 LINES OF WHISPER/BERT LOGIC HERE]
-        # ========================================================================
-        # 
-        # Your existing AI processing pipeline logic goes here:
-        # 
-        # Step 1: Load and use load_whisper_model() to transcribe temp_audio_path
-        # Step 2: Load and use load_diarization_model() for speaker diarization
-        # Step 3: Load and use load_sentiment_model() for per-speaker sentiment
-        # Step 4: Load and use load_spacy_model() for entity extraction
-        # Step 5: Load and use load_summarizer_model() for summarization
-        # Step 6: Use rapidfuzz for compliance checking
-        # Step 7: Calculate AI Quality Score
-        # Step 8: Calculate talk-time metrics
-        # 
-        # Replace all temp_path/audio_path variables with temp_audio_path
-        # 
-        # Return a dictionary with all results as shown in the example below
+        # 🔧 AI PROCESSING PIPELINE (Extracted from FastAPI endpoints)
         # ========================================================================
         
         logger.info("🚀 Starting AI processing pipeline...")
         
-        # EXAMPLE PLACEHOLDER - Replace with your actual AI processing
-        # Call your existing transcription, diarization, sentiment, etc. functions here
+        # STEP 1: TRANSCRIPTION WITH WHISPER
+        logger.info("Step 1/5: Transcribing audio with Whisper...")
+        whisper_model = load_whisper_model()
+        if whisper_model is None:
+            raise Exception("Whisper model failed to load")
         
+        use_fp16 = CUDA_AVAILABLE
+        transcription_result = whisper_model.transcribe(
+            temp_audio_path,
+            verbose=False,
+            fp16=use_fp16,
+            language=None,
+            word_timestamps=True
+        )
+        
+        full_text = transcription_result.get("text", "").strip()
+        language = transcription_result.get("language", "en")
+        segments = transcription_result.get("segments", [])
+        
+        logger.info(f"✅ Transcription complete: {len(full_text)} chars, language: {language}")
+        
+        # STEP 2: SPEAKER DIARIZATION
+        logger.info("Step 2/5: Performing speaker diarization...")
+        diarization_pipeline = load_diarization_model()
+        if diarization_pipeline is None:
+            raise Exception("Diarization model not available")
+        
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        
+        diarization = diarization_pipeline(
+            temp_audio_path,
+            min_speakers=min_speakers,
+            max_speakers=max_speakers
+        )
+        
+        # Extract speaker segments
+        speaker_segments = []
+        speakers_set = set()
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers_set.add(speaker)
+            speaker_segments.append({
+                "speaker": speaker,
+                "start": round(float(turn.start), 2),
+                "end": round(float(turn.end), 2),
+                "duration": round(float(turn.end - turn.start), 2)
+            })
+        
+        speaker_segments.sort(key=lambda x: x["start"])
+        logger.info(f"✅ Diarization complete: {len(speakers_set)} speakers, {len(speaker_segments)} segments")
+        
+        # STEP 3: MERGE TRANSCRIPTION WITH SPEAKER LABELS
+        logger.info("Step 3/5: Merging transcript with speaker labels...")
+        
+        def find_speaker_at_time(timestamp, speaker_segs):
+            for seg in speaker_segs:
+                if seg["start"] <= timestamp <= seg["end"]:
+                    return seg["speaker"]
+            closest = min(speaker_segs, key=lambda x: abs(x["start"] - timestamp))
+            return closest["speaker"]
+        
+        # Map speakers to Agent/Customer
+        sorted_speakers = sorted(list(speakers_set))
+        speaker_labels = {}
+        if len(sorted_speakers) >= 2:
+            speaker_labels[sorted_speakers[0]] = "Agent"
+            speaker_labels[sorted_speakers[1]] = "Customer"
+            for i, speaker in enumerate(sorted_speakers[2:], start=3):
+                speaker_labels[speaker] = f"Speaker {i}"
+        elif len(sorted_speakers) == 1:
+            speaker_labels[sorted_speakers[0]] = "Speaker"
+        
+        # Build speaker-labeled transcript
+        labeled_segments = []
+        current_speaker = None
+        current_text = []
+        
+        for segment in segments:
+            midpoint = (segment["start"] + segment["end"]) / 2
+            segment_speaker = find_speaker_at_time(midpoint, speaker_segments)
+            segment_text = segment["text"].strip()
+            
+            if segment_speaker != current_speaker:
+                if current_speaker and current_text:
+                    labeled_segments.append({
+                        "speaker": speaker_labels.get(current_speaker, current_speaker),
+                        "text": " ".join(current_text).strip()
+                    })
+                current_speaker = segment_speaker
+                current_text = [segment_text]
+            else:
+                current_text.append(segment_text)
+        
+        if current_speaker and current_text:
+            labeled_segments.append({
+                "speaker": speaker_labels.get(current_speaker, current_speaker),
+                "text": " ".join(current_text).strip()
+            })
+        
+        speaker_labeled_text = "\n\n".join([
+            f"[{seg['speaker']}]: {seg['text']}"
+            for seg in labeled_segments
+        ])
+        
+        logger.info(f"✅ Speaker-labeled transcript created: {len(labeled_segments)} turns")
+        
+        # STEP 4: PER-SPEAKER SENTIMENT ANALYSIS
+        logger.info("Step 4/5: Analyzing per-speaker sentiment...")
+        sentiment_analyzer = load_sentiment_model()
+        
+        agent_text = ""
+        customer_text = ""
+        
+        for seg in labeled_segments:
+            if seg["speaker"] == "Agent" or seg["speaker"] == sorted_speakers[0]:
+                agent_text += " " + seg["text"]
+            elif seg["speaker"] == "Customer" or (len(sorted_speakers) >= 2 and seg["speaker"] == sorted_speakers[1]):
+                customer_text += " " + seg["text"]
+        
+        agent_text = agent_text.strip()
+        customer_text = customer_text.strip()
+        
+        # Analyze sentiment
+        agent_sentiment_result = {"label": "NEUTRAL", "score": 0.5}
+        customer_sentiment_result = {"label": "NEUTRAL", "score": 0.5}
+        
+        if sentiment_analyzer and agent_text and len(agent_text) > 5:
+            try:
+                agent_sentiment_result = sentiment_analyzer(agent_text[:512])[0]
+            except Exception as e:
+                logger.warning(f"Agent sentiment failed: {e}")
+        
+        if sentiment_analyzer and customer_text and len(customer_text) > 5:
+            try:
+                customer_sentiment_result = sentiment_analyzer(customer_text[:512])[0]
+            except Exception as e:
+                logger.warning(f"Customer sentiment failed: {e}")
+        
+        label_map = {"POSITIVE": "positive", "NEGATIVE": "negative", "NEUTRAL": "neutral"}
+        agent_sentiment = label_map.get(agent_sentiment_result["label"].upper(), "neutral")
+        customer_sentiment = label_map.get(customer_sentiment_result["label"].upper(), "neutral")
+        
+        logger.info(f"✅ Sentiment - Agent: {agent_sentiment} ({agent_sentiment_result['score']:.2f}), Customer: {customer_sentiment} ({customer_sentiment_result['score']:.2f})")
+        
+        # STEP 5: AI QUALITY SCORE
+        logger.info("Step 5/5: Calculating AI quality score...")
+        
+        transcript_lower = full_text.lower()
+        
+        factors = {
+            "customer_tone_score": 0.0,
+            "language_score": 0.0,
+            "agent_professionalism_score": 0.0,
+            "customer_communication_score": 0.0,
+            "abusive_language_penalty": 0.0,
+            "dnc_penalty": 0.0
+        }
+        
+        # Factor 1: Customer Tone (25 pts)
+        if customer_sentiment == "positive":
+            factors["customer_tone_score"] = 25.0
+        elif customer_sentiment == "neutral":
+            factors["customer_tone_score"] = 18.0
+        else:
+            factors["customer_tone_score"] = 10.0
+        
+        # Factor 2: Language Score (10 pts)
+        lang_scores = {"english": 10.0, "en": 10.0, "spanish": 8.0, "es": 8.0, "french": 8.0, "fr": 8.0}
+        factors["language_score"] = lang_scores.get(language, 5.0)
+        
+        # Factor 3: Agent Professionalism (25 pts)
+        casual_phrases = ["yeah", "yep", "nope", "gonna", "wanna", "gotta", "kinda", "sorta", "umm", "uh"]
+        agent_text_lower = agent_text.lower()
+        found_casual = [p for p in casual_phrases if p in agent_text_lower]
+        penalty = min(len(found_casual) * 2, 15)
+        factors["agent_professionalism_score"] = 25.0 - penalty
+        
+        # Factor 4: Customer Communication (20 pts)
+        polite_words = ["please", "thank you", "thanks", "appreciate"]
+        aggressive_words = ["ridiculous", "unacceptable", "terrible", "awful"]
+        customer_text_lower = customer_text.lower()
+        polite_count = sum(1 for w in polite_words if w in customer_text_lower)
+        aggressive_count = sum(1 for w in aggressive_words if w in customer_text_lower)
+        
+        if aggressive_count >= 2:
+            factors["customer_communication_score"] = 8.0
+        elif aggressive_count == 1:
+            factors["customer_communication_score"] = 12.0
+        elif polite_count >= 2:
+            factors["customer_communication_score"] = 20.0
+        else:
+            factors["customer_communication_score"] = 16.0
+        
+        # Factor 5: Abusive Language (-30 pts max)
+        abusive_words = ["fuck", "shit", "damn", "hell", "ass", "bitch", "bastard", "stupid", "idiot"]
+        words = re.findall(r'\b\w+\b', transcript_lower)
+        found_abusive = [w for w in words if w in abusive_words]
+        if found_abusive:
+            factors["abusive_language_penalty"] = -min(len(found_abusive) * 10, 30)
+        
+        # Factor 6: DNC Detection (-20 pts)
+        dnc_phrases = ["do not call", "don't call", "stop calling", "remove me from", "take me off"]
+        found_dnc = [p for p in dnc_phrases if p in transcript_lower]
+        if found_dnc:
+            factors["dnc_penalty"] = -20.0
+        
+        raw_score = sum(factors.values())
+        overall_score = max(0, min(100, (raw_score / 80.0) * 100.0 if raw_score >= 0 else raw_score))
+        
+        logger.info(f"✅ Quality Score: {overall_score:.1f}/100")
+        
+        # CALCULATE DURATION AND METRICS
+        import librosa
+        duration = librosa.get_duration(path=temp_audio_path)
+        word_count = len(full_text.split()) if full_text else 0
+        
+        # Calculate talk time
+        speaker_talk_time = {}
+        for seg in speaker_segments:
+            speaker = seg["speaker"]
+            speaker_talk_time[speaker] = speaker_talk_time.get(speaker, 0) + seg["duration"]
+        
+        # Calculate ratio
+        if len(sorted_speakers) >= 2:
+            agent_time = speaker_talk_time.get(sorted_speakers[0], 0)
+            customer_time = speaker_talk_time.get(sorted_speakers[1], 0)
+            if customer_time > 0:
+                ratio_str = f"{agent_time / customer_time:.2f}:1"
+            else:
+                ratio_str = "N/A"
+        else:
+            ratio_str = "N/A"
+        
+        # Format timestamps
+        timestamps = []
+        for segment in segments:
+            timestamps.append({
+                "start": round(segment["start"], 2),
+                "end": round(segment["end"], 2),
+                "text": segment["text"].strip()
+            })
+        
+        # Clear memory
+        if CUDA_AVAILABLE:
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        # BUILD FINAL RESULT
         result = {
-            "transcript": "This is a placeholder transcript - REPLACE WITH REAL PROCESSING",
-            "speaker_labeled_transcript": "[Agent]: Hello\\n[Customer]: Hi there",
-            "language": "english",
-            "duration": 120.5,
-            "word_count": 50,
-            "speaker_segments": [],
-            "speakers": ["SPEAKER_00", "SPEAKER_01"],
-            "talk_time": {
-                "speaker_talk_time": {"SPEAKER_00": 60.0, "SPEAKER_01": 55.0},
-                "agent_customer_ratio": "1.09:1",
-                "dead_air_total": 5.5,
-                "dead_air_segments": []
-            },
+            "transcript": full_text,
+            "speaker_labeled_transcript": speaker_labeled_text,
+            "language": language,
+            "duration": round(duration, 2),
+            "word_count": word_count,
+            "timestamps": timestamps,
+            "speaker_segments": speaker_segments,
+            "speakers": sorted_speakers,
             "sentiment": {
-                "agent_sentiment": "neutral",
-                "customer_sentiment": "positive",
-                "agent_score": 0.5,
-                "customer_score": 0.85
-            },
-            "entities": [],
-            "key_phrases": [],
-            "summary": "Call summary placeholder",
-            "compliance": {
-                "missing_mandatory": [],
-                "detected_forbidden": [],
-                "compliance_score": 100
+                "agent_sentiment": agent_sentiment,
+                "customer_sentiment": customer_sentiment,
+                "agent_score": round(agent_sentiment_result["score"], 4),
+                "customer_score": round(customer_sentiment_result["score"], 4)
             },
             "quality_score": {
-                "overall_score": 85.0,
-                "factors": {},
-                "details": {},
-                "flags": {}
+                "overall_score": round(overall_score, 2),
+                "factors": factors,
+                "details": {
+                    "customer_tone": customer_sentiment,
+                    "detected_language": language,
+                    "agent_casual_phrases": found_casual,
+                    "abusive_words_found": found_abusive,
+                    "dnc_phrases_found": found_dnc
+                },
+                "flags": {
+                    "has_abusive_language": len(found_abusive) > 0,
+                    "is_dnc_customer": len(found_dnc) > 0,
+                    "agent_too_casual": len(found_casual) >= 3
+                }
+            },
+            "talk_time": {
+                "speaker_talk_time": {k: round(v, 2) for k, v in speaker_talk_time.items()},
+                "agent_customer_ratio": ratio_str,
+                "total_duration": round(duration, 2)
             }
         }
         
