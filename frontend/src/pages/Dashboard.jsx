@@ -191,11 +191,12 @@ const Dashboard = () => {
   }, [fetchDashboardData, user]);
 
   const handleActivateSubscription = async (payment) => {
-    // Plan prices for validation
+    // Plan prices for validation (Updated March 2026)
     const planPrices = {
-      starter: { monthly: 99, yearly: 950 },
-      professional: { monthly: 299, yearly: 2870 },
-      enterprise: { monthly: 999, yearly: 9590 }
+      starter: { monthly: 129, yearly: 1239 },
+      growth: { monthly: 199, yearly: 1909 },
+      professional: { monthly: 299, yearly: 2869 },
+      enterprise: { monthly: 899, yearly: 8629 }
     };
 
     const planType = payment.requestedPlan || 'starter';

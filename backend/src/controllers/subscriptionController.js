@@ -86,7 +86,7 @@ exports.createCheckoutSession = async (req, res, next) => {
   try {
     const { planType } = req.body;
 
-    if (!planType || !['free', 'starter', 'professional', 'enterprise'].includes(planType)) {
+    if (!planType || !['free', 'starter', 'growth', 'professional', 'enterprise'].includes(planType)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid plan type',
@@ -235,7 +235,7 @@ exports.requestSubscription = async (req, res, next) => {
     }
 
     // Validate plan type
-    const validPlans = ['starter', 'professional', 'enterprise'];
+    const validPlans = ['starter', 'growth', 'professional', 'enterprise'];
     if (!validPlans.includes(planType)) {
       return res.status(400).json({
         success: false,

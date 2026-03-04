@@ -8,7 +8,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Pricing plans configuration
+// Pricing plans configuration (Updated March 2026)
 const PLANS = {
   free: {
     name: 'Free',
@@ -16,62 +16,74 @@ const PLANS = {
     amount: 0, // $0/month
     interval: 'month',
     features: [
-      '10 calls/month',
-      'Basic transcription',
+      '500 minutes/month',
+      'Standard transcription',
       'Community support',
       '1 user',
-      '7-day data retention',
+      '14-day data retention',
     ],
     limits: {
-      callsPerMonth: 10,
-      storageGB: 1,
-      dataRetentionDays: 7,
+      minutesPerMonth: 500,
+      storageGB: 2,
+      dataRetentionDays: 14,
       teamMembers: 1,
     },
   },
   starter: {
     name: 'Starter',
     priceId: process.env.STRIPE_STARTER_PRICE_ID,
-    amount: 14900, // $149/month in cents (80% of pod cost)
+    amount: 12900, // $129/month in cents
     interval: 'month',
     features: [
-      '100 calls/month',
-      'Basic analytics',
+      '1,500 minutes/month',
+      'Standard AI transcription',
       'Email support',
-      '1 user',
-      '1 dedicated pod',
+      '3 team members',
       '30-day data retention',
+    ],
+  },
+  growth: {
+    name: 'Growth',
+    priceId: process.env.STRIPE_GROWTH_PRICE_ID,
+    amount: 19900, // $199/month in cents
+    interval: 'month',
+    features: [
+      '2,500 minutes/month',
+      'Enhanced AI analysis',
+      'Priority support',
+      '5 team members',
+      'API access (rate-limited)',
+      '60-day data retention',
     ],
   },
   professional: {
     name: 'Professional',
     priceId: process.env.STRIPE_PROFESSIONAL_PRICE_ID,
-    amount: 24900, // $249/month in cents (133% of pod cost)
+    amount: 29900, // $299/month in cents
     interval: 'month',
     features: [
-      '500 calls/month',
-      'Advanced analytics',
-      'Priority support',
-      '5 users',
-      '1 dedicated pod',
-      'Custom rules',
+      '4,000 minutes/month',
+      'Advanced AI analysis',
+      'Priority support + live chat',
+      '10 team members',
       'API access',
+      'Webhooks & SSO',
       '90-day data retention',
     ],
   },
   enterprise: {
     name: 'Enterprise',
     priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
-    amount: 39900, // $399/month in cents (213% of pod cost)
+    amount: 89900, // $899/month in cents
     interval: 'month',
     features: [
-      'Unlimited calls',
-      'Full analytics suite',
-      'Priority support',
-      'Unlimited users',
-      '1 dedicated pod',
-      'API access',
-      'Dedicated account manager',
+      '15,000 minutes/month',
+      'Full AI suite',
+      '24/7 support + account manager',
+      'Unlimited team members',
+      'Custom AI models',
+      'White-labeling',
+      'SLA guarantees',
       '1-year data retention',
     ],
   },

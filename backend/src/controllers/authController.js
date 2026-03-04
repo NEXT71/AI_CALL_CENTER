@@ -67,6 +67,7 @@ exports.register = async (req, res, next) => {
       // Trial period for paid plans
       const trialDays = {
         starter: 14,
+        growth: 14,
         professional: 14,
         enterprise: 30,
       };

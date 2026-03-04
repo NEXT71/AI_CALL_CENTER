@@ -119,6 +119,7 @@ function checkStripe() {
   const stripePublic = process.env.STRIPE_PUBLISHABLE_KEY;
   const stripePrices = [
     process.env.STRIPE_STARTER_PRICE_ID,
+    process.env.STRIPE_GROWTH_PRICE_ID,
     process.env.STRIPE_PROFESSIONAL_PRICE_ID,
     process.env.STRIPE_ENTERPRISE_PRICE_ID,
   ];
