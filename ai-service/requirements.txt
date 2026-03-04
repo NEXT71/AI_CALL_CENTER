@@ -1,9 +1,7 @@
 # Core Framework
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-python-multipart==0.0.12
+runpod==1.5.0
+requests==2.31.0
 python-dotenv==1.0.1
-pydantic==2.10.3
 
 # GPU-Accelerated Deep Learning
 # For CPU-only (most compatible):

@@ -10,4 +10,7 @@ router.post(
   webhookController.handleStripeWebhook
 );
 
+// RunPod Serverless webhook - no authentication required (validate via signature if needed)
+router.post('/runpod', webhookController.handleRunPodWebhook);
+
 module.exports = router;

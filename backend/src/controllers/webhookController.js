@@ -290,3 +290,209 @@ async function handleTrialWillEnd(subscription) {
   // Optional: Send trial ending notification email
   // await emailService.sendTrialEndingEmail(user, subscription);
 }
+
+/**
+ * @route   POST /api/v1/webhooks/runpod
+ * @desc    Receive RunPod Serverless results via webhook
+ * @access  Public (no auth - validate signature if needed)
+ */
+exports.handleRunPodWebhook = async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const Call = require('../models/Call');
+  const scoringService = require('../services/scoringService');
+  
+  try {
+    const { id: jobId, status, output, error } = req.body;
+
+    logger.info('RunPod webhook received', { 
+      jobId, 
+      status,
+      hasOutput: !!output,
+      hasError: !!error 
+    });
+
+    // Validate webhook payload
+    if (!jobId) {
+      logger.error('RunPod webhook missing job ID');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing job ID' 
+      });
+    }
+
+    // Find call by RunPod job ID
+    const call = await Call.findOne({ runpodJobId: jobId });
+    if (!call) {
+      logger.error('Call not found for RunPod job', { jobId });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Call not found' 
+      });
+    }
+
+    // Check if job failed
+    if (status === 'FAILED' || error) {
+      logger.error('RunPod job failed', { 
+        jobId, 
+        callId: call.callId, 
+        error 
+      });
+
+      call.status = 'failed';
+      call.processingError = error || 'RunPod job failed';
+      await call.save();
+
+      // ⚠️ CRITICAL: Delete audio file to save disk space
+      if (call.audioFilePath && fs.existsSync(call.audioFilePath)) {
+        try {
+          fs.unlinkSync(call.audioFilePath);
+          logger.info('Audio file deleted after failed processing', { 
+            callId: call.callId, 
+            path: call.audioFilePath 
+          });
+        } catch (unlinkError) {
+          logger.error('Failed to delete audio file', { 
+            callId: call.callId, 
+            error: unlinkError.message 
+          });
+        }
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook processed (job failed)' 
+      });
+    }
+
+    // Check if job is still running
+    if (status === 'IN_PROGRESS' || status === 'IN_QUEUE') {
+      logger.info('RunPod job still processing', { jobId, status });
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Job still processing' 
+      });
+    }
+
+    // Job completed successfully - extract results
+    if (status === 'COMPLETED' && output) {
+      logger.info('RunPod job completed successfully', { 
+        jobId, 
+        callId: call.callId 
+      });
+
+      // Update call with AI results from output
+      call.transcript = output.transcript || '';
+      call.speakerLabeledTranscript = output.speaker_labeled_transcript || '';
+      call.detectedLanguage = output.language || 'english';
+      call.duration = output.duration || 0;
+      call.wordCount = output.word_count || 0;
+
+      // Diarization data
+      if (output.speaker_segments) {
+        call.speakerSegments = output.speaker_segments;
+        call.speakers = output.speakers || [];
+      }
+
+      // Talk-time metrics
+      if (output.talk_time) {
+        call.speakerTalkTime = output.talk_time.speaker_talk_time || {};
+        call.agentCustomerRatio = output.talk_time.agent_customer_ratio || 'N/A';
+        call.deadAirTotal = output.talk_time.dead_air_total || 0;
+        call.deadAirSegments = output.talk_time.dead_air_segments || [];
+      }
+
+      // Sentiment analysis
+      if (output.sentiment) {
+        call.agentSentiment = output.sentiment.agent_sentiment || 'neutral';
+        call.customerSentiment = output.sentiment.customer_sentiment || 'neutral';
+        call.agentSentimentScore = output.sentiment.agent_score || 0.5;
+        call.customerSentimentScore = output.sentiment.customer_score || 0.5;
+      }
+
+      // Entities and key phrases
+      call.entities = output.entities || [];
+      call.keyPhrases = output.key_phrases || [];
+
+      // Summary
+      call.summary = output.summary || '';
+
+      // Compliance check (if applicable)
+      if (output.compliance) {
+        call.missingMandatory = output.compliance.missing_mandatory || [];
+        call.detectedForbidden = output.compliance.detected_forbidden || [];
+        call.complianceScore = output.compliance.compliance_score || 0;
+      }
+
+      // AI Quality Score
+      if (output.quality_score) {
+        call.aiQualityScore = output.quality_score.overall_score || 0;
+        call.aiQualityFactors = output.quality_score.factors || {};
+        call.aiQualityDetails = output.quality_score.details || {};
+        call.aiQualityFlags = output.quality_score.flags || {};
+      }
+
+      // Calculate final quality score using scoring service
+      try {
+        const scoringResult = scoringService.calculateQualityScore(call);
+        call.qualityScore = scoringResult.score;
+        call.pointsBreakdown = scoringResult.breakdown;
+        call.recommendations = scoringResult.recommendations;
+      } catch (scoringError) {
+        logger.warn('Failed to calculate quality score', { 
+          callId: call.callId, 
+          error: scoringError.message 
+        });
+      }
+
+      // Mark as completed
+      call.status = 'completed';
+      call.processedAt = new Date();
+      await call.save();
+
+      logger.info('Call processing completed', { 
+        callId: call.callId, 
+        qualityScore: call.qualityScore 
+      });
+
+      // ⚠️ CRITICAL: Delete audio file to save disk space after successful processing
+      if (call.audioFilePath && fs.existsSync(call.audioFilePath)) {
+        try {
+          fs.unlinkSync(call.audioFilePath);
+          logger.info('Audio file deleted after successful processing', { 
+            callId: call.callId, 
+            path: call.audioFilePath 
+          });
+          
+          // Optionally clear the audioFilePath field
+          call.audioFilePath = null;
+          await call.save();
+        } catch (unlinkError) {
+          logger.error('Failed to delete audio file', { 
+            callId: call.callId, 
+            error: unlinkError.message 
+          });
+        }
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook processed successfully' 
+      });
+    }
+
+    // Unknown status
+    logger.warn('Unknown RunPod webhook status', { jobId, status });
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Webhook received but status unknown' 
+    });
+
+  } catch (error) {
+    logger.error('Webhook processing error', { error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Webhook processing failed' 
+    });
+  }
+};

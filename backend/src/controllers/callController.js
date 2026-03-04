@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
+const axios = require('axios');
 const Call = require('../models/Call');
 const config = require('../config/config');
 const aiService = require('../services/aiService');
@@ -10,6 +11,12 @@ const scoringService = require('../services/scoringService');
 const auditService = require('../services/auditService');
 const runpodService = require('../services/runpodService');
 const logger = require('../config/logger');
+
+// RunPod Serverless Configuration
+const RUNPOD_SERVERLESS_ENDPOINT = process.env.RUNPOD_SERVERLESS_ENDPOINT;
+const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY;
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
+const USE_RUNPOD_SERVERLESS = process.env.USE_RUNPOD_SERVERLESS === 'true';
 
 // Ensure upload directory exists
 if (!fs.existsSync(config.upload.dir)) {
@@ -281,7 +288,63 @@ exports.uploadCall = [
 ];
 
 /**
- * Process call asynchronously using FREE & open-source AI models
+ * Call RunPod Serverless API with audio URL
+ * RunPod will download the audio, process it, and send results via webhook
+ */
+async function callRunPodServerless(audioFilePath, callId) {
+  try {
+    // Construct public URL for the audio file
+    const filename = path.basename(audioFilePath);
+    const publicAudioUrl = `${BASE_URL}/temp-audio/${filename}`;
+    
+    logger.info('Calling RunPod Serverless API', { 
+      callId, 
+      audioUrl: publicAudioUrl,
+      endpoint: RUNPOD_SERVERLESS_ENDPOINT
+    });
+
+    // Construct webhook URL for RunPod to callback
+    const webhookUrl = `${BASE_URL}/api/v1/webhooks/runpod`;
+
+    const response = await axios.post(
+      RUNPOD_SERVERLESS_ENDPOINT,
+      {
+        input: {
+          audio_url: publicAudioUrl,
+          call_id: callId,
+          min_speakers: 2,
+          max_speakers: 2
+        },
+        webhook: webhookUrl
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RUNPOD_API_KEY}`
+        },
+        timeout: 10000 // 10 second timeout for job submission
+      }
+    );
+
+    const jobId = response.data.id;
+    logger.info('RunPod job submitted successfully', { callId, jobId });
+
+    return {
+      jobId,
+      status: 'submitted'
+    };
+  } catch (error) {
+    logger.error('RunPod Serverless API error', { 
+      callId,
+      error: error.message,
+      response: error.response?.data 
+    });
+    throw new Error(`RunPod job submission failed: ${error.message}`);
+  }
+}
+
+/**
+ * Process call asynchronously using RunPod Serverless or traditional AI service
  */
 async function processCallAsync(callId) {
   try {
@@ -303,7 +366,38 @@ async function processCallAsync(callId) {
 
     // Update status
     call.status = 'processing';
+    call.processingStartedAt = new Date();
     await call.save();
+
+    // Check if RunPod Serverless is configured
+    if (USE_RUNPOD_SERVERLESS && RUNPOD_SERVERLESS_ENDPOINT && RUNPOD_API_KEY) {
+      logger.info('Using RunPod Serverless for processing', { callId: call.callId });
+      
+      // Get audio file path
+      const audioPath = call.audioFilePath;
+      if (!audioPath || !fs.existsSync(audioPath)) {
+        throw new Error('Audio file not found');
+      }
+
+      // Submit job to RunPod Serverless
+      const result = await callRunPodServerless(audioPath, call._id.toString());
+      
+      // Store RunPod job ID in the call record
+      call.runpodJobId = result.jobId;
+      call.status = 'processing';
+      await call.save();
+
+      logger.info('Call submitted to RunPod Serverless', { 
+        callId: call.callId, 
+        jobId: result.jobId 
+      });
+      
+      // Exit early - webhook will handle the rest
+      return;
+    }
+
+    // Fallback to traditional AI service processing
+    logger.info('Using traditional AI service for processing', { callId: call.callId });
 
     // IMPORTANT: Ensure RunPod GPU is running before processing
     try {

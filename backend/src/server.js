@@ -145,6 +145,29 @@ if (config.nodeEnv === 'production' && !process.env.ALLOWED_ORIGINS) {
 
 app.use(cors(corsOptions));
 
+// Serve temporary audio files publicly for RunPod serverless access
+// RunPod will download audio from this endpoint
+app.use('/temp-audio', express.static(path.join(__dirname, '../uploads/calls'), {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    const ext = path.extname(filePath).toLowerCase();
+    const contentTypes = {
+      '.wav': 'audio/wav',
+      '.mp3': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.ogg': 'audio/ogg',
+      '.flac': 'audio/flac',
+      '.aac': 'audio/aac'
+    };
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
+    }
+  }
+}));
+console.log('✅ DEBUG: Public audio endpoint mounted at /temp-audio');
+
 // Stripe webhook endpoint - MUST be before body parser
 // Stripe needs raw body for signature verification
 console.log('🔍 DEBUG: Mounting webhook routes...');

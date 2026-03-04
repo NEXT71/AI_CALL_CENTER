@@ -1,22 +1,18 @@
 import os
-import uvicorn
 import uuid
 import shutil
 import re
 import threading
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List, Dict, Optional, Any
+import gc
+import requests
+from typing import Dict, Any
 from dotenv import load_dotenv
 import warnings
 import logging
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import torch
 from datetime import datetime, time, timedelta
 import pytz
+from concurrent.futures import ThreadPoolExecutor
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -101,120 +97,11 @@ ner_pipeline = None
 nlp_spacy = None
 diarization_pipeline = None
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="AI Call Center - RunPod GPU Service",
-    description="Optimized for NVIDIA RTX 2000 Ada on RunPod - Handles 30+ minute calls",
-    version="2.0.0"
-)
-
-# CORS configuration - Allow all origins for RunPod
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
-
-# Global exception handler to prevent crashes
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Catch all unhandled exceptions to prevent service crashes"""
-    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
-    
-    # Clean up GPU memory on error
-    if CUDA_AVAILABLE:
-        try:
-            import gc
-            torch.cuda.empty_cache()
-            gc.collect()
-            logger.info("GPU memory cleaned after error")
-        except Exception as cleanup_error:
-            logger.error(f"Failed to cleanup GPU: {cleanup_error}")
-    
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "Internal Server Error",
-            "message": "An unexpected error occurred. The service will continue running.",
-            "type": type(exc).__name__
-        }
-    )
-
-# Startup event - initialize critical resources
-@app.on_event("startup")
-async def startup_event():
-    """Initialize resources on startup"""
-    logger.info("🚀 AI Service starting up...")
-    logger.info(f"Device: {DEVICE} (GPU: {CUDA_AVAILABLE})")
-    logger.info(f"Max workers: {MAX_WORKERS}")
-    logger.info("✅ Service ready to accept requests")
-    
-    # Test CUDA availability
-    if CUDA_AVAILABLE:
-        try:
-            torch.cuda.synchronize()
-            logger.info("✅ CUDA initialized successfully")
-        except Exception as e:
-            logger.error(f"⚠️ CUDA initialization warning: {e}")
-
-# Shutdown event - cleanup resources
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup resources on shutdown"""
-    logger.info("🛑 AI Service shutting down...")
-    
-    # Clear GPU memory
-    if CUDA_AVAILABLE:
-        try:
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-            logger.info("✅ GPU memory cleared")
-        except Exception as e:
-            logger.error(f"Error clearing GPU: {e}")
-    
-    # Shutdown thread pool
-    try:
-        executor.shutdown(wait=False)
-        logger.info("✅ Thread pool shutdown")
-    except Exception as e:
-        logger.error(f"Error shutting down thread pool: {e}")
-    
-    # Garbage collection
-    import gc
-    gc.collect()
-    logger.info("✅ Graceful shutdown completed")
-
-# Custom middleware for service availability
-@app.middleware("http")
-async def check_service_availability(request: Request, call_next):
-    """Check if service is available based on schedule before processing requests"""
-    # TEMPORARILY DISABLED FOR TESTING - Allow 24/7 access
-    return await call_next(request)
-    
-    """
-    # ORIGINAL CODE - Uncomment to re-enable schedule restrictions
-    # Allow health checks even when service is unavailable
-    if request.url.path == "/health":
-        return await call_next(request)
-
-    if not is_service_available():
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "Service Unavailable",
-                "message": "AI service is only available Monday-Saturday from 6:45 PM PKT to 6:00 AM PST",
-                "available_days": "Monday-Saturday",
-                "available_hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time"
-            }
-        )
-
-    response = await call_next(request)
-    return response
-    """
+# Configuration
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small" if CUDA_AVAILABLE else "base")
+SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
+SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
+SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
 
 # Model availability flags
 models_available = {
@@ -226,6 +113,7 @@ models_available = {
     "diarization": False,
     "gpu_enabled": CUDA_AVAILABLE
 }
+
 
 def load_whisper_model():
     """Lazy load Whisper model with GPU support"""
@@ -2204,69 +2092,184 @@ async def calculate_talk_time(
         gc.collect()
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "service": "AI Call Center - RunPod GPU Service",
-        "version": "2.0.0",
-        "gpu_enabled": CUDA_AVAILABLE,
-        "gpu_name": GPU_NAME if CUDA_AVAILABLE else "N/A",
-        "optimizations": [
-            "GPU-accelerated Whisper transcription",
-            "Chunked processing for 30+ minute audio",
-            "Parallel chunk processing",
-            "FP16 precision for 2x speed",
-            "GPU-accelerated sentiment & summarization"
-        ],
-        "endpoints": {
-            "health": "/health",
-            "transcribe": "/transcribe",
-            "transcribe_with_speakers": "/transcribe-with-speakers",
-            "sentiment": "/analyze-sentiment",
-            "entities": "/extract-entities",
-            "summarize": "/summarize",
-            "compliance": "/check-compliance",
-            "diarize": "/diarize",
-            "talk_time": "/calculate-talk-time"
-        }
-    }
+# ==============================================================================
+# 🚀 RUNPOD SERVERLESS HANDLER
+# ==============================================================================
 
+import runpod
+
+def handler(job: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    RunPod Serverless handler function.
+    Receives job with audio_url, downloads it, processes with AI pipeline, returns results.
+    """
+    temp_audio_path = None
+    
+    try:
+        # Step 1: Check service availability schedule
+        logger.info("Checking service availability...")
+        if not is_service_available():
+            logger.warning("Service unavailable - outside operating hours")
+            return {
+                "error": "Service Unavailable",
+                "message": "AI service is only available Monday-Saturday from 6:45 PM PKT to 6:00 AM PST",
+                "available_days": "Monday-Saturday",
+                "available_hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time"
+            }
+        
+        logger.info("✅ Service is available - proceeding with job")
+        
+        # Step 2: Extract input parameters
+        job_input = job.get('input', {})
+        audio_url = job_input.get('audio_url')
+        call_id = job_input.get('call_id', 'unknown')
+        min_speakers = job_input.get('min_speakers', 2)
+        max_speakers = job_input.get('max_speakers', 2)
+        
+        if not audio_url:
+            logger.error("No audio_url provided in job input")
+            return {
+                "error": "Missing audio_url",
+                "message": "audio_url is required in job input"
+            }
+        
+        logger.info(f"📥 Processing job for call_id: {call_id}")
+        logger.info(f"📥 Audio URL: {audio_url}")
+        
+        # Step 3: Download audio file from URL
+        logger.info(f"🌐 Downloading audio from: {audio_url}")
+        temp_audio_path = f"/tmp/{uuid.uuid4()}.wav"
+        
+        try:
+            response = requests.get(audio_url, stream=True, timeout=120)
+            response.raise_for_status()
+            
+            with open(temp_audio_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
+            logger.info(f"✅ Audio downloaded: {file_size_mb:.2f} MB")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Failed to download audio: {e}")
+            return {
+                "error": "Download Failed",
+                "message": f"Failed to download audio from URL: {str(e)}"
+            }
+        
+        # ========================================================================
+        # 🔧 [PASTE YOUR 2200 LINES OF WHISPER/BERT LOGIC HERE]
+        # ========================================================================
+        # 
+        # Your existing AI processing pipeline logic goes here:
+        # 
+        # Step 1: Load and use load_whisper_model() to transcribe temp_audio_path
+        # Step 2: Load and use load_diarization_model() for speaker diarization
+        # Step 3: Load and use load_sentiment_model() for per-speaker sentiment
+        # Step 4: Load and use load_spacy_model() for entity extraction
+        # Step 5: Load and use load_summarizer_model() for summarization
+        # Step 6: Use rapidfuzz for compliance checking
+        # Step 7: Calculate AI Quality Score
+        # Step 8: Calculate talk-time metrics
+        # 
+        # Replace all temp_path/audio_path variables with temp_audio_path
+        # 
+        # Return a dictionary with all results as shown in the example below
+        # ========================================================================
+        
+        logger.info("🚀 Starting AI processing pipeline...")
+        
+        # EXAMPLE PLACEHOLDER - Replace with your actual AI processing
+        # Call your existing transcription, diarization, sentiment, etc. functions here
+        
+        result = {
+            "transcript": "This is a placeholder transcript - REPLACE WITH REAL PROCESSING",
+            "speaker_labeled_transcript": "[Agent]: Hello\\n[Customer]: Hi there",
+            "language": "english",
+            "duration": 120.5,
+            "word_count": 50,
+            "speaker_segments": [],
+            "speakers": ["SPEAKER_00", "SPEAKER_01"],
+            "talk_time": {
+                "speaker_talk_time": {"SPEAKER_00": 60.0, "SPEAKER_01": 55.0},
+                "agent_customer_ratio": "1.09:1",
+                "dead_air_total": 5.5,
+                "dead_air_segments": []
+            },
+            "sentiment": {
+                "agent_sentiment": "neutral",
+                "customer_sentiment": "positive",
+                "agent_score": 0.5,
+                "customer_score": 0.85
+            },
+            "entities": [],
+            "key_phrases": [],
+            "summary": "Call summary placeholder",
+            "compliance": {
+                "missing_mandatory": [],
+                "detected_forbidden": [],
+                "compliance_score": 100
+            },
+            "quality_score": {
+                "overall_score": 85.0,
+                "factors": {},
+                "details": {},
+                "flags": {}
+            }
+        }
+        
+        logger.info(f"✅ AI processing completed for call_id: {call_id}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Handler error: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return {
+            "error": "Processing Failed",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
+    
+    finally:
+        # ⚠️ CRITICAL: Always clean up the downloaded audio file to save GPU disk space
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            try:
+                os.remove(temp_audio_path)
+                logger.info(f"🗑️ Cleaned up temporary file: {temp_audio_path}")
+            except Exception as cleanup_error:
+                logger.error(f"❌ Failed to cleanup file {temp_audio_path}: {cleanup_error}")
+        
+        # Clear GPU memory
+        if CUDA_AVAILABLE:
+            try:
+                torch.cuda.empty_cache()
+                logger.info("🧹 GPU memory cleared")
+            except Exception as gpu_error:
+                logger.error(f"Failed to clear GPU: {gpu_error}")
+        
+        # Force garbage collection
+        gc.collect()
+
+
+# ==============================================================================
+# 🎬 START RUNPOD SERVERLESS
+# ==============================================================================
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    host = os.getenv("HOST", "0.0.0.0")
+    logger.info("=" * 80)
+    logger.info("🚀 Starting RunPod Serverless Worker for AI Call Center")
+    logger.info("=" * 80)
+    logger.info(f"GPU Enabled: {CUDA_AVAILABLE}")
+    if CUDA_AVAILABLE:
+        logger.info(f"GPU: {GPU_NAME}")
+        logger.info(f"VRAM: {VRAM_GB:.1f} GB")
+    else:
+        logger.info("Running on CPU (slower processing)")
+    logger.info(f"Max Workers: {MAX_WORKERS}")
+    logger.info(f"Whisper Model: {WHISPER_MODEL}")
+    logger.info("Service Schedule: Monday-Saturday, 6:45 PM PKT to 6:00 AM PST")
+    logger.info("=" * 80)
     
-    print(f"""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║                                                               ║
-    ║   🚀 RunPod GPU AI Service - Production Ready                ║
-    ║                                                               ║
-    ║   GPU: {GPU_NAME[:50].ljust(50)} ║
-    ║   VRAM: {f"{VRAM_GB:.1f} GB" if CUDA_AVAILABLE else "N/A".ljust(55)} ║
-    ║   Device: {DEVICE.upper().ljust(56)} ║
-    ║                                                               ║
-    ║   ✅ Whisper: {WHISPER_MODEL.ljust(48)} ║
-    ║   ✅ Optimized for 30+ minute audio recordings               ║
-    ║   ✅ Parallel chunk processing ({MAX_WORKERS} workers)                    ║
-    ║   ✅ FP16 precision enabled                                  ║
-    ║   ✅ Auto-restart on crash (use run_production.sh)           ║
-    ║   ✅ Memory leak prevention enabled                          ║
-    ║                                                               ║
-    ║   Port: {str(port).ljust(58)} ║
-    ║   Host: {host.ljust(58)} ║
-    ║                                                               ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    """)
-    
-    # Production-ready uvicorn configuration
-    uvicorn.run(
-        app, 
-        host=host, 
-        port=port, 
-        log_level="info",
-        timeout_keep_alive=75,  # Keep-alive timeout (prevents hanging connections)
-        limit_concurrency=100,  # Max concurrent connections (prevent overload)
-        limit_max_requests=1000,  # Restart worker after 1000 requests (prevent memory leaks)
-        timeout_graceful_shutdown=30  # Graceful shutdown timeout
-    )
+    # Start the RunPod serverless handler
+    runpod.serverless.start({"handler": handler})
