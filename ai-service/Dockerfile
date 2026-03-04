@@ -33,12 +33,11 @@ RUN python3 -m spacy download en_core_web_sm
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8000
+# Create temp directory for audio files
+RUN mkdir -p /tmp && chmod 777 /tmp
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD python3 -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+# RunPod Serverless doesn't need port exposure or health checks
+# The handler function is invoked directly by RunPod runtime
 
-# Run the application
+# Run the RunPod serverless handler
 CMD ["python3", "main.py"]
