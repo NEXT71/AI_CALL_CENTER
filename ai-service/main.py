@@ -13,6 +13,7 @@ import torch
 from datetime import datetime, time, timedelta
 import pytz
 from concurrent.futures import ThreadPoolExecutor
+import runpod
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -249,12 +250,6 @@ def load_spacy_model():
         logger.error(f"❌ Failed to load spaCy model: {e}")
         models_available["spacy"] = False
         return None
-
-# Configuration
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small" if CUDA_AVAILABLE else "base")
-SENTIMENT_MODEL = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
-SPACY_MODEL = os.getenv("SPACY_MODEL", "en_core_web_sm")
-SUMMARIZATION_MODEL = os.getenv("SUMMARIZATION_MODEL", "facebook/bart-large-cnn")
 
 # Pydantic models - NOT USED in RunPod Serverless (handler uses dictionaries)
 # These were part of the old FastAPI implementation
@@ -2125,8 +2120,6 @@ async def calculate_talk_time(
 # 🚀 RUNPOD SERVERLESS HANDLER
 # ==============================================================================
 
-import runpod
-
 def handler(job: Dict[str, Any]) -> Dict[str, Any]:
     """
     RunPod Serverless handler function.
@@ -2531,6 +2524,6 @@ if __name__ == "__main__":
     logger.info(f"Whisper Model: {WHISPER_MODEL}")
     logger.info("Service Schedule: Monday-Saturday, 6:45 PM PKT to 6:00 AM PST")
     logger.info("=" * 80)
-    
-    # Start the RunPod serverless handler
-    runpod.serverless.start({"handler": handler})
+
+# Start the RunPod serverless handler (MUST be at module level)
+runpod.serverless.start({"handler": handler})
