@@ -10,6 +10,7 @@ const aiService = require('../services/aiService');
 const scoringService = require('../services/scoringService');
 const auditService = require('../services/auditService');
 const runpodService = require('../services/runpodService');
+const usageLimits = require('../middleware/usageLimits');
 const logger = require('../config/logger');
 
 // RunPod Serverless Configuration
@@ -304,7 +305,7 @@ async function callRunPodServerless(audioFilePath, callId) {
     const webhookUrl = `${BASE_URL}/api/v1/webhooks/runpod`;
 
     const response = await axios.post(
-      RUNPOD_SERVERLESS_ENDPOINT,
+      `${RUNPOD_SERVERLESS_ENDPOINT}/run`,
       {
         input: {
           audio_url: publicAudioUrl,
