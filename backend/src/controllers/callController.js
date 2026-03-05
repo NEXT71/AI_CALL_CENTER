@@ -249,20 +249,17 @@ exports.uploadCall = [
         saleAmount: saleAmount ? parseFloat(saleAmount) : undefined,
         productSold: productSold || undefined,
         saleDate: (isSale === true || isSale === 'true') ? new Date(callDate) : undefined,
-        requiresQA: (isSale === true || isSale === 'true'), // Only QA sale calls
-        status: (isSale === true || isSale === 'true') ? 'queued' : 'skipped', // Skip non-sale calls
+        requiresQA: true, // Process all calls with AI
+        status: 'queued', // Queue all calls for processing
       });
 
-      // Only trigger AI processing for SALE calls
-      if (call.isSale && call.requiresQA) {
-        logger.info(`Call ${callId} is a SALE - queuing for AI processing`, {
-          saleAmount: call.saleAmount,
-          productSold: call.productSold,
-        });
-        processCallAsync(call._id);
-      } else {
-        logger.info(`Call ${callId} is NOT a sale - skipping AI processing`);
-      }
+      // Trigger AI processing for ALL calls
+      logger.info(`Call ${callId} - queuing for AI processing`, {
+        isSale: call.isSale,
+        saleAmount: call.saleAmount,
+        productSold: call.productSold,
+      });
+      processCallAsync(call._id);
 
       // Log call upload
       await auditService.logCallUpload(req.user, call, req);
