@@ -506,12 +506,21 @@ def health_check():
     return health_info
 
 
-@app.post("/transcribe", response_model=TranscribeResponse)
-async def transcribe_audio(audio: UploadFile = File(...)):
-    """
-    Transcribe audio file using Whisper on GPU
-    Handles 30+ minute recordings with automatic chunking
-    """
+# ==============================================================================
+# ⚠️ FASTAPI ENDPOINTS DISABLED FOR RUNPOD SERVERLESS
+# ==============================================================================
+# The following FastAPI endpoints are not used in RunPod Serverless deployment.
+# They have been wrapped in 'if False:' to prevent import errors while preserving
+# the code for reference. Only the RunPod handler function (line ~2114) is active.
+# ==============================================================================
+
+if False:  # Disabled - causes NameError: 'app' is not defined
+    @app.post("/transcribe", response_model=TranscribeResponse)
+    async def transcribe_audio(audio: UploadFile = File(...)):
+        """
+        Transcribe audio file using Whisper on GPU
+        Handles 30+ minute recordings with automatic chunking
+        """
     temp_path = None
     chunk_files = []
     
@@ -2107,6 +2116,7 @@ async def calculate_talk_time(
                 pass
         gc.collect()
 
+# End of disabled FastAPI endpoints block
 
 # ==============================================================================
 # 🚀 RUNPOD SERVERLESS HANDLER
@@ -2123,17 +2133,18 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Step 1: Check service availability schedule
-        logger.info("Checking service availability...")
-        if not is_service_available():
-            logger.warning("Service unavailable - outside operating hours")
-            return {
-                "error": "Service Unavailable",
-                "message": "AI service is only available Monday-Saturday from 6:45 PM PKT to 6:00 AM PST",
-                "available_days": "Monday-Saturday",
-                "available_hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time"
-            }
+        # TEMPORARILY DISABLED FOR TESTING - Re-enable in production
+        # logger.info("Checking service availability...")
+        # if not is_service_available():
+        #     logger.warning("Service unavailable - outside operating hours")
+        #     return {
+        #         "error": "Service Unavailable",
+        #         "message": "AI service is only available Monday-Saturday from 6:45 PM PKT to 6:00 AM PST",
+        #         "available_days": "Monday-Saturday",
+        #         "available_hours": "6:45 PM Pakistan Time to 6:00 AM Pacific Time"
+        #     }
         
-        logger.info("✅ Service is available - proceeding with job")
+        logger.info("✅ Proceeding with job (availability check disabled for testing)")
         
         # Step 2: Extract input parameters
         job_input = job.get('input', {})
