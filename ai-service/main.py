@@ -510,13 +510,15 @@ def health_check():
 # ⚠️ FASTAPI ENDPOINTS DISABLED FOR RUNPOD SERVERLESS
 # ==============================================================================
 # The following FastAPI endpoints are not used in RunPod Serverless deployment.
-# They have been wrapped in 'if False:' to prevent import errors while preserving
+# They are wrapped in triple-quotes to prevent import errors while preserving
 # the code for reference. Only the RunPod handler function (line ~2114) is active.
 # ==============================================================================
 
-if False:  # Disabled - causes NameError: 'app' is not defined
-    @app.post("/transcribe", response_model=TranscribeResponse)
-    async def transcribe_audio(audio: UploadFile = File(...)):
+"""
+# All FastAPI endpoints disabled to prevent NameError: 'app' is not defined
+
+@app.post("/transcribe", response_model=TranscribeResponse)
+async def transcribe_audio(audio: UploadFile = File(...)):
         """
         Transcribe audio file using Whisper on GPU
         Handles 30+ minute recordings with automatic chunking
@@ -2116,6 +2118,7 @@ async def calculate_talk_time(
                 pass
         gc.collect()
 
+"""
 # End of disabled FastAPI endpoints block
 
 # ==============================================================================
