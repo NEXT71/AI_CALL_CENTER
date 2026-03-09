@@ -2125,6 +2125,13 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
     RunPod Serverless handler function.
     Receives job with audio_url, downloads it, processes with AI pipeline, returns results.
     """
+    # CRITICAL: Log immediately when handler is called
+    logger.info("="*80)
+    logger.info("🎯 HANDLER INVOKED - Job received by RunPod worker")
+    logger.info("="*80)
+    logger.info(f"📦 Full job object: {job}")
+    logger.info(f"📦 Job keys: {list(job.keys())}")
+    
     temp_audio_path = None
     
     try:
@@ -2143,14 +2150,22 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("✅ Proceeding with job (availability check disabled for testing)")
         
         # Step 2: Extract input parameters
+        logger.info("📋 Step 2/8: Extracting job parameters...")
         job_input = job.get('input', {})
+        logger.info(f"📋 Job input keys: {list(job_input.keys())}")
+        logger.info(f"📋 Full job input: {job_input}")
+        
         audio_url = job_input.get('audio_url')
         call_id = job_input.get('call_id', 'unknown')
         min_speakers = job_input.get('min_speakers', 2)
         max_speakers = job_input.get('max_speakers', 2)
         
+        logger.info(f"📋 Extracted - audio_url: {audio_url}")
+        logger.info(f"📋 Extracted - call_id: {call_id}")
+        logger.info(f"📋 Extracted - min_speakers: {min_speakers}, max_speakers: {max_speakers}")
+        
         if not audio_url:
-            logger.error("No audio_url provided in job input")
+            logger.error("❌ No audio_url provided in job input")
             return {
                 "error": "Missing audio_url",
                 "message": "audio_url is required in job input"
@@ -2160,19 +2175,23 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"📥 Audio URL: {audio_url}")
         
         # Step 3: Download audio file from URL
-        logger.info(f"🌐 Downloading audio from: {audio_url}")
+        logger.info("🌐 Step 3/8: Downloading audio file...")
+        logger.info(f"🌐 Download URL: {audio_url}")
         temp_audio_path = f"/tmp/{uuid.uuid4()}.wav"
+        logger.info(f"🌐 Temp file path: {temp_audio_path}")
         
         try:
+            logger.info(f"🌐 Sending GET request with 120s timeout...")
             response = requests.get(audio_url, stream=True, timeout=120)
             response.raise_for_status()
+            logger.info(f"🌐 Response status: {response.status_code}")
             
             with open(temp_audio_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             
             file_size_mb = os.path.getsize(temp_audio_path) / (1024 * 1024)
-            logger.info(f"✅ Audio downloaded: {file_size_mb:.2f} MB")
+            logger.info(f"✅ Audio downloaded successfully: {file_size_mb:.2f} MB")
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ Failed to download audio: {e}")
             return {
@@ -2184,14 +2203,24 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         # 🔧 AI PROCESSING PIPELINE (Extracted from FastAPI endpoints)
         # ========================================================================
         
+        logger.info("="*80)
+        logger.info("🚀 Starting AI processing pipeline...")
+        logger.info(f"🚀 Call ID: {call_id}")
+        logger.info(f"🚀 Audio file: {temp_audio_path} ({file_size_mb:.2f} MB)")
+        logger.info(f"🚀 Speaker config: min={min_speakers}, max={max_speakers}")
+        logger.info("="*80)
+        
         logger.info("🚀 Starting AI processing pipeline...")
         
-        # STEP 1: TRANSCRIPTION WITH WHISPER
-        logger.info("Step 1/5: Transcribing audio with Whisper...")
+        # STEP 4: TRANSCRIPTION WITH WHISPER
+        logger.info("🎤 Step 4/8: Transcribing audio with Whisper...")
+        logger.info(f"🎤 Loading Whisper model: {WHISPER_MODEL}")
         whisper_model = load_whisper_model()
         if whisper_model is None:
+            logger.error("❌ Whisper model failed to load")
             raise Exception("Whisper model failed to load")
         
+        logger.info(f"🎤 Starting transcription (fp16={CUDA_AVAILABLE})...")
         use_fp16 = CUDA_AVAILABLE
         transcription_result = whisper_model.transcribe(
             temp_audio_path,
@@ -2205,12 +2234,14 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         language = transcription_result.get("language", "en")
         segments = transcription_result.get("segments", [])
         
-        logger.info(f"✅ Transcription complete: {len(full_text)} chars, language: {language}")
+        logger.info(f"✅ Transcription complete: {len(full_text)} chars, {len(segments)} segments, language: {language}")
         
-        # STEP 2: SPEAKER DIARIZATION
-        logger.info("Step 2/5: Performing speaker diarization...")
+        # STEP 5: SPEAKER DIARIZATION
+        logger.info("🎭 Step 5/8: Performing speaker diarization...")
+        logger.info(f"🎭 Speaker config: min={min_speakers}, max={max_speakers}")
         diarization_pipeline = load_diarization_model()
         if diarization_pipeline is None:
+            logger.error("❌ Diarization model not available")
             raise Exception("Diarization model not available")
         
         if CUDA_AVAILABLE:
@@ -2237,8 +2268,8 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         speaker_segments.sort(key=lambda x: x["start"])
         logger.info(f"✅ Diarization complete: {len(speakers_set)} speakers, {len(speaker_segments)} segments")
         
-        # STEP 3: MERGE TRANSCRIPTION WITH SPEAKER LABELS
-        logger.info("Step 3/5: Merging transcript with speaker labels...")
+        # STEP 6: MERGE TRANSCRIPTION WITH SPEAKER LABELS
+        logger.info("🏷️ Step 6/8: Merging transcript with speaker labels...")
         
         def find_speaker_at_time(timestamp, speaker_segs):
             for seg in speaker_segs:
@@ -2292,8 +2323,8 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         
         logger.info(f"✅ Speaker-labeled transcript created: {len(labeled_segments)} turns")
         
-        # STEP 4: PER-SPEAKER SENTIMENT ANALYSIS
-        logger.info("Step 4/5: Analyzing per-speaker sentiment...")
+        # STEP 7: PER-SPEAKER SENTIMENT ANALYSIS
+        logger.info("😊 Step 7/8: Analyzing per-speaker sentiment...")
         sentiment_analyzer = load_sentiment_model()
         
         agent_text = ""
@@ -2330,8 +2361,8 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         
         logger.info(f"✅ Sentiment - Agent: {agent_sentiment} ({agent_sentiment_result['score']:.2f}), Customer: {customer_sentiment} ({customer_sentiment_result['score']:.2f})")
         
-        # STEP 5: AI QUALITY SCORE
-        logger.info("Step 5/5: Calculating AI quality score...")
+        # STEP 8: AI QUALITY SCORE
+        logger.info("📊 Step 8/8: Calculating AI quality score...")
         
         transcript_lower = full_text.lower()
         
@@ -2434,6 +2465,7 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         gc.collect()
         
         # BUILD FINAL RESULT
+        logger.info("📦 Building final result dictionary...")
         result = {
             "transcript": full_text,
             "speaker_labeled_transcript": speaker_labeled_text,
@@ -2472,11 +2504,21 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
             }
         }
         
-        logger.info(f"✅ AI processing completed for call_id: {call_id}")
+        logger.info("="*80)
+        logger.info(f"✅ AI processing completed successfully for call_id: {call_id}")
+        logger.info(f"✅ Result keys: {list(result.keys())}")
+        logger.info(f"✅ Transcript length: {len(full_text)} chars")
+        logger.info(f"✅ Quality score: {overall_score:.1f}/100")
+        logger.info(f"✅ Processing time: See RunPod dashboard for execution time")
+        logger.info("="*80)
         return result
         
     except Exception as e:
-        logger.error(f"❌ Handler error: {e}")
+        logger.error("="*80)
+        logger.error(f"❌ HANDLER ERROR - Exception occurred")
+        logger.error(f"❌ Error type: {type(e).__name__}")
+        logger.error(f"❌ Error message: {e}")
+        logger.error("="*80)
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return {
@@ -2526,4 +2568,13 @@ if __name__ == "__main__":
     logger.info("=" * 80)
 
 # Start the RunPod serverless handler (MUST be at module level)
+logger.info("🔧 Registering RunPod handler function...")
+logger.info(f"🔧 Handler function: {handler}")
+logger.info(f"🔧 Handler is callable: {callable(handler)}")
+
 runpod.serverless.start({"handler": handler})
+
+logger.info("✅ RunPod handler registered successfully")
+logger.info("⏳ Worker is now READY - Waiting for jobs from queue...")
+logger.info("📋 Worker will process jobs from endpoint: https://api.runpod.ai/v2/<YOUR_ENDPOINT_ID>")
+logger.info("="*80)
