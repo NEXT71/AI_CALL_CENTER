@@ -171,8 +171,8 @@ console.log('✅ DEBUG: Public audio endpoint mounted at /temp-audio');
 // Stripe webhook endpoint - MUST be before body parser
 // Stripe needs raw body for signature verification
 console.log('🔍 DEBUG: Mounting webhook routes...');
-app.use('/api/webhooks', webhookRoutes);
-console.log('✅ DEBUG: Webhook routes mounted');
+app.use('/api/v1/webhooks', webhookRoutes);
+console.log('✅ DEBUG: Webhook routes mounted at /api/v1/webhooks');
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
