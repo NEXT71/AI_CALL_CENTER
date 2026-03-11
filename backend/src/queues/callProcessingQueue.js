@@ -586,4 +586,8 @@ exports.cleanQueue = async (grace = 86400000) => {
   logger.info('Queue cleaned', { grace });
 };
 
+callQueue.getQueueStats = exports.getQueueStats;
+callQueue.getJobStatus = exports.getJobStatus;
+callQueue.cleanQueue = exports.cleanQueue;
+
 module.exports = callQueue;

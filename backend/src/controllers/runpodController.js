@@ -109,7 +109,7 @@ exports.startPod = async (req, res, next) => {
       details: { error: error.message },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'error',
+      status: 'failure',
     });
 
     res.status(500).json({
@@ -169,7 +169,7 @@ exports.stopPod = async (req, res, next) => {
       details: { error: error.message },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
-      status: 'error',
+      status: 'failure',
     });
 
     res.status(500).json({

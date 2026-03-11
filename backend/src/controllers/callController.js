@@ -11,6 +11,7 @@ const scoringService = require('../services/scoringService');
 const auditService = require('../services/auditService');
 const runpodService = require('../services/runpodService');
 const usageLimits = require('../middleware/usageLimits');
+const usageAlerts = require('../services/usageAlerts');
 const logger = require('../config/logger');
 
 // RunPod Serverless Configuration
@@ -559,7 +560,7 @@ async function processCallAsync(callId) {
       await usageLimits.updateUsageMetrics(userId, call.duration || 0);
       
       // Check and send usage alerts
-      await usageAlerts.checkAndSendUsageAlerts(userId);
+      await usageAlerts.checkAndSendUsageWarnings(userId);
     }
 
     // Decrement concurrency counter

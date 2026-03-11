@@ -34,5 +34,8 @@ pyannote.audio==3.1.1
 # Timezone handling
 pytz>=2024.1
 
+# Visualization (required by pyannote.audio)
+matplotlib>=3.6.0
+
 # Utilities
 psutil==6.1.0

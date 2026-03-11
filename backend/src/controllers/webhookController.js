@@ -1,7 +1,5 @@
-const User = require('../models/User');
-const stripeService = require('../services/stripeService');
-const emailService = require('../services/emailService');
 const logger = require('../config/logger');
+
 
 /**
  * @route   POST /api/webhooks/stripe

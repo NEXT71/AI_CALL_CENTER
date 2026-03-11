@@ -5,6 +5,7 @@ const User = require('../models/User');
 const config = require('../config/config');
 const auditService = require('../services/auditService');
 const emailService = require('../services/emailService');
+const logger = require('../config/logger');
 
 /**
  * Generate JWT tokens
@@ -477,8 +478,8 @@ exports.resetPassword = async (req, res, next) => {
     user.tokenVersion += 1; // Invalidate all existing tokens
     await user.save();
 
-    // Log password reset
-    await auditService.logPasswordReset(req.user, user, req);
+    // Log password reset (public route - no req.user)
+    await auditService.logPasswordReset(null, user, req);
 
     res.status(200).json({
       success: true,

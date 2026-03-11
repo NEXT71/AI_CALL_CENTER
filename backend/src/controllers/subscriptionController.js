@@ -890,12 +890,20 @@ exports.approvePayment = async (req, res, next) => {
       });
     }
 
+    // MANDATORY: Reject approval if no transaction documents were submitted
+    if (!payment.proofDocuments || payment.proofDocuments.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot approve payment: no transaction documents on file. The user must resubmit the payment request with proof of transaction (receipt, bank statement, or payment screenshot).',
+      });
+    }
+
     // Update payment status
     payment.status = 'approved';
     payment.approvedBy = req.user._id;
     payment.approvedAt = new Date();
     if (notes) {
-      payment.notes = notes;
+      payment.adminNotes = notes;
     }
     await payment.save();
 
@@ -1020,7 +1028,9 @@ exports.rejectPayment = async (req, res, next) => {
 
     // Update payment status
     payment.status = 'rejected';
-    payment.notes = reason;
+    payment.rejectionReason = reason;
+    payment.rejectedBy = req.user._id;
+    payment.rejectedAt = new Date();
     await payment.save();
 
     // Log the rejection

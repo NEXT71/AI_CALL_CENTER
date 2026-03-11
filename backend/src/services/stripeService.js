@@ -2,11 +2,17 @@ const Stripe = require('stripe');
 const config = require('../config/config');
 const logger = require('../config/logger');
 
-// Initialize Stripe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY environment variable is required');
+// Initialize Stripe lazily to prevent crash if STRIPE_SECRET_KEY is not set
+let stripe = null;
+function getStripe() {
+  if (!stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY environment variable is required');
+    }
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripe;
 }
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Pricing plans configuration (Updated March 2026)
 const PLANS = {
@@ -94,7 +100,7 @@ const PLANS = {
  */
 exports.createCustomer = async (user) => {
   try {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: user.email,
       name: user.name,
       metadata: {
@@ -140,7 +146,7 @@ exports.createCheckoutSession = async (user, planType) => {
       customerId = customer.id;
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
@@ -187,7 +193,7 @@ exports.createBillingPortalSession = async (user) => {
       throw new Error('No Stripe customer found');
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: `${process.env.FRONTEND_URL}/settings/billing`,
     });
@@ -204,7 +210,7 @@ exports.createBillingPortalSession = async (user) => {
  */
 exports.getSubscription = async (subscriptionId) => {
   try {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
     return subscription;
   } catch (error) {
     logger.error('Error retrieving subscription:', error);
@@ -217,7 +223,7 @@ exports.getSubscription = async (subscriptionId) => {
  */
 exports.cancelSubscription = async (subscriptionId) => {
   try {
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
+    const subscription = await getStripe().subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
 
@@ -238,7 +244,7 @@ exports.cancelSubscription = async (subscriptionId) => {
  */
 exports.reactivateSubscription = async (subscriptionId) => {
   try {
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
+    const subscription = await getStripe().subscriptions.update(subscriptionId, {
       cancel_at_period_end: false,
     });
 
@@ -258,7 +264,7 @@ exports.reactivateSubscription = async (subscriptionId) => {
  */
 exports.getPaymentMethods = async (customerId) => {
   try {
-    const paymentMethods = await stripe.paymentMethods.list({
+    const paymentMethods = await getStripe().paymentMethods.list({
       customer: customerId,
       type: 'card',
     });
@@ -275,7 +281,7 @@ exports.getPaymentMethods = async (customerId) => {
  */
 exports.getInvoices = async (customerId, limit = 10) => {
   try {
-    const invoices = await stripe.invoices.list({
+    const invoices = await getStripe().invoices.list({
       customer: customerId,
       limit: limit,
     });
@@ -305,7 +311,7 @@ exports.constructWebhookEvent = (payload, signature) => {
       throw new Error('Webhook secret not configured');
     }
 
-    const event = stripe.webhooks.constructEvent(
+    const event = getStripe().webhooks.constructEvent(
       payload,
       signature,
       webhookSecret

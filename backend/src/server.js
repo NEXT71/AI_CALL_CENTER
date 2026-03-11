@@ -50,12 +50,6 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 console.log('✅ DEBUG: subscriptionRoutes imported');
 const webhookRoutes = require('./routes/webhookRoutes');
 console.log('✅ DEBUG: webhookRoutes imported');
-// RunPod GPU Control Routes
-console.log('🚀 DEBUG: Attempting to import runpodRoutes...');
-const runpodRoutes = require('./routes/runpodRoutes');
-console.log('✅ DEBUG: runpodRoutes imported successfully');
-console.log('🔍 DEBUG: runpodRoutes type:', typeof runpodRoutes);
-console.log('🔍 DEBUG: runpodRoutes.stack:', runpodRoutes.stack ? 'has routes' : 'NO ROUTES');
 
 // Import jobs
 const fileCleanupJob = require('./jobs/fileCleanup');
@@ -285,21 +279,6 @@ app.use(`${API_VERSION}/audit-logs`, auditLogRoutes);
 console.log('🔍 DEBUG: Mounting subscriptions routes...');
 app.use(`${API_VERSION}/subscriptions`, subscriptionRoutes);
 console.log('✅ DEBUG: API routes mounted');
-
-// RunPod GPU Control API
-console.log('🚀 DEBUG: Registering RunPod routes at path:', `${API_VERSION}/runpod`);
-app.use(`${API_VERSION}/runpod`, runpodRoutes);
-console.log('✅ DEBUG: RunPod routes registered successfully at', `${API_VERSION}/runpod`);
-// List all registered routes
-if (runpodRoutes.stack) {
-  console.log('📋 DEBUG: RunPod routes:');
-  runpodRoutes.stack.forEach(layer => {
-    if (layer.route) {
-      const methods = Object.keys(layer.route.methods).join(', ').toUpperCase();
-      console.log(`   ${methods} ${API_VERSION}/runpod${layer.route.path}`);
-    }
-  });
-}
 
 // Legacy routes (deprecated - redirect to v1)
 console.log('🔍 DEBUG: Setting up legacy routes...');

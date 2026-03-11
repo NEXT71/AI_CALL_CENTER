@@ -205,9 +205,9 @@ exports.logEmailVerification = async (user, req) => {
  */
 exports.logPasswordReset = async (admin, user, req) => {
   return exports.createAuditLog({
-    userId: admin._id,
-    userName: admin.name,
-    userRole: admin.role,
+    userId: admin?._id || user._id,
+    userName: admin?.name || user.name,
+    userRole: admin?.role || 'User',
     action: 'UPDATE_USER',
     resourceType: 'User',
     resourceId: user._id,

@@ -56,8 +56,8 @@ class FileCleanupJob {
       const oldCalls = await Call.find({
         status: 'completed',
         processedAt: { $lt: cutoffDate },
-        audioPath: { $exists: true, $ne: '' },
-      }).select('_id audioPath callId');
+        audioFilePath: { $exists: true, $ne: '' },
+      }).select('_id audioFilePath callId');
 
       let deletedCount = 0;
       let errorCount = 0;
@@ -65,18 +65,18 @@ class FileCleanupJob {
       for (const call of oldCalls) {
         try {
           // Check if file exists
-          await fs.access(call.audioPath);
+          await fs.access(call.audioFilePath);
 
           // Delete the file
-          await fs.unlink(call.audioPath);
+          await fs.unlink(call.audioFilePath);
           
           // Update call record to mark file as deleted
-          call.audioPath = `[DELETED] ${call.audioPath}`;
+          call.audioFilePath = `[DELETED] ${call.audioFilePath}`;
           await call.save();
 
           deletedCount++;
           logger.debug(`Deleted file for call ${call.callId}`, { 
-            path: call.audioPath 
+            path: call.audioFilePath 
           });
         } catch (err) {
           if (err.code !== 'ENOENT') {
@@ -84,7 +84,7 @@ class FileCleanupJob {
             errorCount++;
             logger.warn(`Failed to delete file for call ${call.callId}`, {
               error: err.message,
-              path: call.audioPath,
+              path: call.audioFilePath,
             });
           }
         }
